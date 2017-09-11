@@ -8,6 +8,8 @@
 #include <Eigen/Sparse>
 #include <Eigen/SparseLU>
 #include <Eigen/SparseCholesky>
+#include "HODLR_Tree.hpp"
+#include "HODLR_Matrix.hpp"
 
 #include "imagePlane.hpp"
 #include "sourcePlane.hpp"
@@ -71,5 +73,26 @@ double getLogLike(ImagePlane* image,BaseSourcePlane* source,double lambda,precom
 void getSourceErrors(int Sm,double* errors,precomp* pcomp);
 void getMockData(ImagePlane* mockdata,BaseSourcePlane* source,precomp* pcomp);
 void getMin(ImagePlane* image,BaseSourcePlane* source,precomp* pcomp);
+
+
+
+class gaussKernel : public HODLR_Matrix {
+public:
+  gaussKernel(int Sm,double* x,double* y,std::map<std::string,BaseNlpar*> pars) : pSm(Sm), px(x), py(y), ppars(pars) {};
+  
+  double get_Matrix_Entry(const unsigned i,const unsigned j){
+    double d = sqrt( pow(px[i]-px[j],2) + pow(py[i]-py[j],2) );
+    return ppars["spec_ampl"]->val*exp( -0.5*d*d/ppars["spec_sig"]->val );
+  }
+
+private:
+  int pSm;
+  double* px;
+  double* py;
+  std::map<std::string,BaseNlpar*> ppars;  
+};
+
+void getInverseCovarianceMatrix(BaseSourcePlane* source,std::map<std::string,BaseNlpar*> pars,precomp* pcomp);
+
 
 #endif /* TABLE_ALGEBRA_HPP */

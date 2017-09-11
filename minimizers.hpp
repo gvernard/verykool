@@ -36,12 +36,21 @@ static double mainLogLike(ImagePlane* image,BaseSourcePlane* source,CollectionMa
     ada->createDelaunay();
     source->constructH(&mat->H);
   }
+
+
   
+  if( source->reg == "covariance_kernel" ){
+    getInverseCovarianceMatrix(source,nlpars[1],pcomp);
+  }
+
+
   source->constructL(image,mycollection,&mat->L);
   setAlgebraRuntime(image,source,nlpars[1]["lambda"]->val,mat,pcomp);
   solveLinearSparseS(image,source,pcomp);
   double loglike = getLogLike(image,source,nlpars[1]["lambda"]->val,pcomp,nlpars);
   return loglike;
+
+
 
   //  return pow(pars[0]-6,2)+pow(pars[1]-6,2)+pow(pars[2]-6,2)+pow(pars[3]-6,2)+pow(pars[4]-6,2)+pow(pars[5]-6,2);
 }

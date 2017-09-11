@@ -345,3 +345,43 @@ double getLogLike(ImagePlane* image,BaseSourcePlane* source,double lambda,precom
   return val;
 }
 
+
+
+void getInverseCovarianceMatrix(BaseSourcePlane* source,std::map<std::string,BaseNlpar*> pars,precomp* pcomp){
+
+  // Set up the kernel.
+  gaussKernel kernel(source->Sm,source->x,source->y,pars);
+
+  // Settings for the solver.
+  unsigned N       = source->Sm;
+  unsigned nLeaf   = 50;
+  double tolerance = 1e-14;
+
+  // Build the RHS matrix.
+  Eigen::MatrixXd b(N,1),x;
+  Eigen::VectorXd yvar(N);
+  for(int i=0;i<N;i++){
+    b(i,0) = source->src[i];
+    //    yvar(i) = _ferr[i] * _ferr[i];
+    yvar(i) = 1;
+  }
+
+  std::cout << std::endl << "Setting things up..." << std::endl;
+  HODLR_Tree<gaussKernel> * A = new HODLR_Tree<gaussKernel>(&kernel,N,nLeaf);
+
+  std::cout << std::endl << "Assembling the matrix in HODLR form..." << std::endl;
+  A->assemble_Matrix(yvar,tolerance,'s');
+
+  std::cout << std::endl << "Factoring the matrix..." << std::endl;
+  A->compute_Factor();
+
+  std::cout << std::endl << "Solving the system..." << std::endl;
+  A->solve(b,x);
+  
+  std::cout << std::endl << "Computing the determinant..." << std::endl;
+  double determinant;
+  A->compute_Determinant(determinant);
+
+  pcomp->detC = determinant;
+  //  pcomp->C    = C;
+}
