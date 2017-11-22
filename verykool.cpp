@@ -69,6 +69,15 @@ int main(int argc,char* argv[]){
     ada->createDelaunay();
   }
 
+  if( init.source["sample_reg"] == "true" ){
+    mysource->sample_reg = true;
+  }
+
+  if( mysource->reg == "covariance_kernel" ){
+    mysource->kernel = FactoryCovKernel::getInstance()->createCovKernel(init.source["kernel"],init.nlpars[1]);
+  }
+
+
 
 
   //Initialize matrices: S,C,B,H,L --------------------------------------------------------------------------------------------------------------------------------

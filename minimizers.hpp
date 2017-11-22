@@ -29,28 +29,35 @@ static double mainLogLike(ImagePlane* image,BaseSourcePlane* source,CollectionMa
     mycollection->models[i]->setMassPars(nlpars[2+i]);
   }
   mycollection->setPhysicalPars(nlpars[0]);
+
   
+
+  if( source->sample_reg ){
+    source->kernel->setParameters(nlpars[1]);
+  }
+
   if( source->type == "adaptive" ){
     AdaptiveSource* ada = dynamic_cast<AdaptiveSource*>(source);
     ada->createAdaGrid(image,mycollection);
     ada->createDelaunay();
+  }
+
+  if( source->sample_reg || source->type == "adaptive" ){
     source->constructH(&mat->H);
   }
 
 
-  
-  if( source->reg == "covariance_kernel" ){
-    getInverseCovarianceMatrix(source,nlpars[1],pcomp);
-  }
 
-
+  //  std::cout << "1" << std::endl;
   source->constructL(image,mycollection,&mat->L);
-  setAlgebraRuntime(image,source,nlpars[1]["lambda"]->val,mat,pcomp);
+  //  std::cout << "2" << std::endl;
+  setAlgebraRuntime(image,source,nlpars[1],mat,pcomp);
+  //  std::cout << "3" << std::endl;
   solveLinearSparseS(image,source,pcomp);
-  double loglike = getLogLike(image,source,nlpars[1]["lambda"]->val,pcomp,nlpars);
+  //  std::cout << "4" << std::endl;
+  double loglike = getLogLike(image,source,pcomp,nlpars);
+  //  std::cout << "5" << std::endl;
   return loglike;
-
-
 
   //  return pow(pars[0]-6,2)+pow(pars[1]-6,2)+pow(pars[2]-6,2)+pow(pars[3]-6,2)+pow(pars[4]-6,2)+pow(pars[5]-6,2);
 }

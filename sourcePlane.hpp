@@ -33,32 +33,40 @@ BOOST_GEOMETRY_REGISTER_BOOST_TUPLE_CS(cs::cartesian)
 #include "massModels.hpp"
 #include "tableAlgebra.hpp"
 #include "imgFuncs.hpp"
+#include "cov_kernels.hpp"
 
 typedef std::map<int,double>::iterator it_int_double;
 
 struct mytable;
 class ImagePlane;
+class BaseCovKernel;
 class CollectionMassModels;
 
 class BaseSourcePlane {
 public:
-  std::string type;              //adaptive or regular
-  int Si;                        //pixels in x, if adaptive then Si is set to 0
-  int Sj;                        //pixels in y, if adaptive then Sj is set to 0
-  int Sm;                        //total number of pixels
-  double* src;                   //values of the pixels
-  double* x;                     //pixel x-coordinates
-  double* y;                     //pixel y-coordinates
-  std::vector<double> bound_x;   //embedding polygon vertex x-coordinates
-  std::vector<double> bound_y;   //embedding polygon vertex y-coordinates
-  std::string reg;               //name of the regularization scheme
-
+  std::string type;               // adaptive or regular
+  int Si;                         // pixels in x, if adaptive then Si is set to 0
+  int Sj;                         // pixels in y, if adaptive then Sj is set to 0
+  int Sm;                         // total number of pixels
+  double* src;                    // values of the pixels
+  double* x;                      // pixel x-coordinates
+  double* y;                      // pixel y-coordinates
+  std::vector<double> bound_x;    // embedding polygon vertex x-coordinates
+  std::vector<double> bound_y;    // embedding polygon vertex y-coordinates
+  std::string reg;                // name of the regularization scheme
+  int eigenSparseMemoryAllocForH; // estimate of the non-zero elements per row of the regularization matrix H
+  bool sample_reg = false;        // sampling regularization matrix related parameters
+  BaseCovKernel* kernel;          // pointer to kernel class
+  
   BaseSourcePlane(){};
 
   ~BaseSourcePlane(){
     free(src);
     free(x);
     free(y);
+    if( this->reg == "covariance_kernel" ){
+      delete this->kernel;
+    }
   };
 
 
@@ -71,6 +79,7 @@ public:
 
   //non-virtual members
   void normalize();
+  void setSourceCovariance(std::map<std::string,BaseNlpar*> pars);
 };
 
 

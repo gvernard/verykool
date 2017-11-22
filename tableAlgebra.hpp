@@ -20,17 +20,16 @@ struct mytriplet {
   int j;
   double v;
 };
+
 struct mytable {
   int Ti;
   int Tj;
   std::vector<mytriplet> tri;
 };
 
-
-
 class BaseSourcePlane;
-class ImagePlane;
 
+class ImagePlane;
 
 class mymatrices {
 public:
@@ -42,8 +41,6 @@ public:
 
   void initMatrices(ImagePlane* image,BaseSourcePlane* source,std::string maskpath,std::string noise_flag,std::string covpath,std::string psfpath,std::map<std::string,std::string> psf);
 };
-
-
 
 class precomp {
 public:
@@ -66,9 +63,9 @@ public:
 };
 
 void setAlgebraInit(ImagePlane* image,BaseSourcePlane* source,mymatrices* mat,precomp* pcomp);
-void setAlgebraRuntime(ImagePlane* image,BaseSourcePlane* source,double lambda,mymatrices* mat,precomp* pcomp);
+void setAlgebraRuntime(ImagePlane* image,BaseSourcePlane* source,std::map<std::string,BaseNlpar*> reg_pars,mymatrices* mat,precomp* pcomp);
 void solveLinearSparseS(ImagePlane* image,BaseSourcePlane* source,precomp* pcomp);
-double getLogLike(ImagePlane* image,BaseSourcePlane* source,double lambda,precomp* pcomp,std::vector<std::map<std::string,BaseNlpar*> > nlpars);
+double getLogLike(ImagePlane* image,BaseSourcePlane* source,precomp* pcomp,std::vector<std::map<std::string,BaseNlpar*> > nlpars);
 
 void getSourceErrors(int Sm,double* errors,precomp* pcomp);
 void getMockData(ImagePlane* mockdata,BaseSourcePlane* source,precomp* pcomp);
@@ -78,11 +75,13 @@ void getMin(ImagePlane* image,BaseSourcePlane* source,precomp* pcomp);
 
 class gaussKernel : public HODLR_Matrix {
 public:
-  gaussKernel(int Sm,double* x,double* y,std::map<std::string,BaseNlpar*> pars) : pSm(Sm), px(x), py(y), ppars(pars) {};
+  //  gaussKernel(int Sm,double* x,double* y,std::map<std::string,BaseNlpar*> pars) : pSm(Sm), px(x), py(y), ppars(pars) {};
+  gaussKernel(int dum){};
   
   double get_Matrix_Entry(const unsigned i,const unsigned j){
-    double d = sqrt( pow(px[i]-px[j],2) + pow(py[i]-py[j],2) );
-    return ppars["spec_ampl"]->val*exp( -0.5*d*d/ppars["spec_sig"]->val );
+    //double d = sqrt( pow(px[i]-px[j],2) + pow(py[i]-py[j],2) );
+    //return ppars["spec_ampl"]->val*exp( -0.5*d*d/ppars["spec_sig"]->val );
+    return 1.0;
   }
 
 private:
@@ -92,7 +91,8 @@ private:
   std::map<std::string,BaseNlpar*> ppars;  
 };
 
-void getInverseCovarianceMatrix(BaseSourcePlane* source,std::map<std::string,BaseNlpar*> pars,precomp* pcomp);
+//void getInverseCovarianceMatrix(BaseSourcePlane* source,std::map<std::string,BaseNlpar*> pars,precomp* pcomp);
+void getInverseCovarianceMatrixHODLR(mymatrices* mat,std::map<std::string,BaseNlpar*> pars,precomp* pcomp);
 
 
 #endif /* TABLE_ALGEBRA_HPP */

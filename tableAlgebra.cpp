@@ -90,7 +90,7 @@ void setAlgebraInit(ImagePlane* image,BaseSourcePlane* source,mymatrices* mat,pr
   for(int i=0;i<mat->B.tri.size();i++){  BB.insert(mat->B.tri[i].j,mat->B.tri[i].i) = mat->B.tri[i].v;  }//for column-major (swap the i and j indices of tri struct)
 
   Eigen::SparseMatrix<double> HH(Sm,Sm);
-  HH.reserve(Eigen::VectorXi::Constant(Sm,8));//overestimating the number of non-zero coefficients per HH row (different number for 1st,2nd order derivative etc)
+  HH.reserve(Eigen::VectorXi::Constant(Sm,source->eigenSparseMemoryAllocForH));//overestimating the number of non-zero coefficients per HH row (different number for 1st,2nd order derivative etc)
   for(int i=0;i<mat->H.tri.size();i++){  HH.insert(mat->H.tri[i].i,mat->H.tri[i].j) = mat->H.tri[i].v;  }
 
 
@@ -132,11 +132,18 @@ void setAlgebraInit(ImagePlane* image,BaseSourcePlane* source,mymatrices* mat,pr
   SSt   = SS.transpose();
   StCS  = (SSt * CC * SS);
 
-  //Calculate HtH
-  Eigen::SparseMatrix<double> HHt(Sm,Sm);
+
+  // Calculate HtH
   Eigen::SparseMatrix<double> HtH(Sm,Sm);
-  HHt   = HH.transpose();
-  HtH   = (HHt * HH);
+  if( source->reg == "covariance_kernel" ){
+    // calculate the inverse of the source covariance matrix stored in H, and store it in HtH
+  } else {
+    // calculate the product HtH of a derivative based H matrix
+    Eigen::SparseMatrix<double> HHt(Sm,Sm);
+    HHt = HH.transpose();
+    HtH = (HHt * HH);    
+    HHt.resize(0,0);
+  }
 
   //calculate determinant of HtH
   double detHtH = 0.;
@@ -167,15 +174,15 @@ void setAlgebraInit(ImagePlane* image,BaseSourcePlane* source,mymatrices* mat,pr
   CC.resize(0,0);
   BB.resize(0,0);
   HH.resize(0,0);
-  HHt.resize(0,0);
   HtH.resize(0,0);
 }
 
 
 // Calculate tables and related quantities at every iteration
-void setAlgebraRuntime(ImagePlane* image,BaseSourcePlane* source,double lambda,mymatrices* mat,precomp* pcomp){
+void setAlgebraRuntime(ImagePlane* image,BaseSourcePlane* source,std::map<std::string,BaseNlpar*> reg_pars,mymatrices* mat,precomp* pcomp){
   int Nm = image->Nm;
   int Sm = source->Sm;
+
 
   Eigen::SparseMatrix<double> LL(mat->L.Ti,mat->L.Tj);
   LL.reserve(Eigen::VectorXi::Constant(mat->L.Ti,4));//setting the non-zero coefficients per row of the lensing matrix (4 for bi-linear interpolation scheme, etc)
@@ -183,28 +190,57 @@ void setAlgebraRuntime(ImagePlane* image,BaseSourcePlane* source,double lambda,m
   
   Eigen::SparseMatrix<double> M(Nm,Sm);
   Eigen::SparseMatrix<double> Mt(Sm,Nm);
-  Eigen::SparseMatrix<double> A(Sm,Sm);
 
-  M  = pcomp->B*LL;
-  Mt = M.transpose();
-  A  = Mt*pcomp->C*M + lambda*pcomp->HtH;
+  M         = pcomp->B*LL;
+  Mt        = M.transpose();
+  pcomp->M  = M;
+  pcomp->Mt = Mt;
+
 
   //I need also to calculate HtH, and detHtH for an adaptive source
-  if( source->type == "adaptive" ){
+  if( source->type == "adaptive" || source->sample_reg ){
+
     Eigen::SparseMatrix<double> HH(Sm,Sm);
-    HH.reserve(Eigen::VectorXi::Constant(Sm,8));//overestimating the number of non-zero coefficients per HH row (different number for 1st,2nd order derivative etc)
+    HH.reserve(Eigen::VectorXi::Constant(Sm,source->eigenSparseMemoryAllocForH));//overestimating the number of non-zero coefficients per HH row (different number for 1st,2nd order derivative etc)
     for(int i=0;i<mat->H.tri.size();i++){  HH.insert(mat->H.tri[i].i,mat->H.tri[i].j) = mat->H.tri[i].v;  }
-    
-    //Calculate HtH
-    Eigen::SparseMatrix<double> HHt(Sm,Sm);
     Eigen::SparseMatrix<double> HtH(Sm,Sm);
-    HHt   = HH.transpose();
-    HtH   = (HHt * HH);    
+
+    // Calculate HtH
+    if( source->sample_reg ){
+      // calculate the inverse of the source covariance matrix stored in H, and store it in HtH
+
+      Eigen::Matrix<double,Eigen::Dynamic,Eigen::Dynamic> inv(Sm,Sm);
+      Eigen::SimplicialLDLT<Eigen::SparseMatrix<double> > solver;
+      solver.compute(HH);
+      Eigen::VectorXd idc(HH.cols()),c(HH.cols());
+      for(int i=0;i<Sm;i++){
+	for(int j=0;j<idc.size();j++){
+	  idc[j] = 0;
+	}
+	idc[i] = 1;
+	//this needs to be done in two steps, otherwise it does not work when using LU
+	c = solver.solve(idc);
+	inv.col(i) = c;
+      }
+      HtH = inv.sparseView();
+
+      inv.resize(0,0);
+      
+    } else {
+      // calculate the product HtH of a derivative based H matrix
+      Eigen::SparseMatrix<double> HHt(Sm,Sm);
+      HHt = HH.transpose();
+      HtH = (HHt * HH);    
+      HHt.resize(0,0);
+    }
+    HH.resize(0,0);   // no longer needed, all information has been passed to HtH
+    pcomp->HtH = HtH;
     
-    //calculate determinant of HtH
+    
+    // Calculate the determinant of HtH
     Eigen::SimplicialLDLT< Eigen::SparseMatrix<double> > solver;
     Eigen::VectorXd diag;
-    double dum;    
+    double dum;
     double detHtH = 0.;
     solver.analyzePattern(HtH);
     solver.factorize(HtH);
@@ -215,19 +251,20 @@ void setAlgebraRuntime(ImagePlane* image,BaseSourcePlane* source,double lambda,m
 	detHtH += log10( dum );
       }
     }
-    
-    pcomp->HtH     = HtH;
     pcomp->detHtH  = detHtH;
 
-    HH.resize(0,0);
-    HHt.resize(0,0);
+
     HtH.resize(0,0);
   }
-
   
-  pcomp->M  = M;
-  pcomp->Mt = Mt;
-  pcomp->A  = A;
+  Eigen::SparseMatrix<double> A(Sm,Sm);
+  if( source->reg == "covariance_kernel" ){
+    A = Mt*pcomp->C*M + pcomp->HtH;
+  } else {
+    A = Mt*pcomp->C*M + reg_pars["lambda"]->val*pcomp->HtH;
+  }
+  pcomp->A = A;
+
 
   LL.resize(0,0);
   M.resize(0,0);
@@ -324,36 +361,59 @@ void getMin(ImagePlane* image,BaseSourcePlane* source,precomp* pcomp){
 }
 
 
-double getLogLike(ImagePlane* image,BaseSourcePlane* source,double lambda,precomp* pcomp,std::vector<std::map<std::string,BaseNlpar*> > nlpars){
+double getLogLike(ImagePlane* image,BaseSourcePlane* source,precomp* pcomp,std::vector<std::map<std::string,BaseNlpar*> > nlpars){
   double pi  = 3.14159265358979323846;
 
-  getMin(image,source,pcomp);
-  double g   = pcomp->chi2/2. + lambda*pcomp->reg/2.;
-  double f1  = image->lookup.size()*log10(2*pi)/2.;
-  double f2  = source->Sm*log10(lambda)/2.;
-  double val = -g -f1 +f2 +(pcomp->detC)/2. +(pcomp->detHtH)/2. -(pcomp->detA)/2.;
-  
-  for(int i=0;i<nlpars.size();i++){
-    for(auto it = nlpars[i].cbegin(); it != nlpars[i].cend(); ++it){
-      printf(" %12.8f",it->second->val);
+  if( source->reg == "covariance_kernel" ){
+    getMin(image,source,pcomp);
+    double g   = pcomp->chi2/2. + pcomp->reg/2.;
+    double f1  = image->lookup.size()*log10(2*pi)/2.;
+    //double f2  = source->Sm*log10(nlpars[1]["lambda"]->val)/2.;
+    double val = -g -f1 +(pcomp->detC)/2. +(pcomp->detHtH)/2. -(pcomp->detA)/2.;
+    
+    for(int i=0;i<nlpars.size();i++){
+      for(auto it = nlpars[i].cbegin(); it != nlpars[i].cend(); ++it){
+	printf(" %12.8f",it->second->val);
+      }
     }
-  }
-  printf("\n");
-  printf("%16.7f  %16.7f  %16.7f %16.7f  %16.7f  %16.7f  %16.7f  %16.7f  %16.7f\n",pcomp->chi2,pcomp->reg,lambda*pcomp->reg,-g,-f1,f2,pcomp->detC/2.,pcomp->detHtH/2.,-pcomp->detA/2.);
-  printf("%16.7f\n\n",val);
+    printf("\n");
+    printf("%16.7f  %16.7f  %16.7f  %16.7f  %16.7f  %16.7f  %16.7f\n",pcomp->chi2,pcomp->reg,-g,-f1,pcomp->detC/2.,pcomp->detHtH/2.,-pcomp->detA/2.);
+    printf("%16.7f\n\n",val);
 
-  return val;
+    return val;
+  } else {
+    getMin(image,source,pcomp);
+    double g   = pcomp->chi2/2. + nlpars[1]["lambda"]->val*pcomp->reg/2.;
+    double f1  = image->lookup.size()*log10(2*pi)/2.;
+    double f2  = source->Sm*log10(nlpars[1]["lambda"]->val)/2.;
+    double val = -g -f1 +f2 +(pcomp->detC)/2. +(pcomp->detHtH)/2. -(pcomp->detA)/2.;
+    
+    for(int i=0;i<nlpars.size();i++){
+      for(auto it = nlpars[i].cbegin(); it != nlpars[i].cend(); ++it){
+	printf(" %12.8f",it->second->val);
+      }
+    }
+    printf("\n");
+    printf("%16.7f  %16.7f  %16.7f  %16.7f  %16.7f  %16.7f  %16.7f  %16.7f  %16.7f\n",pcomp->chi2,pcomp->reg,nlpars[1]["lambda"]->val*pcomp->reg,-g,-f1,f2,pcomp->detC/2.,pcomp->detHtH/2.,-pcomp->detA/2.);
+    printf("%16.7f\n\n",val);
+
+    return val;
+  }
+
 }
 
 
 
-void getInverseCovarianceMatrix(BaseSourcePlane* source,std::map<std::string,BaseNlpar*> pars,precomp* pcomp){
+//void getInverseCovarianceMatrix(BaseSourcePlane* source,std::map<std::string,BaseNlpar*> pars,precomp* pcomp){
+void getInverseCovarianceMatrixHODLR(mymatrices* mat,std::map<std::string,BaseNlpar*> pars,precomp* pcomp){
 
   // Set up the kernel.
-  gaussKernel kernel(source->Sm,source->x,source->y,pars);
+  //  gaussKernel kernel(source->Sm,source->x,source->y,pars);
+  gaussKernel kernel(3);
 
   // Settings for the solver.
-  unsigned N       = source->Sm;
+  //  unsigned N       = source->Sm;
+  unsigned N       = mat->C.Ti;
   unsigned nLeaf   = 50;
   double tolerance = 1e-14;
 
@@ -361,27 +421,35 @@ void getInverseCovarianceMatrix(BaseSourcePlane* source,std::map<std::string,Bas
   Eigen::MatrixXd b(N,1),x;
   Eigen::VectorXd yvar(N);
   for(int i=0;i<N;i++){
-    b(i,0) = source->src[i];
+    b(i,0) = 1.0;
+    //    b(i,0) = source->src[i];
     //    yvar(i) = _ferr[i] * _ferr[i];
-    yvar(i) = 1;
+    //    yvar(i) = 1.0;
+    yvar(i) = sqrt(1.0/mat->C.tri[i].v);
   }
 
-  std::cout << std::endl << "Setting things up..." << std::endl;
+  // Setting things up
   HODLR_Tree<gaussKernel> * A = new HODLR_Tree<gaussKernel>(&kernel,N,nLeaf);
 
-  std::cout << std::endl << "Assembling the matrix in HODLR form..." << std::endl;
+  // Assembling the matrix in HODLR form
   A->assemble_Matrix(yvar,tolerance,'s');
 
-  std::cout << std::endl << "Factoring the matrix..." << std::endl;
+  // Factoring the matrix
   A->compute_Factor();
 
-  std::cout << std::endl << "Solving the system..." << std::endl;
+  // Solving the system
   A->solve(b,x);
   
-  std::cout << std::endl << "Computing the determinant..." << std::endl;
+  // Computing the determinant
   double determinant;
   A->compute_Determinant(determinant);
 
+  //Get the elements of the inverse
+  A->computeInverse();
+
+
   pcomp->detC = determinant;
+  std::cout << "det: " << determinant << std::endl;
   //  pcomp->C    = C;
 }
+

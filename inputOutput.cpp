@@ -7,7 +7,7 @@ void outputInitial(std::vector<std::map<std::string,BaseNlpar*> > nlpars,std::st
   myactive tmp;
   std::vector<std::string> names;
 
-  //set active parameters (and periodicity) in order: physical, other, lens parameters for each lens
+  //set active parameters (and periodicity) in order: physical, regularization, lens parameters for each lens
   for(int j=0;j<nlpars.size();j++){
     names = BaseNlpar::getActive(nlpars[j]);
     for(int i=0;i<names.size();i++){
@@ -112,7 +112,11 @@ void outputGeneric(ImagePlane* image,BaseSourcePlane* source,std::vector<std::ma
   terms["logdetA"]   = -pcomp->detA/2.;
   terms["logdetHtH"] =  pcomp->detHtH/2.;
   terms["logdetC"]   =  pcomp->detC/2.;
-  terms["logl"]      =  source->Sm*log10(nlpars[1]["lambda"]->val)/2.;
+  if( source->reg == "covariance_kernel" ){
+    // do nothing
+  } else {
+    terms["logl"]      =  source->Sm*log10(nlpars[1]["lambda"]->val)/2.;
+  }
   terms["log2pi"]    = -image->Nm*log10(2*pi)/2.;
   json_output["terms"] = terms;
 
@@ -157,7 +161,11 @@ int Initialization::parseInputJSON(const char* c_path,const char* c_filename){
   for(int i=0;i<jmembers.size();i++){
     this->source[jmembers[i]] = root["splane"][jmembers[i]].asString();
   }
-  this->source["reg"] = root["reg"].asString();
+  this->source["reg"] = root["reg"]["type"].asString();
+  if( this->source["reg"] == "covariance_kernel" ){
+    this->source["kernel"] = root["reg"]["subtype"].asString();
+  }
+
   //Calculate the number of adaptive source pixels based on the image data
   if( this->source["type"] == "adaptive" && ( this->source["mode"] == "image" || this->source["mode"] == "grid" ) ){
     int spacing = std::stoi(this->source["spacing"]);
@@ -201,13 +209,27 @@ int Initialization::parseInputJSON(const char* c_path,const char* c_filename){
   this->nlpars.push_back( nlparsFromJson(root["physical"]) );
 
   //Non-linear parameters: Read the other parameters (regularization lambda, etc) in the class variables, always at position [1] of nlpars.
-  this->nlpars.push_back( nlparsFromJson(root["other"]) );
+  this->nlpars.push_back( nlparsFromJson(root["reg"]["nlpars"]) );
 
   //Non-linear parameters: read the mass model type and its parameters in the class variables, always at positions [2-*] of nlpars.
   const Json::Value lenses = root["lenses"];
   for(int i=0;i<lenses.size();i++){
     this->mmodel.push_back( lenses[i]["subtype"].asString() );
     this->nlpars.push_back( nlparsFromJson(lenses[i]["nlpars"]) );
+  }
+
+
+  
+  // Sampling parameters of the regularization
+  int c = 0;
+  typedef std::map<std::string,BaseNlpar*>::iterator it_nlpar;
+  for(it_nlpar myiterator=nlpars[1].begin();myiterator!=nlpars[1].end();myiterator++){
+    if( myiterator->second->fix == 0 ){
+      c++;
+    }
+  }
+  if( c > 0 && this->source["reg"] == "covariance_kernel" ){
+    this->source["sample_reg"] = "true";
   }
 
 

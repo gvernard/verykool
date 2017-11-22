@@ -143,12 +143,14 @@ void FixedSource::constructH(mytable* H){
 
   if( this->reg == "identity" ){//---------------------------> zero order
     
+    this->eigenSparseMemoryAllocForH = 1;
     for(int i=0;i<H->Ti;i++){
       tmp.push_back({i,i,1});
     }
 
   } else if ( this->reg == "gradient" ){//-------------------> first order
     
+    this->eigenSparseMemoryAllocForH = 8;
     int Si = this->Si;
     int Sj = this->Sj;
     double ddx = 1./fabs(this->x[1]  - this->x[0]);
@@ -165,6 +167,7 @@ void FixedSource::constructH(mytable* H){
 
   } else if ( this->reg == "curvature" ){//-------------------> second order
 
+    this->eigenSparseMemoryAllocForH = 8;
     int Si = this->Si;
     int Sj = this->Sj;
     double dx = fabs(this->x[1]  - this->x[0]);
@@ -280,7 +283,10 @@ void FixedSource::constructH(mytable* H){
     H->tri.push_back({  Si*Sj-1,  Si*Sj-4,        -1.*ddx2   });
     */
 
+  } else if ( this->reg == "covariance_kernel" ){//-------------------> covariance matrix
+    std::cout << "ATTENTION: Need to implement covariance matrix for a fixed source" << std::endl;
   }
+
 
   H->tri.swap(tmp);
 }
@@ -456,12 +462,14 @@ void FloatingSource::constructH(mytable* H){
 
   if( this->reg == "identity" ){//---------------------------> zero order
     
+    this->eigenSparseMemoryAllocForH = 1;
     for(int i=0;i<H->Ti;i++){
       tmp.push_back({i,i,1});
     }
 
   } else if ( this->reg == "gradient" ){//-------------------> first order
     
+    this->eigenSparseMemoryAllocForH = 8;
     int Si = this->Si;
     int Sj = this->Sj;
     double ddx = 1./fabs(this->x[1] - this->x[0]);
@@ -478,6 +486,7 @@ void FloatingSource::constructH(mytable* H){
 
   } else if ( this->reg == "curvature" ){//-------------------> second order
 
+    this->eigenSparseMemoryAllocForH = 8;
     int Si = this->Si;
     int Sj = this->Sj;
     double dx = fabs(this->x[1] - this->x[0]);
@@ -505,6 +514,8 @@ void FloatingSource::constructH(mytable* H){
       tmp.push_back({i,i,1.});
     }
 
+  } else if ( this->reg == "covariance_kernel" ){//-------------------> covariance matrix
+    std::cout << "ATTENTION: Need to implement covariance matrix for a floating source" << std::endl;
   }
 
   H->tri.swap(tmp);
@@ -843,6 +854,7 @@ void AdaptiveSource::constructH(mytable* H){
 
   if( this->reg == "identity" ){//---------------------------> zero order
     
+    this->eigenSparseMemoryAllocForH = 1;
     for(int i=0;i<H->Ti;i++){
       tmp.push_back({i,i,1});
     }
@@ -853,7 +865,7 @@ void AdaptiveSource::constructH(mytable* H){
 
 
 
-    
+    this->eigenSparseMemoryAllocForH = 8;
     for(int i=0;i<this->Sm;i++){
       
       xypoint p0 = {this->x[i],this->y[i]};
@@ -980,6 +992,7 @@ void AdaptiveSource::constructH(mytable* H){
 
   } else if ( this->reg == "curvature" ){//-------------------> second order
 
+    this->eigenSparseMemoryAllocForH = 8;
     for(int i=0;i<this->Sm;i++){
       
       xypoint p0 = {this->x[i],this->y[i]};
@@ -1064,7 +1077,39 @@ void AdaptiveSource::constructH(mytable* H){
     }
 
     
+  } else if ( this->reg == "covariance_kernel" ){//-------------------> covariance matrix
+    // will use a BaseCovKernel class, which will be member of the BaseSourcePlane class
+
+    int* nonZeroRow = (int*) calloc(this->Sm,sizeof(int));
+    
+    for(int i=0;i<this->Sm-1;i++){
+      tmp.push_back({i,i,1});
+      nonZeroRow[i]++;
+      for(int j=i+1;j<this->Sm;j++){
+	double r = sqrt( pow(this->x[j]-this->x[i],2) + pow(this->y[j]-this->y[i],2) );
+	if( r < this->kernel->rmax ){
+	  double cov = this->kernel->getCovariance(r);
+	  tmp.push_back({i,j,r});
+	  tmp.push_back({j,i,r});
+	  nonZeroRow[i]++;
+	  nonZeroRow[j]++;
+	}
+      }
+    }
+
+    int maxNonZero = 0;
+    for(int i=0;i<this->Sm;i++){
+      if( nonZeroRow[i] > maxNonZero ){
+	maxNonZero = nonZeroRow[i];
+      }
+    }
+    free(nonZeroRow);
+
+    std::cout << std::endl << std::endl << maxNonZero << std::endl << std::endl;
+    this->eigenSparseMemoryAllocForH = maxNonZero;
+
   }
+
 
   H->tri.swap(tmp);
 }
