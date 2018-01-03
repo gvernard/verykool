@@ -1,5 +1,123 @@
 #include "inputOutput.hpp"
 
+#include <cstring>
+#include <iostream>
+#include <fstream>
+#include <sstream>
+#include <cmath>
+
+#include "json/json.h"
+
+#include "massModels.hpp"
+#include "imagePlane.hpp"
+#include "sourcePlane.hpp"
+#include "nonLinearPars.hpp"
+#include "tableAlgebra.hpp"
+#include "mainLogLike.hpp"
+
+
+
+void initialize_program(std::string path,std::string run,Initialization*& init,ImagePlane*& mydata,CollectionMassModels*& mycollection,BaseSourcePlane*& mysource,std::vector<myactive>& active,mymatrices*& matrices,precomp*& pcomp){
+  printf("%-50s","Starting initialization");
+  fflush(stdout);
+  
+
+  // Instantiate init object ---------------------------------------------------------------------------------------------------------------------------------------
+  init = new Initialization();
+  init->parseInputJSON(path.c_str(),run.c_str());
+
+
+  // Read image data -----------------------------------------------------------------------------------------------------------------------------------------------
+  mydata = new ImagePlane(init->imgpath,stoi(init->image["pix_x"]),stoi(init->image["pix_y"]),stof(init->image["siz_x"]),stof(init->image["siz_y"]));
+
+
+  // Initialize mass model parameters ------------------------------------------------------------------------------------------------------------------------------
+  mycollection = new CollectionMassModels(init->nlpars[0]);
+  mycollection->models.resize(init->mmodel.size());
+  for(int k=0;k<mycollection->models.size();k++){
+    mycollection->models[k] = FactoryMassModel::getInstance()->createMassModel(init->mmodel[k],init->nlpars[2+k]);
+  }
+
+
+  // Initialize source ---------------------------------------------------------------------------------------------------------------------------------------------
+  //initialize here, but also in each iteration for an adaptive grid                                                  [<---iteration dependent for adaptive source]
+  mysource = FactorySourcePlane::getInstance()->createSourcePlane(init->source);
+  if( mysource->type == "adaptive" ){
+    AdaptiveSource* ada = dynamic_cast<AdaptiveSource*>(mysource);
+    ada->createAdaGrid(mydata,mycollection);
+    ada->createDelaunay();
+  }
+  if( init->source["sample_reg"] == "true" ){
+    mysource->sample_reg = true;
+  }
+  if( mysource->reg == "covariance_kernel" ){
+    mysource->kernel = FactoryCovKernel::getInstance()->createCovKernel(init->source["kernel"],init->nlpars[1]);
+  }
+
+
+  // Initialize matrices: S,C,B,H,L --------------------------------------------------------------------------------------------------------------------------------
+  //This is independent of the specific linear algebra package used.
+  //S: mask,
+  //C: covariance matrix,
+  //B: blurring matrix,
+  //L: lensing matrix,
+  //H: source regularization matrix
+  matrices = new mymatrices();
+  matrices->initMatrices(mydata,mysource,init->maskpath,init->noise_flag,init->covpath,init->psfpath,init->psf);
+
+
+  // Initialize precomputed algebraic quantities -------------------------------------------------------------------------------------------------------------------
+  //Precompute a number of algebraic quantities (table products etc)                                                                [<---algebra package dependent]
+  pcomp = new precomp(mydata,mysource);
+  setAlgebraInit(mydata,mysource,matrices,pcomp);
+
+
+  // Get vector of active parameters -------------------------------------------------------------------------------------------------------------------------------
+  for(int j=0;j<init->nlpars.size();j++){
+    std::vector<std::string> names = BaseNlpar::getActive(init->nlpars[j]);
+    for(int i=0;i<names.size();i++){
+      myactive tmp = {j,names[i],init->nlpars[j][names[i]]->per};
+      active.push_back(tmp);
+    }
+    names.clear();
+  }
+
+
+  // Initial output ------------------------------------------------------------------------------------------------------------------------------------------------
+  outputInitial(init->nlpars,init->output);
+
+
+  printf("%+7s\n","...done");
+  std::cout << std::string(200,'=') << std::endl;
+  fflush(stdout);
+}
+
+
+void finalize_program(Initialization* init,ImagePlane* mydata,CollectionMassModels* mycollection,BaseSourcePlane* mysource,mymatrices* matrices,precomp* pcomp){
+  printf("%-25s\n","Starting output");
+  fflush(stdout);
+  
+  // call mainLogLike to set the values of all the variables,matrices, etc, before the output
+  double logL= mainLogLike(mydata,mysource,mycollection,init->nlpars,matrices,pcomp);
+  outputGeneric(mydata,mysource,init->nlpars,pcomp,init->output);
+  
+  printf("%+7s\n","...done");
+  std::cout << std::string(200,'=') << std::endl;
+  fflush(stdout);  
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
 void outputInitial(std::vector<std::map<std::string,BaseNlpar*> > nlpars,std::string output){
 
   //Set active parameters from vector of sets of non-linear parameters (nlpars; order matters!!!)
@@ -72,7 +190,7 @@ void outputGeneric(ImagePlane* image,BaseSourcePlane* source,std::vector<std::ma
   // Output image of the model (model)
   mock_data.writeImage(output + "vkl_image.fits");
   
-  // Output residual image (diference between my_data and mock_data)
+  // Output residual image (diference between mydata and mock_data)
   ImagePlane residual(image->Nj,image->Ni,image->width,image->height);
   for(int i=0;i<image->Ni;i++){
     for(int j=0;j<image->Nj;j++){
@@ -129,18 +247,18 @@ void outputGeneric(ImagePlane* image,BaseSourcePlane* source,std::vector<std::ma
 
 
 
-int Initialization::parseInputJSON(const char* c_path,const char* c_filename){
+void Initialization::parseInputJSON(const char* c_path,const char* c_runname){
   Json::Value root;
   Json::Value::Members jmembers;
 
   std::string path(c_path);
-  std::string filename(c_path);
-  filename.append(c_filename);
-  std::ifstream fin(filename);
+  std::string runname(path);
+  runname.append(c_runname);
+  std::ifstream fin(runname+"vkl_input.json");
   fin >> root;
 
   //General parameters
-  this->output = path+root["output"].asString();
+  this->output = runname+root["output"].asString();
   if( root["maskpath"].asString() == "0" ){
     this->maskpath = "0";
   } else {
@@ -203,6 +321,7 @@ int Initialization::parseInputJSON(const char* c_path,const char* c_filename){
   jmembers = root[ this->minimizer["type"] ].getMemberNames();
   for(int i=0;i<jmembers.size();i++){
     this->minimizer[jmembers[i]] = root[ this->minimizer["type"] ][jmembers[i]].asString();
+    //    std::cout << root[ this->minimizer["type"] ][jmembers[i]].asString() << std::endl;
   }
 
   //Non-linear parameters: read the physical parameters in the class variables, always at position [0] nlpars.
@@ -233,8 +352,6 @@ int Initialization::parseInputJSON(const char* c_path,const char* c_filename){
   }
 
 
-
-  return 0;
 }
 
 

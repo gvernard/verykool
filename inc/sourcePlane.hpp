@@ -1,13 +1,7 @@
 #ifndef SOURCE_PLANE_HPP
 #define SOURCE_PLANE_HPP
 
-#include <iostream>
-#include <cmath>
 #include <cstdlib>
-#include <cstring>
-#include <stdio.h>
-#include <fstream>
-#include <algorithm>
 #include <map>
 #include <string>
 
@@ -19,28 +13,15 @@
 BOOST_GEOMETRY_REGISTER_BOOST_TUPLE_CS(cs::cartesian)
 */
 
-#include <CGAL/Exact_predicates_inexact_constructions_kernel.h>
-#include <CGAL/Delaunay_triangulation_2.h>
-#include <CGAL/Triangulation_vertex_base_with_info_2.h>
-#include <CGAL/Triangulation_face_base_with_info_2.h>
-
-#include <CGAL/Voronoi_diagram_2.h>
-#include <CGAL/Delaunay_triangulation_adaptation_traits_2.h>
-#include <CGAL/Delaunay_triangulation_adaptation_policies_2.h>
-
-
-
-#include "massModels.hpp"
-#include "tableAlgebra.hpp"
-#include "imgFuncs.hpp"
 #include "cov_kernels.hpp"
+
 
 typedef std::map<int,double>::iterator it_int_double;
 
 struct mytable;
 class ImagePlane;
-class BaseCovKernel;
 class CollectionMassModels;
+
 
 class BaseSourcePlane {
 public:

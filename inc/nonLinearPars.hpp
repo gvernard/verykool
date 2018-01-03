@@ -3,8 +3,6 @@
 
 #include <string>
 #include <map>
-#include <fstream>
-#include <cmath>
 #include <vector>
 
 //used in minimizers

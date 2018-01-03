@@ -1,5 +1,17 @@
 #include "minimizers.hpp"
 
+#include <iostream>
+#include <stdlib.h>
+#include <cmath>
+#include <fstream>
+
+#include "tableAlgebra.hpp"
+#include "nonLinearPars.hpp"
+#include "inputOutput.hpp"
+#include "mainLogLike.hpp"
+
+
+
 //Functions related to the calculation of the Bayesian evidence and parameter estimation using MultiNest
 //==============================================================================================================================
 void MultiNest::minimize(std::map<std::string,std::string> opt,ImagePlane* image,BaseSourcePlane* source,CollectionMassModels* mycollection,std::vector<std::map<std::string,BaseNlpar*> > nlpars,mymatrices* mat,precomp* pcomp,const std::string output){

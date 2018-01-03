@@ -80,13 +80,13 @@ public:
   std::vector<BaseMassModel*> models;
   std::map<std::string,double> mpars;
   
-  CollectionMassModels(std::map<std::string,BaseNlpar*> nlpars){
-    this->setPhysicalPars(nlpars);
-  };
   CollectionMassModels(){
     this->mpars["g1"] = 0.0;
     this->mpars["g2"] = 0.0;
   }
+  CollectionMassModels(std::map<std::string,BaseNlpar*> nlpars){
+    this->setPhysicalPars(nlpars);
+  };
   ~CollectionMassModels(){
     for(int i=0;i<this->models.size();i++){
       delete(this->models[i]);

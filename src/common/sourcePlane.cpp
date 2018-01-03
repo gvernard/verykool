@@ -1,5 +1,27 @@
 #include "sourcePlane.hpp"
 
+#include <iostream>
+#include <cmath>
+#include <fstream>
+#include <algorithm>
+
+#include <CGAL/Exact_predicates_inexact_constructions_kernel.h>
+#include <CGAL/Delaunay_triangulation_2.h>
+#include <CGAL/Triangulation_vertex_base_with_info_2.h>
+#include <CGAL/Triangulation_face_base_with_info_2.h>
+
+#include <CGAL/Voronoi_diagram_2.h>
+#include <CGAL/Delaunay_triangulation_adaptation_traits_2.h>
+#include <CGAL/Delaunay_triangulation_adaptation_policies_2.h>
+
+#include <CCfits/CCfits>
+
+#include "imagePlane.hpp"
+#include "cov_kernels.hpp"
+#include "massModels.hpp"
+#include "tableAlgebra.hpp"
+
+
 //Abstract class: BaseSourcePlane
 //===============================================================================================================
 void BaseSourcePlane::normalize(){
@@ -1105,7 +1127,7 @@ void AdaptiveSource::constructH(mytable* H){
     }
     free(nonZeroRow);
 
-    std::cout << std::endl << std::endl << maxNonZero << std::endl << std::endl;
+    //    std::cout << std::endl << std::endl << maxNonZero << std::endl << std::endl;
     this->eigenSparseMemoryAllocForH = maxNonZero;
 
   }

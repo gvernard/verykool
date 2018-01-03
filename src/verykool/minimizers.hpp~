@@ -1,71 +1,20 @@
 #ifndef MINIMIZERS_HPP
 #define MINIMIZERS_HPP
 
-#include <iostream>
-#include <stdlib.h>
-#include <math.h>
-#include <fstream>
 #include <string>
 #include <vector>
 #include <map>
-#include <limits>
-#include <algorithm>
-#include <functional>
 
 #include "multinest.h"
+#include "simplex.hpp"
 
-#include "inputOutput.hpp"
-#include "massModels.hpp"
-#include "imagePlane.hpp"
-#include "sourcePlane.hpp"
-#include "tableAlgebra.hpp"
-#include "nonLinearPars.hpp"
-
-
-
-
-static double mainLogLike(ImagePlane* image,BaseSourcePlane* source,CollectionMassModels* mycollection,std::vector<std::map<std::string,BaseNlpar*> > nlpars,mymatrices* mat,precomp* pcomp){
-  for(int i=0;i<mycollection->models.size();i++){
-    mycollection->models[i]->setMassPars(nlpars[2+i]);
-  }
-  mycollection->setPhysicalPars(nlpars[0]);
-
-  
-
-  if( source->sample_reg ){
-    source->kernel->setParameters(nlpars[1]);
-  }
-
-  if( source->type == "adaptive" ){
-    AdaptiveSource* ada = dynamic_cast<AdaptiveSource*>(source);
-    ada->createAdaGrid(image,mycollection);
-    ada->createDelaunay();
-  }
-
-  if( source->sample_reg || source->type == "adaptive" ){
-    source->constructH(&mat->H);
-  }
-
-
-
-  //  std::cout << "1" << std::endl;
-  source->constructL(image,mycollection,&mat->L);
-  //  std::cout << "2" << std::endl;
-  setAlgebraRuntime(image,source,nlpars[1],mat,pcomp);
-  //  std::cout << "3" << std::endl;
-  solveLinearSparseS(image,source,pcomp);
-  //  std::cout << "4" << std::endl;
-  double loglike = getLogLike(image,source,pcomp,nlpars);
-  //  std::cout << "5" << std::endl;
-  return loglike;
-
-  //  return pow(pars[0]-6,2)+pow(pars[1]-6,2)+pow(pars[2]-6,2)+pow(pars[3]-6,2)+pow(pars[4]-6,2)+pow(pars[5]-6,2);
-}
-
-
-
-
-
+class ImagePlane;
+class BaseSourcePlane;
+class CollectionMassModels;
+class mymatrices;
+class precomp;
+class BaseNlpar;
+struct myactive;
 
 
 // BaseMinimizer parent/base class
@@ -124,14 +73,14 @@ public:
 
 
 
-// Simplex class and related stuff
+// The implementation of mySimplex derived class
 //================================================================================================================================================
-class Simplex: public BaseMinimizer {
+class mySimplex: public BaseMinimizer,public Simplex {
 public:
-  Simplex(ImagePlane* a,BaseSourcePlane* b,CollectionMassModels* c,std::vector<std::map<std::string,BaseNlpar*> > d,mymatrices* e,precomp* f);
-  ~Simplex();
+  mySimplex(ImagePlane* a,BaseSourcePlane* b,CollectionMassModels* c,std::vector<std::map<std::string,BaseNlpar*> > d,mymatrices* e,precomp* f);
+  ~mySimplex();
   
-  double operator()(const std::vector<double> pars){};
+  //  double operator()(const std::vector<double> pars){};
 
   void minimize(std::map<std::string,std::string> minimizer,ImagePlane* image,BaseSourcePlane* source,CollectionMassModels* mycollection,std::vector<std::map<std::string,BaseNlpar*> > nlpars,mymatrices* mat,precomp* pcomp,const std::string output);
   void output();
@@ -146,13 +95,16 @@ private:
   precomp* pcomp;
   std::vector<myactive> active;
 
-  double LogLike(const std::vector<double> pars);
+  double LogLike(double* pars);
   std::vector<double> initPars(std::vector<std::map<std::string,BaseNlpar*> > nlpars);
   void printPars(const std::vector<double>& c);
-  double myrandom();
-  std::vector<double> SimplexMinimizer(std::vector<double> init,double tol,int iterations);
-  //  template<class UC> std::vector<double> SimplexAnnealing(UC f,std::vector<double> init,double tol,int iterations,std::vector<std::vector<double> > x);
 };
+
+
+
+
+
+
 
 
 
@@ -180,6 +132,7 @@ public:
   }
 
   BaseMinimizer* createMinimizer(std::map<std::string,std::string> minimizer,ImagePlane* image,BaseSourcePlane* source,CollectionMassModels* collection,std::vector<std::map<std::string,BaseNlpar*> > nlpars,mymatrices* matrices,precomp* pcomp,const std::string output){
+
     if( minimizer["type"] == "0" ){
       printf("%-25s","using given parameters");
       fflush(stdout);
@@ -191,7 +144,7 @@ public:
     } else if( minimizer["type"] == "simplex" ){
       printf("%-25s","using Simplex");
       fflush(stdout);
-      return new Simplex(image,source,collection,nlpars,matrices,pcomp);
+      return new mySimplex(image,source,collection,nlpars,matrices,pcomp);
     } else {
       return NULL;
     }

@@ -1,3 +1,4 @@
-test_case/
 obj/
-supportProgs/
+bin/
+lib/
+analysis_tools/

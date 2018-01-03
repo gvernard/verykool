@@ -1,5 +1,8 @@
 #include "nonLinearPars.hpp"
 
+#include <fstream>
+#include <cmath>
+
 //Abstract class: BaseNlpar
 //===============================================================================================================
 std::vector<std::string> BaseNlpar::getActive(std::map<std::string,BaseNlpar*> nlpars){

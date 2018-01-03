@@ -1,5 +1,11 @@
 #include "tableAlgebra.hpp"
 
+#include <iostream>
+
+#include "imagePlane.hpp"
+#include "sourcePlane.hpp"
+#include "nonLinearPars.hpp"
+
 precomp::precomp(ImagePlane* image,BaseSourcePlane* source){
   int Nm = image->Nm;  
   int Sm = source->Sm;
@@ -49,7 +55,7 @@ void mymatrices::initMatrices(ImagePlane* image,BaseSourcePlane* source,std::str
   this->B.Ti = image->Nm;
   this->B.Tj = image->Nm;
   image->readB(&this->B,psfpath,stoi(psf["pix_x"]),stoi(psf["pix_y"]),stoi(psf["crop_x"]),stoi(psf["crop_y"]));
-  
+
   //Lensing matrix (Ni*Nj x Si*Sj) or (Nm x Sm) initialize here, but also in each iteration                                               [<---iteration dependent]
   this->L.Ti = image->Nm;
   this->L.Tj = source->Sm;
@@ -383,10 +389,10 @@ double getLogLike(ImagePlane* image,BaseSourcePlane* source,precomp* pcomp,std::
     return val;
   } else {
     getMin(image,source,pcomp);
-    double g   = pcomp->chi2/2. + nlpars[1]["lambda"]->val*pcomp->reg/2.;
-    double f1  = image->lookup.size()*log10(2*pi)/2.;
-    double f2  = source->Sm*log10(nlpars[1]["lambda"]->val)/2.;
-    double val = -g -f1 +f2 +(pcomp->detC)/2. +(pcomp->detHtH)/2. -(pcomp->detA)/2.;
+    double g   = pcomp->chi2/2.0 + nlpars[1]["lambda"]->val*pcomp->reg/2.0;
+    double f1  = image->lookup.size()*log10(2*pi)/2.0;
+    double f2  = source->Sm*log10(nlpars[1]["lambda"]->val)/2.0;
+    double val = -g -f1 +f2 +(pcomp->detC)/2.0 +(pcomp->detHtH)/2.0 -(pcomp->detA)/2.0;
     
     for(int i=0;i<nlpars.size();i++){
       for(auto it = nlpars[i].cbegin(); it != nlpars[i].cend(); ++it){
@@ -394,7 +400,7 @@ double getLogLike(ImagePlane* image,BaseSourcePlane* source,precomp* pcomp,std::
       }
     }
     printf("\n");
-    printf("%16.7f  %16.7f  %16.7f  %16.7f  %16.7f  %16.7f  %16.7f  %16.7f  %16.7f\n",pcomp->chi2,pcomp->reg,nlpars[1]["lambda"]->val*pcomp->reg,-g,-f1,f2,pcomp->detC/2.,pcomp->detHtH/2.,-pcomp->detA/2.);
+    printf("%16.7f  %16.7f  %16.7f  %16.7f  %16.7f  %16.7f  %16.7f  %16.7f  %16.7f\n",pcomp->chi2,pcomp->reg,nlpars[1]["lambda"]->val*pcomp->reg,-g,-f1,f2,pcomp->detC/2.0,pcomp->detHtH/2.0,-pcomp->detA/2.0);
     printf("%16.7f\n\n",val);
 
     return val;

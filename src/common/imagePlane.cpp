@@ -1,5 +1,13 @@
 #include "imagePlane.hpp"
 
+#include <cmath>
+#include <fstream>
+#include <cstdlib>
+#include <CCfits/CCfits>
+
+#include "tableAlgebra.hpp"
+
+
 //ImagePlane class implementation
 //============================================================================================
 ImagePlane::ImagePlane(const std::string filepath,int i,int j,double w,double h){

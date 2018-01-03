@@ -2,7 +2,6 @@
 #define TABLE_ALGEBRA_HPP
 
 #include <vector>
-#include <iostream>
 
 #include <Eigen/Dense>
 #include <Eigen/Sparse>
@@ -11,9 +10,11 @@
 #include "HODLR_Tree.hpp"
 #include "HODLR_Matrix.hpp"
 
-#include "imagePlane.hpp"
-#include "sourcePlane.hpp"
-#include "nonLinearPars.hpp"
+
+
+class BaseSourcePlane;
+class ImagePlane;
+class BaseNlpar;
 
 struct mytriplet {
   int i;
@@ -27,9 +28,6 @@ struct mytable {
   std::vector<mytriplet> tri;
 };
 
-class BaseSourcePlane;
-
-class ImagePlane;
 
 class mymatrices {
 public:
@@ -38,6 +36,9 @@ public:
   mytable B;
   mytable H;
   mytable L;
+
+  mymatrices(){};
+  ~mymatrices(){};
 
   void initMatrices(ImagePlane* image,BaseSourcePlane* source,std::string maskpath,std::string noise_flag,std::string covpath,std::string psfpath,std::map<std::string,std::string> psf);
 };
@@ -58,6 +59,7 @@ public:
   double chi2;
   double reg;
 
+  precomp(){};
   precomp(ImagePlane* image,BaseSourcePlane* source);
   ~precomp();
 };

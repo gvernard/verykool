@@ -2,6 +2,7 @@
 
 #include <cmath>
 
+
 GaussKernel::GaussKernel(double rmax,double sdev){
   this->type = "gauss";
   this->rmax = rmax;

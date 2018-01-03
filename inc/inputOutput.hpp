@@ -1,27 +1,20 @@
 #ifndef SUPPORT_FUNCS_HPP
 #define SUPPORT_FUNCS_HPP
 
-#include <math.h>
 #include <string>
-#include <cstring>
-#include <iostream>
-#include <fstream>
-#include <sstream>
 #include <vector>
 #include <map>
 
 #include "json/json.h"
 
 #include "nonLinearPars.hpp"
-#include "tableAlgebra.hpp"
 
 
-class precomp;
 class ImagePlane;
 class BaseSourcePlane;
-
-void outputInitial(std::vector<std::map<std::string,BaseNlpar*> > nlpars,std::string output);
-void outputGeneric(ImagePlane* image,BaseSourcePlane* source,std::vector<std::map<std::string,BaseNlpar*> > nlpars,precomp* pcomp,std::string output);
+class CollectionMassModels;
+class mymatrices;
+class precomp;
 
 class Initialization {
 public:
@@ -41,8 +34,7 @@ public:
   std::map<std::string,std::string> psf;       //parameters of the psf (x and y, total and cropped sizes)
   std::map<std::string,std::string> minimizer; //parameters for minimizer (MultiNest,Minuit2,etc)
 
-
-  std::vector<std::string> mmodel;                  //mass models of the lenses
+  std::vector<std::string> mmodel;                           //mass models of the lenses
   std::vector<std::map<std::string,BaseNlpar*> > nlpars;     //non-linear parameters of the physical system [0], other [1], and of the mass models [2-*]
 
 
@@ -58,12 +50,20 @@ public:
     this->nlpars.clear();
   };
 
-  int parseInputJSON(const char* path,const char* filename);
+  void parseInputJSON(const char* path,const char* filename);
 
 
 private:
   std::map<std::string,BaseNlpar*> nlparsFromJson(const Json::Value myjson);
 
 };
+
+
+
+void initialize_program(std::string path,std::string run,Initialization*& init,ImagePlane*& mydata,CollectionMassModels*& mycollection,BaseSourcePlane*& mysource,std::vector<myactive>& active,mymatrices*& matrices,precomp*& pcomp);
+void finalize_program(Initialization* init,ImagePlane* mydata,CollectionMassModels* mycollection,BaseSourcePlane* mysource,mymatrices* matrices,precomp* pcomp);
+
+void outputInitial(std::vector<std::map<std::string,BaseNlpar*> > nlpars,std::string output);
+void outputGeneric(ImagePlane* image,BaseSourcePlane* source,std::vector<std::map<std::string,BaseNlpar*> > nlpars,precomp* pcomp,std::string output);
 
 #endif /* SUPPORT_FUNCS_HPP */

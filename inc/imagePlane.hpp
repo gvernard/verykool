@@ -1,17 +1,14 @@
 #ifndef IMAGE_PLANE_HPP
 #define IMAGE_PLANE_HPP
 
-#include <cmath>
-#include <cstdlib>
-#include <stdio.h>
-#include <fstream>
+#include <valarray>
+#include <string>
 #include <vector>
-
-#include <CCfits/CCfits>
-
-#include "tableAlgebra.hpp"
+#include <map>
 
 struct mytable;
+
+
 class ImagePlane {
 public:
   int Ni;                    //pixels in x direction
@@ -26,6 +23,7 @@ public:
   int* active;               //active image pixels used in the construction of the adaptive grid
 
 
+  ImagePlane(){};
   ImagePlane(const std::string filepath,int i,int j,double w,double h);  //used to read images
   ImagePlane(int i,int j,double w,double h);                             //used to create images
   ImagePlane(int i,double w,double h);                                   //used to create masked images
