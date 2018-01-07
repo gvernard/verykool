@@ -1,4 +1,7 @@
 obj/
 bin/
 lib/
-analysis_tools/
+analysis_tools/*.pdf
+analysis_tools/*.png
+analysis_tools/*.log
+analysis_tools/*.aux
