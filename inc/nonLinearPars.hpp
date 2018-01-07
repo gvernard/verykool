@@ -2,17 +2,16 @@
 #define NON_LINEAR_PARS_HPP
 
 #include <string>
-#include <map>
 #include <vector>
+#include <map>
+#include <iostream>
 
-//used in minimizers
-struct myactive {
-  int index;
-  std::string nam;
-  int per;
-};
+// In this file: BasePrior, Uni, Gauss, Exp, and FactoryPrior
+//               Nlpar
 
-class BaseNlpar{
+class BasePrior;
+
+class Nlpar {
 public:
   std::string nam;
   int fix;
@@ -22,52 +21,70 @@ public:
   double min;
   double max;
   double ran;
-  std::map<std::string,double> pri;
+  BasePrior* pri;
 
-  BaseNlpar(){};
-  ~BaseNlpar(){
-    this->pri.clear();
+
+  Nlpar(){};
+  Nlpar(std::string a,int b,int c,double d,double e,double f,double g);
+  ~Nlpar(){
+    free(pri);
   };
 
-  virtual double prior(double x) = 0;
-  virtual void fromUnitCube(double u) = 0;
-  //  virtual void getPriorPars() = 0; maybe no need to be virtual (loop over the 'pri' map)
-  //  virtual void setPriorPars() = 0;
+  std::string getName();
+  double getValue();
+  int getActive();
+  void setNewPrior(BasePrior* prior);
 
-  static std::vector<std::string> getActive(std::map<std::string,BaseNlpar*> nlpars);
-
-  /*
-  static void printNlpars(std::map<std::string,BaseNlpar*> nlpars){
-    typedef std::map<std::string,BaseNlpar*>::iterator it_type;
-    for(it_type iterator=nlpars.begin();iterator!=nlpars.end();iterator++){
-      printf("nam: %s, val: %f\n",iterator->second->nam,iterator->second->val);
-    }
-  };
-  */
+  static std::vector<std::string> getVectorNames(std::vector<Nlpar*> pars);
+  static std::vector<double> getVectorValues(std::vector<Nlpar*> pars);
+  static std::vector<int> getVectorActive(std::vector<Nlpar*> pars);
+  static double getValueByName(std::string nam,std::vector<Nlpar*> pars);
 };
 
 
-class Uni: public BaseNlpar{
+class BasePrior {
 public:
-  Uni(std::string a,int b,int c,double d,double e,double f,double g,std::map<std::string,double> h);
-  ~Uni();
+  std::string type;
+  Nlpar* mother;
+
+  BasePrior(){};
+  ~BasePrior(){};
+
+  virtual double prior(double x) = 0;
+  virtual double fromUnitCube(double u) = 0;
+  virtual void printPars() = 0;
+  virtual std::map<std::string,double> getPars() = 0;
+};
+
+
+class Uni: public BasePrior {
+public:
+  Uni(Nlpar* p);
+  ~Uni(){};
   
   double prior(double x);
-  void fromUnitCube(double u);
+  double fromUnitCube(double u);
+  void printPars();
+  std::map<std::string,double> getPars();
 
 private:
   double p0; // the constant probability
 };
 
-class Gauss: public BaseNlpar{
+
+class Gauss: public BasePrior {
 public:
-  Gauss(std::string a,int b,int c,double d,double e,double f,double g,std::map<std::string,double> h);
-  ~Gauss();
+  Gauss(Nlpar* p,double a,double b);
+  ~Gauss(){};
   
   double prior(double x);
-  void fromUnitCube(double u);
+  double fromUnitCube(double u);
+  void printPars();
+  std::map<std::string,double> getPars();
 
 private:
+  double mean;
+  double sdev;
   double two_sdev2; // 2 times the sdev squared
   double fac;       // 1/(s*sqrt(2*pi)) the normalization factor of a normal distribution
   double den;       // the denominator of a truncated normal distribution (difference between two cumulative distributions)
@@ -75,49 +92,49 @@ private:
   double F(double x);
 };
 
-class Log: public BaseNlpar{
+
+class Exp: public BasePrior {
 public:
-  Log(std::string a,int b,int c,double d,double e,double f,double g,std::map<std::string,double> h);
-  ~Log();
+  Exp(Nlpar* p,double a);
+  ~Exp(){};
 
   double prior(double x);
-  void fromUnitCube(double u);
+  double fromUnitCube(double u);
+  void printPars();
+  std::map<std::string,double> getPars();
 
 private:
-  double fac; // 1/ln(10)
-  double p0;  // the constant probability in log space  
+  double beta;
+  double fac;
 };
 
 
-//This is a singleton class.
-class FactoryNlpar{
-public:
-  FactoryNlpar(FactoryNlpar const&) = delete;//Stop the compiler generating methods of copying the object.
-  void operator=(FactoryNlpar const&) = delete;
 
-  static FactoryNlpar* getInstance(){
-    static FactoryNlpar dum;//Guaranteed to be destroyed. Instantiated on first call.
+//This is a singleton class.
+class FactoryPrior {
+public:
+  FactoryPrior(FactoryPrior const&) = delete;//Stop the compiler generating methods of copying the object.
+  void operator=(FactoryPrior const&) = delete;
+
+  static FactoryPrior* getInstance(){
+    static FactoryPrior dum;//Guaranteed to be destroyed. Instantiated on first call.
     return &dum;
   }
 
-  BaseNlpar* createNlpar(std::string nam,int fix,int per,double val,double err,double min,double max,std::string pri_nam,std::map<std::string,double> pri_par){
-    if( pri_nam == "uni" ){ 
-      return new Uni(nam,fix,per,val,err,min,max,pri_par);
-    } else if ( pri_nam == "gauss" ){
-      return new Gauss(nam,fix,per,val,err,min,max,pri_par);
-    } else if ( pri_nam == "log" ){
-      return new Log(nam,fix,per,val,err,min,max,pri_par);
+  BasePrior* createPrior(Nlpar* mother,std::map<std::string,std::string> prior){
+    if( prior["type"] == "uni" ){ 
+      return new Uni(mother);
+    } else if( prior["type"] == "gauss" ){
+      return new Gauss(mother,stof(prior["mean"]),stof(prior["sdev"]));
+    } else if( prior["type"] == "exp" ){
+      return new Exp(mother,stof(prior["beta"]));
     } else {
       return NULL;
     }
   }
-
   
 private:
-  FactoryNlpar(){};
+  FactoryPrior(){};
 };
-
-
-
 
 #endif /* NON_LINEAR_PARS_HPP */

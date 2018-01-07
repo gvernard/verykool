@@ -5,36 +5,19 @@
 #include <cmath>
 #include <fstream>
 
-#include "tableAlgebra.hpp"
+#include "parameterModels.hpp"
 #include "nonLinearPars.hpp"
 #include "inputOutput.hpp"
-#include "mainLogLike.hpp"
+#include "tableAlgebra.hpp"
+
 
 
 
 //Functions related to the calculation of the Bayesian evidence and parameter estimation using MultiNest
 //==============================================================================================================================
-void MultiNest::minimize(std::map<std::string,std::string> opt,ImagePlane* image,BaseSourcePlane* source,CollectionMassModels* mycollection,std::vector<std::map<std::string,BaseNlpar*> > nlpars,mymatrices* mat,precomp* pcomp,const std::string output){
-  
+void MultiNest::minimize(std::map<std::string,std::string> opt,BaseParameterModel* pars,ImagePlane* image,BaseSourcePlane* source,CollectionMassModels* mycollection,mymatrices* mat,precomp* pcomp,const std::string output){
 
-  //Set active parameters from vector of sets of non-linear parameters (nlpars; order matters!!!)
-  std::vector<myactive> active;
-  myactive tmp;
-  std::vector<std::string> names;
-
-  //set active parameters (and periodicity) in order: physical, other, lens parameters for each lens
-  for(int j=0;j<nlpars.size();j++){
-    names = BaseNlpar::getActive(nlpars[j]);
-    for(int i=0;i<names.size();i++){
-      tmp = {j,names[i],nlpars[j][names[i]]->per};
-      active.push_back(tmp);
-    }
-    names.clear();
-  }
-
-  int myndims = active.size();
-
-
+  int myndims = pars->active.size();
   
   int IS         = 0;				// do Nested Importance Sampling?
   int mmodal     = 0;				// do mode separation?
@@ -52,7 +35,7 @@ void MultiNest::minimize(std::map<std::string,std::string> opt,ImagePlane* image
 
   int pWrap[ndims];				// which parameters to have periodic boundary conditions?
   for(int i=0;i<ndims;i++){
-    pWrap[i] = active[i].per;
+    pWrap[i] = pars->active[i]->per;
   }
 
   std::string strroot = output + "mn-";         // root for output files
@@ -72,9 +55,8 @@ void MultiNest::minimize(std::map<std::string,std::string> opt,ImagePlane* image
 
   //  void* context  = 0;			// not required by MultiNest, any additional information user wants to pass
 
-  std::vector< std::map<std::string,double> > map_pars(nlpars.size());
   int counter = 0;
-  extras myextras = {image,source,mycollection,nlpars,active,mat,output,&map_pars,pcomp,counter};
+  extras myextras = {pars,image,source,mycollection,mat,output,pcomp,counter};
 
   nested::run(IS,mmodal,ceff,nlive,tol,efr,ndims,nPar,nClsPar,maxModes,updInt,Ztol,root,seed,pWrap,fb,resume,outfile,initMPI,logZero,maxiter,MultiNestLogLike,MultiNestDumper,&myextras);
 }
@@ -129,16 +111,14 @@ void LogLike(double* Cube,int& ndim,int& npars,double& lnew,void* myextras){
 void MultiNestLogLike(double* Cube,int& ndim,int& npars,double& lnew,void* myextras){
   extras* e = (extras*) myextras; // need to cast back void pointer
 
-  //Update values for nlpars
-  for(int i=0;i<e->active.size();i++){
-    e->nlpars[e->active[i].index][e->active[i].nam]->fromUnitCube(Cube[i]);
-    //    printf("%8s: %7.3f\n",e->nlpars[e->active[i].index][e->active[i].nam]->nam,e->nlpars[e->active[i].index][e->active[i].nam]->val);
-    //    std::cout << e->nlpars[e->active[i].index][e->active[i].nam]->nam << ": " << e->nlpars[e->active[i].index][e->active[i].nam]->val << std::endl;
-    //    printf(" %7.3f",e->nlpars[e->active[i].index][e->active[i].nam]->val);
+  //Update values for active parameters
+  std::vector<double> new_pars;
+  for(int i=0;i<e->pars->active.size();i++){
+    new_pars.push_back( e->pars->active[i]->pri->fromUnitCube(Cube[i]) );
   }
-  //  printf("\n");
-
-  lnew = mainLogLike(e->image,e->source,e->mycollection,e->nlpars,e->mat,e->pcomp);
+  e->pars->updateActive(new_pars);
+  e->pars->updateParameterModel(e->image,e->source,e->mycollection,e->mat,e->pcomp);
+  lnew = e->pars->getLogLike(e->image,e->source,e->pcomp);
 }
 
 
@@ -172,19 +152,15 @@ void MultiNestDumper(int& nSamples,int& nlive,int& nPar,double** physLive,double
   FILE* fh;
 
   e->counter++;
-  outputGeneric(e->image,e->source,e->nlpars,e->pcomp,e->output + std::to_string(e->counter) + "_");
+  Initialization::outputGeneric(e->pars,e->image,e->source,e->pcomp,e->output + std::to_string(e->counter) + "_");
 
 
   // lastlive holds the parameter values for the last set of live points, and has the same structure as nlpars, with an array of nlive points for each parameter
-  std::vector< std::map<std::string,double*> > lastlive(nPar);
+  std::vector<double*> lastlive(nPar);
   for(int i=0;i<nPar;i++){
-    //allocate the array to index of nlpars, and parameter name
-    lastlive[e->active[i].index][e->active[i].nam] = (double*) calloc(nlive,sizeof(double));
+    lastlive[i] = (double*) calloc(nlive,sizeof(double));
     for(int j=0;j<nlive;j++){
-      //set the value of the parameter from the related multinest variable
-      e->nlpars[e->active[i].index][e->active[i].nam]->fromUnitCube( physLive[0][i*nlive+j] );
-      //lastlive[index][parameter name][j] is equal to the parameter value, which was set right above
-      lastlive[e->active[i].index][e->active[i].nam][j] = e->nlpars[e->active[i].index][e->active[i].nam]->val;
+      lastlive[i][j] = e->pars->active[i]->pri->fromUnitCube( physLive[0][i*nlive+j] );
     }
   }
 
@@ -192,7 +168,7 @@ void MultiNestDumper(int& nSamples,int& nlive,int& nPar,double** physLive,double
   fh = fopen( (e->output+"lastlive.txt").c_str() ,"w");
   for(int j=0;j<nlive;j++){
     for(int i=0;i<nPar;i++){
-      fprintf(fh," %25.18e",lastlive[e->active[i].index][e->active[i].nam][j]);
+      fprintf(fh," %25.18e",lastlive[i][j]);
     }
     fprintf(fh,"\n");
   }
@@ -210,8 +186,7 @@ void MultiNestDumper(int& nSamples,int& nlive,int& nPar,double** physLive,double
       postdist[j][1] = -posterior[0][(nPar)*nSamples+j];//and then -2*loglikelihood
       
       for(int i=0;i<nPar;i++){
-	e->nlpars[e->active[i].index][e->active[i].nam]->fromUnitCube( posterior[0][i*nSamples+j] );
-	postdist[j][2+i] = e->nlpars[e->active[i].index][e->active[i].nam]->val;
+	postdist[j][2+i] = e->pars->active[i]->pri->fromUnitCube( posterior[0][i*nSamples+j] );
       }
     }
   }
@@ -241,14 +216,11 @@ void MultiNestDumper(int& nSamples,int& nlive,int& nPar,double** physLive,double
   double* bests = (double*) calloc(nPar,sizeof(double));
   double* maps  = (double*) calloc(nPar,sizeof(double));
   for(int i=0;i<nPar;i++){
-    e->nlpars[e->active[i].index][e->active[i].nam]->fromUnitCube( paramConstr[0][i] );
-    means[i] = e->nlpars[e->active[i].index][e->active[i].nam]->val;
-    sdevs[i] = paramConstr[0][nPar+i] * e->nlpars[e->active[i].index][e->active[i].nam]->ran;
-    e->nlpars[e->active[i].index][e->active[i].nam]->fromUnitCube( paramConstr[0][2*nPar+i] );
-    bests[i] = e->nlpars[e->active[i].index][e->active[i].nam]->val;
-    e->nlpars[e->active[i].index][e->active[i].nam]->fromUnitCube( paramConstr[0][3*nPar+i] );
-    maps[i]  = e->nlpars[e->active[i].index][e->active[i].nam]->val;
-    (*(e->map_pars))[e->active[i].index][e->active[i].nam] = e->nlpars[e->active[i].index][e->active[i].nam]->val;  
+    means[i] = e->pars->active[i]->pri->fromUnitCube( paramConstr[0][i] );
+    sdevs[i] = paramConstr[0][nPar+i] * e->pars->active[i]->ran;
+    bests[i] = e->pars->active[i]->pri->fromUnitCube( paramConstr[0][i] );
+    maps[i]  = e->pars->active[i]->pri->fromUnitCube( paramConstr[0][i] );
+    //    (*(e->map_pars))[e->active[i].index][e->active[i].nam] = e->nlpars[e->active[i].index][e->active[i].nam]->val;  
   }
 
   /*
@@ -269,7 +241,7 @@ void MultiNestDumper(int& nSamples,int& nlive,int& nPar,double** physLive,double
   // File with the mean, sdev, best-fit, and MAP parameters
   fh = fopen( (e->output+"vkl_stats.txt").c_str() ,"w");
   for(int i=0;i<nPar;i++){
-    fprintf(fh,"%25s %25.18e %25.18e %25.18e %25.18e\n",e->active[i].nam.c_str(),means[i],sdevs[i],bests[i],maps[i]);
+    fprintf(fh,"%25s %25.18e %25.18e %25.18e %25.18e\n",e->pars->active[i]->nam.c_str(),means[i],sdevs[i],bests[i],maps[i]);
   }
   fclose(fh);
 

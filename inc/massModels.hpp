@@ -15,9 +15,6 @@ extern "C"{
 }
 
 
-class BaseNlpar;
-
-
 class BaseMassModel{
 public:
   int n;
@@ -28,7 +25,7 @@ public:
     mpars.clear();
   };
   
-  void setMassPars(std::map<std::string,BaseNlpar*> nlpars);
+  void setMassPars(std::vector<Nlpar*> nlpars);
   void printMassPars();
   virtual void defl(double xin,double yin,double& xout,double& yout) = 0;
 };
@@ -36,13 +33,13 @@ public:
 
 class Sie: public BaseMassModel{
 public:
-  Sie(std::map<std::string,BaseNlpar*> nlpars);
+  Sie(std::vector<Nlpar*> nlpars);
   void defl(double xin,double yin,double& xout,double& yout);
 };
 
 class Spemd: public BaseMassModel{
 public:
-  Spemd(std::map<std::string,BaseNlpar*> nlpars);
+  Spemd(std::vector<Nlpar*> nlpars);
   void defl(double xin,double yin,double& xout,double& yout);
 };
 
@@ -58,7 +55,7 @@ public:
     return &dum;
   }
 
-  BaseMassModel* createMassModel(const std::string &modelname,std::map<std::string,BaseNlpar*> nlpars){
+  BaseMassModel* createMassModel(const std::string &modelname,std::vector<Nlpar*> nlpars){
     if( modelname == "sie" ){
       return new Sie(nlpars);
     } else if ( modelname == "spemd" ){
@@ -84,7 +81,7 @@ public:
     this->mpars["g1"] = 0.0;
     this->mpars["g2"] = 0.0;
   }
-  CollectionMassModels(std::map<std::string,BaseNlpar*> nlpars){
+  CollectionMassModels(std::vector<Nlpar*> nlpars){
     this->setPhysicalPars(nlpars);
   };
   ~CollectionMassModels(){
@@ -94,9 +91,10 @@ public:
     mpars.clear();
   };
 
-  void setPhysicalPars(std::map<std::string,BaseNlpar*> nlpars){
-    this->mpars["g"]   = nlpars["g"]->val;
-    this->mpars["phi"] = nlpars["phi"]->val;
+  void setPhysicalPars(std::vector<Nlpar*> nlpars){
+    for(int i=0;i<nlpars.size();i++){
+      this->mpars[nlpars[i]->nam] = nlpars[i]->val;
+    }
     this->mpars["g1"]  = this->mpars["g"]*cos(2*this->mpars["phi"]);
     this->mpars["g2"]  = this->mpars["g"]*sin(2*this->mpars["phi"]);
   }

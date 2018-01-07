@@ -1,9 +1,10 @@
 #ifndef SOURCE_PLANE_HPP
 #define SOURCE_PLANE_HPP
 
+#include <string>
+#include <vector>
 #include <cstdlib>
 #include <map>
-#include <string>
 
 /*
 #include <boost/geometry.hpp> 
@@ -13,12 +14,13 @@
 BOOST_GEOMETRY_REGISTER_BOOST_TUPLE_CS(cs::cartesian)
 */
 
-#include "cov_kernels.hpp"
+#include "covKernels.hpp"
 
 
 typedef std::map<int,double>::iterator it_int_double;
 
 struct mytable;
+class Nlpar;
 class ImagePlane;
 class CollectionMassModels;
 
@@ -60,7 +62,7 @@ public:
 
   //non-virtual members
   void normalize();
-  void setSourceCovariance(std::map<std::string,BaseNlpar*> pars);
+  void setSourceCovariance(std::vector<Nlpar> reg_pars){};
 };
 
 

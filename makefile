@@ -24,14 +24,14 @@ COSMOSIS_LIBS  = -lcosmosis
 COMMON_SRC   = src/common
 COMMON_FLAGS = -std=c++11 -fPIC
 COMMON_LIBS  = -lgfortran -lCCfits -lcfitsio -ljsoncpp -lgmp -lCGAL
-DEPS         = imagePlane.hpp inputOutput.hpp massModels.hpp sourcePlane.hpp tableAlgebra.hpp nonLinearPars.hpp cov_kernels.hpp mainLogLike.hpp
-OBJ          = imagePlane.o   inputOutput.o   massModels.o   sourcePlane.o   tableAlgebra.o   nonLinearPars.o   cov_kernels.o   fastell.o
+DEPS         = imagePlane.hpp inputOutput.hpp massModels.hpp sourcePlane.hpp tableAlgebra.hpp nonLinearPars.hpp parameterModels.hpp covKernels.hpp
+OBJ          = imagePlane.o   inputOutput.o   massModels.o   sourcePlane.o   tableAlgebra.o   nonLinearPars.o   parameterModels.o   covKernels.o   fastell.o
 COMMON_DEPS  = $(patsubst %,$(INC_DIR)/%,$(DEPS)) #Pad names with dir
 COMMON_OBJ   = $(patsubst %,$(OBJ_DIR)/%,$(OBJ))  #Pad names with dir
 
 
 
-all: verykool cosmosis
+all: verykool cosmosis other
 
 
 
@@ -57,26 +57,33 @@ $(OBJ_DIR)/min_cosmosis.o: $(COSMOSIS_SRC)/min_cosmosis.cpp
 
 
 
+# Compiling other code
+$(OBJ_DIR)/createCosmosisValuesPriorsIni.o: src/other/createCosmosisValuesPriorsIni.cpp
+	$(GPP) -std=c++11 -I inc -c -o $@ $< 
+
+
+
 common: $(COMMON_OBJ)
-	@echo ""
-	@echo " >>> making common code: done!"
-	@echo ""
 	@echo ""
 
 
 cosmosis: common $(OBJ_DIR)/min_cosmosis.o
+	@echo ""
 	$(CC) $(COSMOSIS_FLAGS) -I inc -o $(LIB_DIR)/libverykool.so $(COMMON_OBJ) $(OBJ_DIR)/min_cosmosis.o $(COMMON_LIBS) $(COSMOSIS_LIBS)
 	@echo ""
-	@echo " >>> making cosmosis: done!"
+
+
+#verykool: common $(OBJ_DIR)/verykool.o $(OBJ_DIR)/min_multinest.o $(OBJ_DIR)/min_simplex.o $(VERYKOOL_SRC)/minimizers.hpp
+verykool: common $(OBJ_DIR)/verykool.o $(OBJ_DIR)/min_multinest.o $(VERYKOOL_SRC)/minimizers.hpp
 	@echo ""
+#	$(MPICC) $(VERYKOOL_FLAGS) -I inc -o $(BIN_DIR)/$@ $(COMMON_OBJ) $(OBJ_DIR)/verykool.o $(OBJ_DIR)/min_multinest.o $(OBJ_DIR)/min_simplex.o $(COMMON_LIBS) $(VERYKOOL_LIBS)
+	$(MPICC) $(VERYKOOL_FLAGS) -I inc -o $(BIN_DIR)/$@ $(COMMON_OBJ) $(OBJ_DIR)/verykool.o $(OBJ_DIR)/min_multinest.o $(COMMON_LIBS) $(VERYKOOL_LIBS)
 	@echo ""
 
 
-verykool: common $(OBJ_DIR)/verykool.o $(OBJ_DIR)/min_multinest.o $(OBJ_DIR)/min_simplex.o $(VERYKOOL_SRC)/minimizers.hpp
-	$(MPICC) $(VERYKOOL_FLAGS) -I inc -o $(BIN_DIR)/$@ $(COMMON_OBJ) $(OBJ_DIR)/verykool.o $(OBJ_DIR)/min_multinest.o $(OBJ_DIR)/min_simplex.o $(COMMON_LIBS) $(VERYKOOL_LIBS)
+other: common $(OBJ_DIR)/createCosmosisValuesPriorsIni.o
 	@echo ""
-	@echo " >>> making verykool: done!"
-	@echo ""
+	$(GPP) -std=c++11 -I inc -o $(BIN_DIR)/createCosmosisValuesPriorsIni $(COMMON_OBJ) $(OBJ_DIR)/createCosmosisValuesPriorsIni.o $(COMMON_LIBS)
 	@echo ""
 
 

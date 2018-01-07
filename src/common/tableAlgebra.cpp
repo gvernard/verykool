@@ -2,9 +2,10 @@
 
 #include <iostream>
 
+#include "nonLinearPars.hpp"
+#include "parameterModels.hpp"
 #include "imagePlane.hpp"
 #include "sourcePlane.hpp"
-#include "nonLinearPars.hpp"
 
 precomp::precomp(ImagePlane* image,BaseSourcePlane* source){
   int Nm = image->Nm;  
@@ -185,7 +186,7 @@ void setAlgebraInit(ImagePlane* image,BaseSourcePlane* source,mymatrices* mat,pr
 
 
 // Calculate tables and related quantities at every iteration
-void setAlgebraRuntime(ImagePlane* image,BaseSourcePlane* source,std::map<std::string,BaseNlpar*> reg_pars,mymatrices* mat,precomp* pcomp){
+void setAlgebraRuntime(ImagePlane* image,BaseSourcePlane* source,const std::vector<Nlpar*> reg_pars,mymatrices* mat,precomp* pcomp){
   int Nm = image->Nm;
   int Sm = source->Sm;
 
@@ -267,7 +268,7 @@ void setAlgebraRuntime(ImagePlane* image,BaseSourcePlane* source,std::map<std::s
   if( source->reg == "covariance_kernel" ){
     A = Mt*pcomp->C*M + pcomp->HtH;
   } else {
-    A = Mt*pcomp->C*M + reg_pars["lambda"]->val*pcomp->HtH;
+    A = Mt*pcomp->C*M + Nlpar::getValueByName("lambda",reg_pars)*pcomp->HtH;
   }
   pcomp->A = A;
 
@@ -367,51 +368,10 @@ void getMin(ImagePlane* image,BaseSourcePlane* source,precomp* pcomp){
 }
 
 
-double getLogLike(ImagePlane* image,BaseSourcePlane* source,precomp* pcomp,std::vector<std::map<std::string,BaseNlpar*> > nlpars){
-  double pi  = 3.14159265358979323846;
 
-  if( source->reg == "covariance_kernel" ){
-    getMin(image,source,pcomp);
-    double g   = pcomp->chi2/2. + pcomp->reg/2.;
-    double f1  = image->lookup.size()*log10(2*pi)/2.;
-    //double f2  = source->Sm*log10(nlpars[1]["lambda"]->val)/2.;
-    double val = -g -f1 +(pcomp->detC)/2. +(pcomp->detHtH)/2. -(pcomp->detA)/2.;
-    
-    for(int i=0;i<nlpars.size();i++){
-      for(auto it = nlpars[i].cbegin(); it != nlpars[i].cend(); ++it){
-	printf(" %12.8f",it->second->val);
-      }
-    }
-    printf("\n");
-    printf("%16.7f  %16.7f  %16.7f  %16.7f  %16.7f  %16.7f  %16.7f\n",pcomp->chi2,pcomp->reg,-g,-f1,pcomp->detC/2.,pcomp->detHtH/2.,-pcomp->detA/2.);
-    printf("%16.7f\n\n",val);
-
-    return val;
-  } else {
-    getMin(image,source,pcomp);
-    double g   = pcomp->chi2/2.0 + nlpars[1]["lambda"]->val*pcomp->reg/2.0;
-    double f1  = image->lookup.size()*log10(2*pi)/2.0;
-    double f2  = source->Sm*log10(nlpars[1]["lambda"]->val)/2.0;
-    double val = -g -f1 +f2 +(pcomp->detC)/2.0 +(pcomp->detHtH)/2.0 -(pcomp->detA)/2.0;
-    
-    for(int i=0;i<nlpars.size();i++){
-      for(auto it = nlpars[i].cbegin(); it != nlpars[i].cend(); ++it){
-	printf(" %12.8f",it->second->val);
-      }
-    }
-    printf("\n");
-    printf("%16.7f  %16.7f  %16.7f  %16.7f  %16.7f  %16.7f  %16.7f  %16.7f  %16.7f\n",pcomp->chi2,pcomp->reg,nlpars[1]["lambda"]->val*pcomp->reg,-g,-f1,f2,pcomp->detC/2.0,pcomp->detHtH/2.0,-pcomp->detA/2.0);
-    printf("%16.7f\n\n",val);
-
-    return val;
-  }
-
-}
-
-
-
+/*
 //void getInverseCovarianceMatrix(BaseSourcePlane* source,std::map<std::string,BaseNlpar*> pars,precomp* pcomp){
-void getInverseCovarianceMatrixHODLR(mymatrices* mat,std::map<std::string,BaseNlpar*> pars,precomp* pcomp){
+void getInverseCovarianceMatrixHODLR(mymatrices* mat,const std::vector<Nlpar>& pars,precomp* pcomp){
 
   // Set up the kernel.
   //  gaussKernel kernel(source->Sm,source->x,source->y,pars);
@@ -458,4 +418,4 @@ void getInverseCovarianceMatrixHODLR(mymatrices* mat,std::map<std::string,BaseNl
   std::cout << "det: " << determinant << std::endl;
   //  pcomp->C    = C;
 }
-
+*/

@@ -1,11 +1,14 @@
 #include "massModels.hpp"
 
+#include <string>
+#include <vector>
+#include <map>
+
 //Abstract class: BaseMassModel
 //===============================================================================================================
-void BaseMassModel::setMassPars(std::map<std::string,BaseNlpar*> nlpars){
-  typedef std::map<std::string,BaseNlpar*>::iterator it_type;
-  for(it_type iterator=nlpars.begin();iterator!=nlpars.end();iterator++){
-    this->mpars[iterator->first] = iterator->second->val;
+void BaseMassModel::setMassPars(std::vector<Nlpar*> nlpars){
+  for(int i=0;i<nlpars.size();i++){
+    this->mpars[nlpars[i]->nam] = nlpars[i]->val;
   }
 }
 
@@ -20,7 +23,7 @@ void BaseMassModel::printMassPars(){
 
 //Derived class from BaseMassModel: Sie (Singular Isothermal Ellipsoid)
 //===============================================================================================================
-Sie::Sie(std::map<std::string,BaseNlpar*> nlpars){
+Sie::Sie(std::vector<Nlpar*> nlpars){
   this->n = 5;
   setMassPars(nlpars);
 }
@@ -129,7 +132,7 @@ void Sie_g::defl(double xin,double yin,double& xout,double& yout){
 
 //Derived class from BaseMassModel: Spemd (Softened Power-law Elliptical Mass Density)
 //===============================================================================================================
-Spemd::Spemd(std::map<std::string,BaseNlpar*> nlpars){
+Spemd::Spemd(std::vector<Nlpar*> nlpars){
   this->n = 7;
   setMassPars(nlpars);
 }

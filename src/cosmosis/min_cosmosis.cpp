@@ -3,23 +3,23 @@
 
 #include "cosmosis/datablock/datablock.hh"
 
+#include "parameterModels.hpp"
 #include "inputOutput.hpp"
 #include "imagePlane.hpp"
 #include "massModels.hpp"
 #include "sourcePlane.hpp"
 #include "tableAlgebra.hpp"
 
-#include "mainLogLike.hpp"
 
 
 
 class vkl_vars {
 public:
   Initialization* init;
+  BaseParameterModel* mypars;
   ImagePlane* mydata;
   CollectionMassModels* mycollection;
   BaseSourcePlane* mysource;
-  std::vector<myactive> active;
   mymatrices* matrices;
   precomp* pcomp;
 
@@ -47,7 +47,7 @@ extern "C" {
     //    vkl_vars* dum = (vkl_vars*) malloc(sizeof(vkl_vars));
     vkl_vars* dum = new vkl_vars();
 
-    initialize_program(path,run,dum->init,dum->mydata,dum->mycollection,dum->mysource,dum->active,dum->matrices,dum->pcomp);
+    Initialization::initialize_program(path,run,dum->init,dum->mypars,dum->mydata,dum->mycollection,dum->mysource,dum->matrices,dum->pcomp);
 
 
     printf("%-25s","Starting minimization");
@@ -66,15 +66,18 @@ extern "C" {
 
     vkl_vars* dum = (vkl_vars*) config;
 
-    // Update active parameters
-    for(int i=0;i<dum->active.size();i++){
+
+    std::vector<std::string> full_names = dum->mypars->getActiveFullNames();
+    std::vector<double> values;
+    for(int i=0;i<full_names.size();i++){
       double val;
-      std::string par_name = std::to_string(dum->active[i].index) + "_" + dum->active[i].nam;
-      status |= block->get_val("nlpars",(std::to_string(dum->active[i].index) + "_" + dum->active[i].nam).c_str(),val);      
-      dum->init->nlpars[dum->active[i].index][dum->active[i].nam]->val = val;
+      status |= block->get_val("nlpars",full_names[i].c_str(),val);
+      values.push_back(val);
     }
 
-    double like = mainLogLike(dum->mydata,dum->mysource,dum->mycollection,dum->init->nlpars,dum->matrices,dum->pcomp);
+    dum->mypars->updateActive(values);
+    dum->mypars->updateParameterModel(dum->mydata,dum->mysource,dum->mycollection,dum->matrices,dum->pcomp);
+    double like = dum->mypars->getLogLike(dum->mydata,dum->mysource,dum->pcomp);
     
     
     //double like = 99.99;
@@ -92,7 +95,7 @@ extern "C" {
     fflush(stdout);
     
     vkl_vars* dum = (vkl_vars*) config;
-    finalize_program(dum->init,dum->mydata,dum->mycollection,dum->mysource,dum->matrices,dum->pcomp);
+    Initialization::finalize_program(dum->init,dum->mypars,dum->mydata,dum->mycollection,dum->mysource,dum->matrices,dum->pcomp);
     delete(dum);
   }
 

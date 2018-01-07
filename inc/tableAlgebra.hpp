@@ -12,9 +12,10 @@
 
 
 
+class BaseParameterModel;
+class Nlpar;
 class BaseSourcePlane;
 class ImagePlane;
-class BaseNlpar;
 
 struct mytriplet {
   int i;
@@ -65,19 +66,18 @@ public:
 };
 
 void setAlgebraInit(ImagePlane* image,BaseSourcePlane* source,mymatrices* mat,precomp* pcomp);
-void setAlgebraRuntime(ImagePlane* image,BaseSourcePlane* source,std::map<std::string,BaseNlpar*> reg_pars,mymatrices* mat,precomp* pcomp);
+void setAlgebraRuntime(ImagePlane* image,BaseSourcePlane* source,const std::vector<Nlpar*> reg_pars,mymatrices* mat,precomp* pcomp);
 void solveLinearSparseS(ImagePlane* image,BaseSourcePlane* source,precomp* pcomp);
-double getLogLike(ImagePlane* image,BaseSourcePlane* source,precomp* pcomp,std::vector<std::map<std::string,BaseNlpar*> > nlpars);
+double getLogLike(ImagePlane* image,BaseSourcePlane* source,precomp* pcomp,BaseParameterModel* mypars);
 
 void getSourceErrors(int Sm,double* errors,precomp* pcomp);
 void getMockData(ImagePlane* mockdata,BaseSourcePlane* source,precomp* pcomp);
 void getMin(ImagePlane* image,BaseSourcePlane* source,precomp* pcomp);
 
 
-
+/*
 class gaussKernel : public HODLR_Matrix {
 public:
-  //  gaussKernel(int Sm,double* x,double* y,std::map<std::string,BaseNlpar*> pars) : pSm(Sm), px(x), py(y), ppars(pars) {};
   gaussKernel(int dum){};
   
   double get_Matrix_Entry(const unsigned i,const unsigned j){
@@ -90,11 +90,10 @@ private:
   int pSm;
   double* px;
   double* py;
-  std::map<std::string,BaseNlpar*> ppars;  
+  std::vector<Nlpar> ppars;  
 };
 
-//void getInverseCovarianceMatrix(BaseSourcePlane* source,std::map<std::string,BaseNlpar*> pars,precomp* pcomp);
-void getInverseCovarianceMatrixHODLR(mymatrices* mat,std::map<std::string,BaseNlpar*> pars,precomp* pcomp);
-
+void getInverseCovarianceMatrixHODLR(mymatrices* mat,const std::vector<Nlpar>& pars,precomp* pcomp);
+*/
 
 #endif /* TABLE_ALGEBRA_HPP */

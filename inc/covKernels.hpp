@@ -2,9 +2,9 @@
 #define COVARIANCE_KERNELS_HPP
 
 #include <string>
-#include <map>
+#include <vector>
 
-#include "nonLinearPars.hpp"
+class Nlpar;
 
 class BaseCovKernel {
 public:
@@ -15,7 +15,7 @@ public:
   ~BaseCovKernel(){};
   
   virtual double getCovariance(double r) = 0;
-  virtual void setParameters(std::map<std::string,BaseNlpar*> pars) = 0;
+  virtual void setParameters(std::vector<Nlpar*> pars) = 0;
 };
 
 
@@ -23,9 +23,9 @@ class GaussKernel: public BaseCovKernel {
 public:
   double sdev;
 
-  GaussKernel(double rmax,double sdev);
+  GaussKernel(std::vector<Nlpar*> pars);
   double getCovariance(double r);
-  void setParameters(std::map<std::string,BaseNlpar*> pars);
+  void setParameters(std::vector<Nlpar*> pars);
 private:
   double fac = 0.39894228; // 1/sqrt(2*pi)
 };
@@ -35,9 +35,9 @@ public:
   double ampl;
   double slope;
 
-  PowerLawKernel(double rmax,double ampl,double slope);
+  PowerLawKernel(std::vector<Nlpar*> pars);
   double getCovariance(double r);
-  void setParameters(std::map<std::string,BaseNlpar*> pars);
+  void setParameters(std::vector<Nlpar*> pars);
 };
 
 class FactoryCovKernel {//This is a singleton class.
@@ -50,11 +50,11 @@ public:
     return &dum;
   }
 
-  BaseCovKernel* createCovKernel(std::string kernel_type,std::map<std::string,BaseNlpar*> pars){
+  BaseCovKernel* createCovKernel(std::string kernel_type,std::vector<Nlpar*> pars){
     if( kernel_type == "gauss" ){
-      return new GaussKernel(pars["rmax"]->val,pars["sdev"]->val);
+      return new GaussKernel(pars);
     } else if( kernel_type == "power_law" ){
-      return new PowerLawKernel(pars["rmax"]->val,pars["ampl"]->val,pars["slope"]->val);
+      return new PowerLawKernel(pars);
     } else {
       return NULL;
     }

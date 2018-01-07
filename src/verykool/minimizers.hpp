@@ -6,15 +6,15 @@
 #include <map>
 
 #include "multinest.h"
-#include "simplex.hpp"
+//#include "simplex.hpp"
 
+class BaseParameterModel;
 class ImagePlane;
 class BaseSourcePlane;
 class CollectionMassModels;
 class mymatrices;
 class precomp;
-class BaseNlpar;
-struct myactive;
+
 
 
 // BaseMinimizer parent/base class
@@ -24,7 +24,7 @@ public:
   BaseMinimizer(){};
   ~BaseMinimizer(){};
 
-  virtual void minimize(std::map<std::string,std::string> minimizer,ImagePlane* image,BaseSourcePlane* source,CollectionMassModels* mycollection,std::vector<std::map<std::string,BaseNlpar*> > nlpars,mymatrices* mat,precomp* pcomp,const std::string output) = 0;
+  virtual void minimize(std::map<std::string,std::string> minimizer,BaseParameterModel* mypars,ImagePlane* image,BaseSourcePlane* source,CollectionMassModels* mycollection,mymatrices* mat,precomp* pcomp,const std::string output) = 0;
   virtual void output() = 0;
 };
 
@@ -37,7 +37,7 @@ public:
   Nothing(){};
   ~Nothing(){};
   
-  void minimize(std::map<std::string,std::string> minimizer,ImagePlane* image,BaseSourcePlane* source,CollectionMassModels* mycollection,std::vector<std::map<std::string,BaseNlpar*> > nlpars,mymatrices* mat,precomp* pcomp,const std::string output){};
+  void minimize(std::map<std::string,std::string> minimizer,BaseParameterModel* mypars,ImagePlane* image,BaseSourcePlane* source,CollectionMassModels* mycollection,mymatrices* mat,precomp* pcomp,const std::string output){};
   void output(){};
 };
 
@@ -45,14 +45,12 @@ public:
 // MultiNest class and related stuff
 //================================================================================================================================================
 struct extras{
+  BaseParameterModel* pars;
   ImagePlane* image;
   BaseSourcePlane* source;
   CollectionMassModels* mycollection;
-  std::vector<std::map<std::string,BaseNlpar*> > nlpars;
-  std::vector<myactive> active;
   mymatrices* mat;
   std::string output;
-  std::vector<std::map<std::string,double> >* map_pars;
   precomp* pcomp;
   int counter;
 };
@@ -66,13 +64,13 @@ public:
   MultiNest(){};
   ~MultiNest(){};
   
-  void minimize(std::map<std::string,std::string> minimizer,ImagePlane* image,BaseSourcePlane* source,CollectionMassModels* mycollection,std::vector<std::map<std::string,BaseNlpar*> > nlpars,mymatrices* mat,precomp* pcomp,const std::string output);
+  void minimize(std::map<std::string,std::string> minimizer,BaseParameterModel* pars,ImagePlane* image,BaseSourcePlane* source,CollectionMassModels* mycollection,mymatrices* mat,precomp* pcomp,const std::string output);
   void output();
 };
 
 
 
-
+/*
 // The implementation of mySimplex derived class
 //================================================================================================================================================
 class mySimplex: public BaseMinimizer,public Simplex {
@@ -99,7 +97,7 @@ private:
   std::vector<double> initPars(std::vector<std::map<std::string,BaseNlpar*> > nlpars);
   void printPars(const std::vector<double>& c);
 };
-
+*/
 
 
 
@@ -131,7 +129,7 @@ public:
     return &dum;
   }
 
-  BaseMinimizer* createMinimizer(std::map<std::string,std::string> minimizer,ImagePlane* image,BaseSourcePlane* source,CollectionMassModels* collection,std::vector<std::map<std::string,BaseNlpar*> > nlpars,mymatrices* matrices,precomp* pcomp,const std::string output){
+  BaseMinimizer* createMinimizer(std::map<std::string,std::string> minimizer,BaseParameterModel* pars,ImagePlane* image,BaseSourcePlane* source,CollectionMassModels* collection,mymatrices* matrices,precomp* pcomp,const std::string output){
 
     if( minimizer["type"] == "test" ){
       printf("%-25s","using given parameters");
@@ -141,10 +139,10 @@ public:
       printf("%-25s","using MultiNest");
       fflush(stdout);
       return new MultiNest();
-    } else if( minimizer["type"] == "simplex" ){
-      printf("%-25s","using Simplex");
-      fflush(stdout);
-      return new mySimplex(image,source,collection,nlpars,matrices,pcomp);
+      //    } else if( minimizer["type"] == "simplex" ){
+      //      printf("%-25s","using Simplex");
+      //      fflush(stdout);
+      //      return new mySimplex(image,source,collection,nlpars,matrices,pcomp);
     } else {
       return NULL;
     }

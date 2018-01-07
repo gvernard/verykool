@@ -17,7 +17,7 @@
 #include <CCfits/CCfits>
 
 #include "imagePlane.hpp"
-#include "cov_kernels.hpp"
+#include "covKernels.hpp"
 #include "massModels.hpp"
 #include "tableAlgebra.hpp"
 
@@ -1051,13 +1051,13 @@ void AdaptiveSource::constructH(mytable* H){
 	  if( ymin <= p0.y && p0.y <= ymax ){
 	    xypoint pint = intersection_point_x(p0,p1,p2);
 	    double l2 = ((p1.y-p0.y)*(pint.x-p1.x)+(p0.x-p1.x)*(pint.y-p1.y))/((p2.y-p1.y)*(p0.x-p1.x)+(p1.x-p2.x)*(p0.y-p1.y));
-	    double l1 = 1.- l2;
+	    double l1 = 1.0 - l2;
 	    //	    double d12 = pow(p1.x-p2.x,2) + pow(p1.y-p2.y,2);
 	    //	    double di2 = pow(pint.x-p2.x,2) + pow(pint.y-p2.y,2);
 	    //	    double l1 = sqrt(di2/d12);
 	    //	    double l2 = 1. - l1;
 	    double d  = fabs(p0.x-pint.x);
-	    weights[ i            ] -= 1./d;
+	    weights[ i            ] -= 1.0/d;
 	    weights[ indices[j]   ] += l1/d;
 	    weights[ indices[j+1] ] += l2/d;
 	  }
@@ -1075,13 +1075,13 @@ void AdaptiveSource::constructH(mytable* H){
 	  if( xmin <= p0.x && p0.x <= xmax ){
 	    xypoint pint = intersection_point_y(p0,p1,p2);
 	    double l2 = ((p1.y-p0.y)*(pint.x-p1.x)+(p0.x-p1.x)*(pint.y-p1.y))/((p2.y-p1.y)*(p0.x-p1.x)+(p1.x-p2.x)*(p0.y-p1.y));
-	    double l1 = 1.- l2;
+	    double l1 = 1.0 - l2;
 	    //	    double d12 = pow(p1.x-p2.x,2) + pow(p1.y-p2.y,2);
 	    //	    double di2 = pow(pint.x-p2.x,2) + pow(pint.y-p2.y,2);
 	    //	    double l1 = sqrt(di2/d12);
 	    //	    double l2 = 1. - l1;
 	    double d  = fabs(p0.y-pint.y);
-	    weights[ i            ] -= 1./d;
+	    weights[ i            ] -= 1.0/d;
 	    weights[ indices[j]   ] += l1/d;
 	    weights[ indices[j+1] ] += l2/d;
 	  }
