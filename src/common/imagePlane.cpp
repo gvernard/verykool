@@ -5,7 +5,7 @@
 #include <cstdlib>
 #include <CCfits/CCfits>
 
-#include "tableAlgebra.hpp"
+#include "tableDefinition.hpp"
 
 
 //ImagePlane class implementation
@@ -16,6 +16,12 @@ ImagePlane::ImagePlane(const std::string filepath,int i,int j,double w,double h)
   Nm     = Ni*Nj;
   width  = w;
   height = h;
+  S.Ti = Nm;
+  S.Tj = Nm;
+  C.Ti = Nm;
+  C.Tj = Nm;
+  B.Ti = Nm;
+  B.Tj = Nm;
 
   std::unique_ptr<CCfits::FITS> pInfile(new CCfits::FITS(filepath,CCfits::Read,true));
   CCfits::PHDU& image = pInfile->pHDU();
@@ -51,6 +57,12 @@ ImagePlane::ImagePlane(int i,int j,double w,double h){
   Nm     = Ni*Nj;
   width  = w;
   height = h;
+  S.Ti = Nm;
+  S.Tj = Nm;
+  C.Ti = Nm;
+  C.Tj = Nm;
+  B.Ti = Nm;
+  B.Tj = Nm;
 
   img = (double*) calloc(Nm,sizeof(double));
   x   = (double*) calloc(Nm,sizeof(double));
@@ -76,6 +88,12 @@ ImagePlane::ImagePlane(int i,double w,double h){
   Nm     = i;
   width  = w;
   height = h;
+  S.Ti = Nm;
+  S.Tj = Nm;
+  C.Ti = Nm;
+  C.Tj = Nm;
+  B.Ti = Nm;
+  B.Tj = Nm;
 
   img = (double*) calloc(Nm,sizeof(double));
   x   = (double*) calloc(Nm,sizeof(double));
@@ -147,11 +165,11 @@ void ImagePlane::readFits(const std::string filepath,std::valarray<float>& conte
   }
 }
 
-void ImagePlane::readS(mytable* S,const std::string filepath){
+void ImagePlane::readS(const std::string filepath){
   if( filepath == "0" ){
     
     for(int i=0;i<this->Nm;i++){
-      S->tri.push_back({i,i,1.});
+      this->S.tri.push_back({i,i,1.});
       this->lookup[i] = i;
     }
 
@@ -163,11 +181,11 @@ void ImagePlane::readS(mytable* S,const std::string filepath){
     int count = 0;
     for(int i=0;i<this->Nm;i++){
       if( contents[i] == 1 ){
-	S->tri.push_back({i,i,1.});
+	this->S.tri.push_back({i,i,1.});
 	this->lookup[i] = count;
 	count++;
       } else {
-	S->tri.push_back({i,i,0});
+	this->S.tri.push_back({i,i,0});
       }
     }
 
@@ -183,12 +201,13 @@ void ImagePlane::maskData(std::map<int,int> lookup,ImagePlane* masked){
   }
 }
 
+/*
 void ImagePlane::setMaskedC(mytable* Cout,mytable* S,mytable* C){
   //this function does the same as multiplying algebraically tables S and C
 
   int* Sfull = (int*) calloc(this->Nm,sizeof(int));
-  for(int k=0;k<S->tri.size();k++){
-    Sfull[ S->tri[k].i ] = 1;
+  for(int k=0;k<this->S->tri.size();k++){
+    Sfull[ this->S->tri[k].i ] = 1;
   }
 
   int i0,j0;
@@ -206,9 +225,9 @@ void ImagePlane::setMaskedC(mytable* Cout,mytable* S,mytable* C){
 
   free(Sfull);
 }
+*/
 
-
-void ImagePlane::readC(mytable* C,const std::string flag,const std::string filepath){
+void ImagePlane::readC(const std::string flag,const std::string filepath){
   double value;
 
   if( flag == "uniform" ){
@@ -217,7 +236,7 @@ void ImagePlane::readC(mytable* C,const std::string flag,const std::string filep
     std::ifstream infile(filepath);
     infile >> value;
     for(int i=0;i<this->Nm;i++){
-      C->tri.push_back({i,i,1./pow(value,2)});
+      this->C.tri.push_back({i,i,1./pow(value,2)});
     }
     infile.close();
 
@@ -233,7 +252,7 @@ void ImagePlane::readC(mytable* C,const std::string flag,const std::string filep
       while( true ){
 	infile >> i >> i >> value;
 	if( infile.eof() ) break;
-	C->tri.push_back({i,i,1./pow(value,2)});
+	this->C.tri.push_back({i,i,1./pow(value,2)});
       }
       infile.close();
 
@@ -246,7 +265,7 @@ void ImagePlane::readC(mytable* C,const std::string flag,const std::string filep
       this->readFits(filepath,contents);
       
       for(int i=0;i<this->Ni*this->Nj;i++){
-	C->tri.push_back({i,i,1.0/pow(contents[i],2)});
+	this->C.tri.push_back({i,i,1.0/pow(contents[i],2)});
 	//	  std::cout << 1./pow(contents[i*this->Nj+j],2) << std::endl;
       }
 
@@ -261,7 +280,7 @@ void ImagePlane::readC(mytable* C,const std::string flag,const std::string filep
     while( true ){
       infile >> i >> j >> value;
       if( infile.eof() ) break;
-      C->tri.push_back({i,j,1./pow(value,2)});
+      this->C.tri.push_back({i,j,1./pow(value,2)});
     }
     infile.close();
 
@@ -271,12 +290,12 @@ void ImagePlane::readC(mytable* C,const std::string flag,const std::string filep
 
 }
 
-void ImagePlane::readB(mytable* B,const std::string filepath,int i,int j,int ci,int cj){
+void ImagePlane::readB(const std::string filepath,int i,int j,int ci,int cj){
   if( filepath == "0" ){
 
     //Create a diagonal matrix of the given dimensions.
-    for(int i=0;i<B->Ti;i++){
-      B->tri.push_back({i,i,1.});
+    for(int i=0;i<this->B.Ti;i++){
+      this->B.tri.push_back({i,i,1.});
     }
 
   } else {
@@ -347,7 +366,7 @@ void ImagePlane::readB(mytable* B,const std::string filepath,int i,int j,int ci,
 
  	for(int ii=-i;ii<boffy;ii++){
 	  for(int jj=-j;jj<roffx;jj++){
-	    B->tri.push_back({i*this->Nj+j,     (i+ii)*this->Nj+(j+jj),     blur[(toffy+ii)*Ncropx+(loffx+jj)]});
+	    this->B.tri.push_back({i*this->Nj+j,     (i+ii)*this->Nj+(j+jj),     blur[(toffy+ii)*Ncropx+(loffx+jj)]});
 	  }
 	}
 
@@ -357,7 +376,7 @@ void ImagePlane::readB(mytable* B,const std::string filepath,int i,int j,int ci,
 
  	for(int ii=-i;ii<boffy;ii++){
 	  for(int jj=-loffx;jj<roffx;jj++){
-	    B->tri.push_back({  i*this->Nj+j,   (i+ii)*this->Nj+(j+jj),     blur[(toffy+ii)*Ncropx+(loffx+jj)]});//row-major
+	    this->B.tri.push_back({  i*this->Nj+j,   (i+ii)*this->Nj+(j+jj),     blur[(toffy+ii)*Ncropx+(loffx+jj)]});//row-major
 	  }
 	}
 
@@ -367,7 +386,7 @@ void ImagePlane::readB(mytable* B,const std::string filepath,int i,int j,int ci,
 
  	for(int ii=-i;ii<boffy;ii++){
 	  for(int jj=-loffx;jj<this->Nj-j;jj++){
-	    B->tri.push_back({i*this->Nj+j,     (i+ii)*this->Nj+(j+jj),     blur[(toffy+ii)*Ncropx+(loffx+jj)]});
+	    this->B.tri.push_back({i*this->Nj+j,     (i+ii)*this->Nj+(j+jj),     blur[(toffy+ii)*Ncropx+(loffx+jj)]});
 	  }
 	}
 
@@ -384,7 +403,7 @@ void ImagePlane::readB(mytable* B,const std::string filepath,int i,int j,int ci,
 
 	for(int ii=-toffy;ii<boffy;ii++){
 	  for(int jj=-j;jj<roffx;jj++){
-	    B->tri.push_back({i*this->Nj+j,     (i+ii)*this->Nj+(j+jj),     blur[(toffy+ii)*Ncropx+(loffx+jj)]});
+	    this->B.tri.push_back({i*this->Nj+j,     (i+ii)*this->Nj+(j+jj),     blur[(toffy+ii)*Ncropx+(loffx+jj)]});
 	  }
 	}
 
@@ -395,7 +414,7 @@ void ImagePlane::readB(mytable* B,const std::string filepath,int i,int j,int ci,
 	//Here I assume that the order of the row (i) and column (j) indices is such to create a row-major sparse matrix
 	for(int ii=-toffy;ii<boffy;ii++){
 	  for(int jj=-loffx;jj<roffx;jj++){
-	    B->tri.push_back({  i*this->Nj+j,   (i+ii)*this->Nj+(j+jj),     blur[(toffy+ii)*Ncropx+(loffx+jj)]});//row-major
+	    this->B.tri.push_back({  i*this->Nj+j,   (i+ii)*this->Nj+(j+jj),     blur[(toffy+ii)*Ncropx+(loffx+jj)]});//row-major
 	  }
 	}
 	
@@ -405,7 +424,7 @@ void ImagePlane::readB(mytable* B,const std::string filepath,int i,int j,int ci,
 
 	for(int ii=-toffy;ii<boffy;ii++){
 	  for(int jj=-loffx;jj<this->Nj-j;jj++){
-	    B->tri.push_back({i*this->Nj+j,     (i+ii)*this->Nj+(j+jj),     blur[(toffy+ii)*Ncropx+(loffx+jj)]});
+	    this->B.tri.push_back({i*this->Nj+j,     (i+ii)*this->Nj+(j+jj),     blur[(toffy+ii)*Ncropx+(loffx+jj)]});
 	  }
 	}
 
@@ -422,7 +441,7 @@ void ImagePlane::readB(mytable* B,const std::string filepath,int i,int j,int ci,
    
 	for(int ii=-toffy;ii<this->Ni-i;ii++){
 	  for(int jj=-j;jj<loffx;jj++){
-	    B->tri.push_back({i*this->Nj+j,     (i+ii)*this->Nj+(j+jj),     blur[(toffy+ii)*Ncropx+(loffx+jj)]});
+	    this->B.tri.push_back({i*this->Nj+j,     (i+ii)*this->Nj+(j+jj),     blur[(toffy+ii)*Ncropx+(loffx+jj)]});
 	  }
 	}
 
@@ -432,7 +451,7 @@ void ImagePlane::readB(mytable* B,const std::string filepath,int i,int j,int ci,
   
 	for(int ii=-toffy;ii<this->Ni-i;ii++){
 	  for(int jj=-loffx;jj<roffx;jj++){
-	    B->tri.push_back({  i*this->Nj+j,   (i+ii)*this->Nj+(j+jj),     blur[(toffy+ii)*Ncropx+(loffx+jj)]});//row-major
+	    this->B.tri.push_back({  i*this->Nj+j,   (i+ii)*this->Nj+(j+jj),     blur[(toffy+ii)*Ncropx+(loffx+jj)]});//row-major
 	  }
 	}
 
@@ -442,7 +461,7 @@ void ImagePlane::readB(mytable* B,const std::string filepath,int i,int j,int ci,
   
 	for(int ii=-toffy;ii<this->Ni-i;ii++){
 	  for(int jj=-loffx;jj<this->Nj-j;jj++){
-	    B->tri.push_back({i*this->Nj+j,     (i+ii)*this->Nj+(j+jj),     blur[(toffy+ii)*Ncropx+(loffx+jj)]});
+	    this->B.tri.push_back({i*this->Nj+j,     (i+ii)*this->Nj+(j+jj),     blur[(toffy+ii)*Ncropx+(loffx+jj)]});
 	  }
 	}
 

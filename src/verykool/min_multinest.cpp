@@ -5,17 +5,15 @@
 #include <cmath>
 #include <fstream>
 
-#include "parameterModels.hpp"
 #include "nonLinearPars.hpp"
-#include "inputOutput.hpp"
-#include "tableAlgebra.hpp"
+#include "likelihoodModels.hpp"
 
 
 
 
 //Functions related to the calculation of the Bayesian evidence and parameter estimation using MultiNest
 //==============================================================================================================================
-void MultiNest::minimize(std::map<std::string,std::string> opt,BaseParameterModel* pars,ImagePlane* image,BaseSourcePlane* source,CollectionMassModels* mycollection,mymatrices* mat,precomp* pcomp,const std::string output){
+void MultiNest::minimize(std::map<std::string,std::string> opt,BaseLikelihoodModel* pars,ImagePlane* image,BaseSourcePlane* source,CollectionMassModels* mycollection,const std::string output){
 
   int myndims = pars->active.size();
   
@@ -56,7 +54,7 @@ void MultiNest::minimize(std::map<std::string,std::string> opt,BaseParameterMode
   //  void* context  = 0;			// not required by MultiNest, any additional information user wants to pass
 
   int counter = 0;
-  extras myextras = {pars,image,source,mycollection,mat,output,pcomp,counter};
+  extras myextras = {pars,image,source,mycollection,output,counter};
 
   nested::run(IS,mmodal,ceff,nlive,tol,efr,ndims,nPar,nClsPar,maxModes,updInt,Ztol,root,seed,pWrap,fb,resume,outfile,initMPI,logZero,maxiter,MultiNestLogLike,MultiNestDumper,&myextras);
 }
@@ -117,8 +115,10 @@ void MultiNestLogLike(double* Cube,int& ndim,int& npars,double& lnew,void* myext
     new_pars.push_back( e->pars->active[i]->pri->fromUnitCube(Cube[i]) );
   }
   e->pars->updateActive(new_pars);
-  e->pars->updateParameterModel(e->image,e->source,e->mycollection,e->mat,e->pcomp);
-  lnew = e->pars->getLogLike(e->image,e->source,e->pcomp);
+  e->pars->updateLikelihoodModel(e->image,e->source,e->mycollection);
+  lnew = e->pars->getLogLike(e->image,e->source);
+  e->pars->printActive();
+  e->pars->printTerms();
 }
 
 
@@ -152,7 +152,7 @@ void MultiNestDumper(int& nSamples,int& nlive,int& nPar,double** physLive,double
   FILE* fh;
 
   e->counter++;
-  Initialization::outputGeneric(e->pars,e->image,e->source,e->pcomp,e->output + std::to_string(e->counter) + "_");
+  e->pars->outputLikelihoodModel(e->image,e->source,e->output + std::to_string(e->counter) + "_");
 
 
   // lastlive holds the parameter values for the last set of live points, and has the same structure as nlpars, with an array of nlive points for each parameter
@@ -206,7 +206,9 @@ void MultiNestDumper(int& nSamples,int& nlive,int& nPar,double** physLive,double
   }
   fclose(fh);
 
-
+  std::ifstream  src((e->output + std::to_string(e->counter) + "_corner.txt").c_str(),std::ios::binary);
+  std::ofstream  dst((e->output + "corner.txt").c_str(), std::ios::binary);
+  dst << src.rdbuf();
 
 
 

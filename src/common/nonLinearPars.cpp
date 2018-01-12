@@ -15,6 +15,7 @@ Nlpar::Nlpar(std::string a,int b,int c,double d,double e,double f,double g){
   err = e;
   min = f;
   max = g;
+  ran = max - min;
 }
 
 std::string Nlpar::getName(){

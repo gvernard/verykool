@@ -19,7 +19,8 @@
 #include "imagePlane.hpp"
 #include "covKernels.hpp"
 #include "massModels.hpp"
-#include "tableAlgebra.hpp"
+#include "tableDefinition.hpp"
+
 
 
 //Abstract class: BaseSourcePlane
@@ -47,6 +48,8 @@ FixedSource::FixedSource(int i,int j,double size,std::string reg_scheme){
   Si   = i;
   Sj   = j;
   Sm   = Si*Sj;
+  H.Ti = Sm;
+  H.Tj = Sm;
 
   src = (double*) calloc(Sm,sizeof(double));
   x   = (double*) calloc(Sm,sizeof(double));
@@ -103,10 +106,12 @@ bool FixedSource::pointInPolygon(double x,double y){
 }
 
 //virtual
-void FixedSource::constructL(ImagePlane* image,CollectionMassModels* mycollection,mytable* L){
+void FixedSource::constructL(ImagePlane* image,CollectionMassModels* mycollection){
   int Nm = image->Nm;
   int Si = this->Si;
   int Sj = this->Sj;
+  this->L.Ti = Nm;
+  this->L.Tj = Si*Sj;
 
   long excluded = 0;
   long included = 0;
@@ -152,7 +157,7 @@ void FixedSource::constructL(ImagePlane* image,CollectionMassModels* mycollectio
 
   }
 
-  L->tri.swap(tmp);
+  this->L.tri.swap(tmp);
   
   //  std::cout << excluded << " image pixels lie outside the source grid." << std::endl;
   //  std::cout << included << " image pixels lie inside the source grid." << std::endl;
@@ -160,13 +165,13 @@ void FixedSource::constructL(ImagePlane* image,CollectionMassModels* mycollectio
 
 
 //virtual
-void FixedSource::constructH(mytable* H){
+void FixedSource::constructH(){
   std::vector<mytriplet> tmp;//need to make sure that the H triplet vector is a new one
 
   if( this->reg == "identity" ){//---------------------------> zero order
     
     this->eigenSparseMemoryAllocForH = 1;
-    for(int i=0;i<H->Ti;i++){
+    for(int i=0;i<this->H.Ti;i++){
       tmp.push_back({i,i,1});
     }
 
@@ -310,7 +315,7 @@ void FixedSource::constructH(mytable* H){
   }
 
 
-  H->tri.swap(tmp);
+  this->H.tri.swap(tmp);
 }
 
 
@@ -360,6 +365,8 @@ FloatingSource::FloatingSource(int i,int j,double size,double x0,double y0,std::
   reg  = reg_scheme;
   Si   = i;
   Sj   = j;
+  H.Ti = Si*Sj;
+  H.Tj = Si*Sj;
 
   src = (double*) calloc(i*j,sizeof(double));
   x   = (double*) calloc(i*j,sizeof(double));
@@ -422,11 +429,13 @@ bool FloatingSource::pointInPolygon(double x,double y){
 }
 
 //virtual
-void FloatingSource::constructL(ImagePlane* image,CollectionMassModels* mycollection,mytable* L){
+void FloatingSource::constructL(ImagePlane* image,CollectionMassModels* mycollection){
   int Ni = image->Ni;
   int Nj = image->Nj;
   int Si = this->Si;
   int Sj = this->Sj;
+  this->L.Ti = Ni*Nj;
+  this->L.Tj = Si*Sj;
 
   long excluded = 0;
   long included = 0;
@@ -472,20 +481,20 @@ void FloatingSource::constructL(ImagePlane* image,CollectionMassModels* mycollec
     }
   }
 
-  L->tri.swap(tmp);
+  this->L.tri.swap(tmp);
 
   //  std::cout << excluded << " image pixels lie outside the source grid." << std::endl;
   //  std::cout << included << " image pixels lie inside the source grid." << std::endl;
 }
 
 //virtual
-void FloatingSource::constructH(mytable* H){
+void FloatingSource::constructH(){
   std::vector<mytriplet> tmp;//need to make sure that the L triplet vector is a new one
 
   if( this->reg == "identity" ){//---------------------------> zero order
     
     this->eigenSparseMemoryAllocForH = 1;
-    for(int i=0;i<H->Ti;i++){
+    for(int i=0;i<this->H.Ti;i++){
       tmp.push_back({i,i,1});
     }
 
@@ -540,7 +549,7 @@ void FloatingSource::constructH(mytable* H){
     std::cout << "ATTENTION: Need to implement covariance matrix for a floating source" << std::endl;
   }
 
-  H->tri.swap(tmp);
+  this->H.tri.swap(tmp);
 }
 
 //virtual
@@ -592,6 +601,8 @@ AdaptiveSource::AdaptiveSource(int a,std::string reg_scheme){
   Sm      = a;
   Si      = a;
   Sj      = 0;
+  H.Ti    = Sm;
+  H.Tj    = Sm;
 
   src = (double*) calloc(Sm,sizeof(double));
   x   = (double*) calloc(Sm,sizeof(double));
@@ -607,6 +618,8 @@ AdaptiveSource::AdaptiveSource(std::string m,int a,int b,std::string reg_scheme)
   Sm      = a;// + 8;
   Si      = a;// + 8;
   Sj      = 0;
+  H.Ti    = Sm;
+  H.Tj    = Sm;
 
   src = (double*) calloc(Sm,sizeof(double));
   x   = (double*) calloc(Sm,sizeof(double));
@@ -619,7 +632,10 @@ AdaptiveSource::~AdaptiveSource(){
 }
 
 //virtual
-void AdaptiveSource::constructL(ImagePlane* image,CollectionMassModels* mycollection,mytable* L){
+void AdaptiveSource::constructL(ImagePlane* image,CollectionMassModels* mycollection){
+  this->L.Ti = image->Nm;
+  this->L.Tj = this->Sm;
+
   double xp,yp;
   double wa,wb,wc;
   double ybc,xac,xcb,yac,xxc,yyc,den;
@@ -684,7 +700,7 @@ void AdaptiveSource::constructL(ImagePlane* image,CollectionMassModels* mycollec
   //std::cout << included << " " << excluded << std::endl;
   //std::cout << tmp.size() << std::endl;
   
-  L->tri.swap(tmp);
+  this->L.tri.swap(tmp);
 }
 
 //non-virtual
@@ -871,13 +887,13 @@ void AdaptiveSource::createDelaunay(){
 
 
 //virtual
-void AdaptiveSource::constructH(mytable* H){
+void AdaptiveSource::constructH(){
   std::vector<mytriplet> tmp;//need to make sure that the L triplet vector is a new one
 
   if( this->reg == "identity" ){//---------------------------> zero order
     
     this->eigenSparseMemoryAllocForH = 1;
-    for(int i=0;i<H->Ti;i++){
+    for(int i=0;i<this->H.Ti;i++){
       tmp.push_back({i,i,1});
     }
 
@@ -1133,7 +1149,7 @@ void AdaptiveSource::constructH(mytable* H){
   }
 
 
-  H->tri.swap(tmp);
+  this->H.tri.swap(tmp);
 }
 
 

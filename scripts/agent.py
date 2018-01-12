@@ -6,7 +6,7 @@ import json
 import re
 import shutil
 import subprocess
-
+import socket
 
 
 
@@ -65,6 +65,9 @@ def main():
     elif options["minimizer"]["type"] in cosmosis:
         mode = "cosmosis"
         
+    mpi_flag = False
+    if options["minimizer"]["nproc"] > 1:
+        mpi_flag = True
             
         
         
@@ -81,30 +84,39 @@ def main():
     ##############################################################################################
     if mode == "original":
         msg = "Executing original code, good luck:"
-        cmd = "mpirun -np 1 " + vkl_dir + "bin/verykool " + path + " " + run
+        cmd = "mpirun -np " + str(options["minimizer"]["nproc"]) + " " + vkl_dir + "bin/verykool " + path + " " + run
     else:
         msg = "Executing cosmosis code, good luck:"
-        create_bash_script(path,run,options,cosmo_lib_dir,conda_env,vkl_dir)
+        if mpi_flag:
+            exe_command = "mpirun -n " + str(options["minimizer"]["nproc"]) + " cosmosis --mpi"
+        else:
+            exe_command = "cosmosis"
+        create_bash_script(path,run,options,cosmo_lib_dir,conda_env,vkl_dir,exe_command)
         cmd = "bash " + path + run + "auto_run_cosmosis.sh"
 
         
         
         
     print msg
+    print(cmd)
     os.system(cmd)
     print "Execution succesful (results may still be wrong though...)"
 
 
 
 
-def create_bash_script(path,run,options,cosmo_lib_dir,conda_env,vkl_dir):
+
+
+
+
+def create_bash_script(path,run,options,cosmo_lib_dir,conda_env,vkl_dir,exe_command):
     f = open(path+run+"auto_run_cosmosis.sh","w")
     f.write("#!/bin/bash\n")
     f.write("# This is an automatically generated file!\n")
     f.write("source " + cosmo_lib_dir +"setup-my-cosmosis\n")
     f.write("source activate " + conda_env + "\n")
     #f.write("mpirun -np 1 cosmosis --mpi " + path + run + "cosmosis_pipeline.ini\n")
-    f.write("cosmosis " + path + run + "cosmosis_pipeline.ini\n")
+    f.write(exe_command + " " + path + run + "cosmosis_pipeline.ini\n")
     f.close()
 
 
@@ -115,15 +127,20 @@ def create_pipeline(path,run,options,vkl_dir):
     f.write("\n")
 
     f.write("["+options["minimizer"]["type"][9:]+"]\n")
-    if options["minimizer"]["type"] in options:
-        for key,value in options[options["minimizer"]["type"]].iteritems():
+    for key,value in options["minimizer"].iteritems():
+        if key == "type":
+            continue
+        elif key == "start_points":
+            f.write("start_points = " + path + run + value + "\n")
+        else:
             f.write(key + " = " + str(value) + "\n")
     f.write("fatal_errors = T\n")
     f.write("\n")
 
     f.write("[output]\n")
-    f.write("filename = " + path + run + "output/cosmosis_output.dat\n")
+    f.write("filename = " + path + run + "output/cosmosis_output\n")
     f.write("format = text\n")
+    f.write("verbosity = quiet\n")
     f.write("\n")
 
     f.write("[pipeline]\n")
@@ -133,6 +150,7 @@ def create_pipeline(path,run,options,vkl_dir):
     f.write("quiet = T\n")
     f.write("timing = F\n")
     f.write("debug = F\n")
+    f.write("priors = " + path + run + "cosmosis_priors.ini\n")
     f.write("\n")
 
     f.write("[verykool]\n")
@@ -140,43 +158,6 @@ def create_pipeline(path,run,options,vkl_dir):
     f.write("path = " + path + "\n")
     f.write("run = " + run + "\n")
     f.close()
-
-
-def create_values(path,run,options):
-    f = open(path+run+"cosmosis_values.ini","w")
-    f.write("[nlpars]\n")
-    for nlpar in options["physical"]:
-        f.write(nlpar["nam"] + " = " + str(nlpar["min"]) + " " + str(nlpar["val"]) + " " + str(nlpar["max"]) + "\n")
-    for nlpar in options["reg"]["nlpars"]:
-        f.write(nlpar["nam"] + " = " + str(nlpar["min"]) +  " " +str(nlpar["val"]) + " " + str(nlpar["max"]) + "\n")
-    for i,lens in enumerate(options["lenses"]):
-        for nlpar in lens["nlpars"]:
-            f.write(str(i)+"_" + nlpar["nam"] + " = " + str(nlpar["min"]) + " " + str(nlpar["val"]) + " " + str(nlpar["max"]) + "\n")
-    f.close()
-
-
-def create_priors(path,run,options):
-    f = open(path+run+"cosmosis_priors.ini","w")
-    f.write("[nlpars]\n")
-    for nlpar in options["physical"]:
-        f.write(nlpar["nam"] + " = " + nlpar_prior(nlpar) + "\n")
-    for nlpar in options["reg"]["nlpars"]:
-        f.write(nlpar["nam"] + " = " + nlpar_prior(nlpar) + "\n")
-    for i,lens in enumerate(options["lenses"]):
-        for nlpar in lens["nlpars"]:
-            f.write(str(i) + "_" + nlpar["nam"] + " = " + nlpar_prior(nlpar) + "\n")
-    f.close()
-def nlpar_prior(nlpar):
-    out  = ""
-    if nlpar["pri"]["type"] == "uni":
-        out = "uniform " + str(nlpar["min"]) + " " + str(nlpar["max"])
-    elif nlpar["pri"]["type"] == "gauss":
-        out = "gauss " + str(nlpar["pri"]["mean"]) + " " + str(nlpar["pri"]["sdev"])
-    elif nlpar["pri"]["type"] == "exp":
-        out = "exponential " + str(nlpar["pri"]["beta"])
-    return out
-
-
 
 
 

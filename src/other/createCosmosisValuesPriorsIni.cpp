@@ -5,14 +5,14 @@
 #include <iostream>
 
 #include "nonLinearPars.hpp"
-#include "parameterModels.hpp"
+#include "likelihoodModels.hpp"
 
 int main(int argc,char* argv[]){
   std::string path(argv[1]);
   std::string run(argv[2]);
 
 
-  BaseParameterModel* mypars = FactoryParameterModel::getInstance()->createParameterModel(path,run);
+  BaseLikelihoodModel* mypars = FactoryLikelihoodModel::getInstance()->createLikelihoodModel(path,run);
 
   std::vector<std::string> names = mypars->getActiveFullNames();
   

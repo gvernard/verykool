@@ -18,11 +18,12 @@ from astropy.io import fits
 from astropy.visualization import astropy_mpl_style
 
 path = sys.argv[1]
-if len(sys.argv) == 3:
-    step = sys.argv[2]
-    out_path  = path+'output/'+str(step)+'_'
+run  = sys.argv[2]
+if len(sys.argv) > 3:
+    step = sys.argv[3]
+    out_path  = path+run+'output/'+str(step)+'_'
 else:
-    out_path  = path+'output/'
+    out_path  = path+run+'output/'+str(step)+'_'
 
 mycmap    = 'Spectral'
 fig       = plt.figure(figsize=(12,8))
@@ -36,7 +37,7 @@ hdulist.close()
 
 #dum = path.split('/')
 #f   = open(path+dum[-2]+'.json','r')
-f   = open(path+'vkl_input.json','r')
+f   = open(path+run+'vkl_input.json','r')
 input_str = f.read()
 #input_str = re.sub(r'\\\n', '', input_str)
 #input_str = re.sub(r'//.*\n', '', input_str)

@@ -6,7 +6,7 @@
 #include <vector>
 #include <map>
 
-struct mytable;
+#include "tableDefinition.hpp"
 
 
 class ImagePlane {
@@ -21,7 +21,9 @@ public:
   double* x;                 //pixel x-coordinates in arcsec
   double* y;                 //pixel y-coordinates in arcsec
   int* active;               //active image pixels used in the construction of the adaptive grid
-
+  mytable B;
+  mytable C;
+  mytable S;
 
   ImagePlane(){};
   ImagePlane(const std::string filepath,int i,int j,double w,double h);  //used to read images
@@ -32,10 +34,10 @@ public:
   void writeImage(const std::string filename);
   void writeBin(const std::string filename);
   void readFits(const std::string filename,std::valarray<float>& contents);
-  void readB(mytable* B,const std::string filepath,int i,int j,int ci,int cj);
-  void readC(mytable* C,const std::string flag,const std::string filepath);
-  void readS(mytable* S,const std::string filepath);
-  void setMaskedC(mytable* Cout,mytable* S,mytable* C);
+  void readB(const std::string filepath,int i,int j,int ci,int cj);
+  void readC(const std::string flag,const std::string filepath);
+  void readS(const std::string filepath);
+  //  void setMaskedC(mytable* Cout,mytable* S,mytable* C);
   void maskData(std::map<int,int> lookup,ImagePlane* masked);
 };
 

@@ -24,8 +24,8 @@ COSMOSIS_LIBS  = -lcosmosis
 COMMON_SRC   = src/common
 COMMON_FLAGS = -std=c++11 -fPIC
 COMMON_LIBS  = -lgfortran -lCCfits -lcfitsio -ljsoncpp -lgmp -lCGAL
-DEPS         = imagePlane.hpp inputOutput.hpp massModels.hpp sourcePlane.hpp tableAlgebra.hpp nonLinearPars.hpp parameterModels.hpp covKernels.hpp
-OBJ          = imagePlane.o   inputOutput.o   massModels.o   sourcePlane.o   tableAlgebra.o   nonLinearPars.o   parameterModels.o   covKernels.o   fastell.o
+DEPS         = imagePlane.hpp inputOutput.hpp massModels.hpp sourcePlane.hpp eigenAlgebra.hpp nonLinearPars.hpp likelihoodModels.hpp covKernels.hpp
+OBJ          = imagePlane.o   inputOutput.o   massModels.o   sourcePlane.o   eigenAlgebra.o   nonLinearPars.o   likelihoodModels.o   covKernels.o   fastell.o
 COMMON_DEPS  = $(patsubst %,$(INC_DIR)/%,$(DEPS)) #Pad names with dir
 COMMON_OBJ   = $(patsubst %,$(OBJ_DIR)/%,$(OBJ))  #Pad names with dir
 
@@ -61,6 +61,9 @@ $(OBJ_DIR)/min_cosmosis.o: $(COSMOSIS_SRC)/min_cosmosis.cpp
 $(OBJ_DIR)/createCosmosisValuesPriorsIni.o: src/other/createCosmosisValuesPriorsIni.cpp
 	$(GPP) -std=c++11 -I inc -c -o $@ $< 
 
+$(OBJ_DIR)/createEmceeStart.o: src/other/createEmceeStart.cpp
+	$(GPP) -std=c++11 -I inc -c -o $@ $< 
+
 
 
 common: $(COMMON_OBJ)
@@ -81,11 +84,11 @@ verykool: common $(OBJ_DIR)/verykool.o $(OBJ_DIR)/min_multinest.o $(VERYKOOL_SRC
 	@echo ""
 
 
-other: common $(OBJ_DIR)/createCosmosisValuesPriorsIni.o
+other: common $(OBJ_DIR)/createCosmosisValuesPriorsIni.o $(OBJ_DIR)/createEmceeStart.o
 	@echo ""
 	$(GPP) -std=c++11 -I inc -o $(BIN_DIR)/createCosmosisValuesPriorsIni $(COMMON_OBJ) $(OBJ_DIR)/createCosmosisValuesPriorsIni.o $(COMMON_LIBS)
+	$(GPP) -std=c++11 -I inc -o $(BIN_DIR)/createEmceeStart $(COMMON_OBJ) $(OBJ_DIR)/createEmceeStart.o $(COMMON_LIBS)
 	@echo ""
-
 
 clean:
 	$(RM) -r $(OBJ_DIR)/* $(LIB_DIR)/*

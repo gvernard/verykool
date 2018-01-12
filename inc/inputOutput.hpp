@@ -10,12 +10,10 @@
 #include "nonLinearPars.hpp"
 
 
-class BaseParameterModel;
+class BaseLikelihoodModel;
 class ImagePlane;
 class BaseSourcePlane;
 class CollectionMassModels;
-class mymatrices;
-class precomp;
 
 class Initialization {
 public:
@@ -42,13 +40,14 @@ public:
   
 
 
-  static void initialize_program(std::string path,std::string run,Initialization*& init,BaseParameterModel*& mypars,ImagePlane*& mydata,CollectionMassModels*& mycollection,BaseSourcePlane*& mysource,mymatrices*& matrices,precomp*& pcomp);
-  static void finalize_program(Initialization* init,BaseParameterModel* mypars,ImagePlane* mydata,CollectionMassModels* mycollection,BaseSourcePlane* mysource,mymatrices* matrices,precomp* pcomp);
-  static void outputGeneric(BaseParameterModel* mypars,ImagePlane* image,BaseSourcePlane* source,precomp* pcomp,std::string output);
+  static void initialize_program(std::string path,std::string run,Initialization*& init,BaseLikelihoodModel*& mypars,ImagePlane*& mydata,CollectionMassModels*& mycollection,BaseSourcePlane*& mysource);
+  static void finalize_program(Initialization* init,BaseLikelihoodModel* mypars,ImagePlane* mydata,CollectionMassModels* mycollection,BaseSourcePlane* mysource);
+  static void outputGeneric(BaseLikelihoodModel* mypars,ImagePlane* image,BaseSourcePlane* source,std::string output);
+
+  void parseInputJSON(std::string path,std::string filename);
   
 private:
-  void parseInputJSON(std::string path,std::string filename);
-  void outputInitial(BaseParameterModel* mypars);
+  void outputInitial(BaseLikelihoodModel* mypars);
 };
 
 #endif /* SUPPORT_FUNCS_HPP */

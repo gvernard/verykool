@@ -7,9 +7,8 @@
 #include "imagePlane.hpp"
 #include "massModels.hpp"
 #include "sourcePlane.hpp"
-#include "tableAlgebra.hpp"
+#include "likelihoodModels.hpp"
 #include "minimizers.hpp"
-
 
 
 
@@ -31,21 +30,19 @@ int main(int argc,char* argv[]){
 
   // Initialize variables
   Initialization* init;
-  BaseParameterModel* mypars;
+  BaseLikelihoodModel* mypars;
   ImagePlane* mydata;
   CollectionMassModels* mycollection;
   BaseSourcePlane* mysource;
-  mymatrices* matrices;
-  precomp* pcomp;
-  Initialization::initialize_program(argv[1],argv[2],init,mypars,mydata,mycollection,mysource,matrices,pcomp);
+  Initialization::initialize_program(argv[1],argv[2],init,mypars,mydata,mycollection,mysource);
 
   
   //=============== BEGIN:MINIMIZATION =========================
   printf("%-25s","Starting minimization");
   fflush(stdout);
  
-  BaseMinimizer* myminimizer = FactoryMinimizer::getInstance()->createMinimizer(init->minimizer,mypars,mydata,mysource,mycollection,matrices,pcomp,init->output);
-  myminimizer->minimize(init->minimizer,mypars,mydata,mysource,mycollection,matrices,pcomp,init->output);
+  BaseMinimizer* myminimizer = FactoryMinimizer::getInstance()->createMinimizer(init->minimizer,mypars,mydata,mysource,mycollection,init->output);
+  myminimizer->minimize(init->minimizer,mypars,mydata,mysource,mycollection,init->output);
 
   printf("%+7s\n","...done");
   std::cout << std::string(200,'=') << std::endl;
@@ -55,7 +52,7 @@ int main(int argc,char* argv[]){
 
   // Finalize output etc
   if( myrank == 0 ){
-    Initialization::finalize_program(init,mypars,mydata,mycollection,mysource,matrices,pcomp);
+    Initialization::finalize_program(init,mypars,mydata,mycollection,mysource);
     //myminimizer->output();
   }
   
@@ -66,9 +63,7 @@ int main(int argc,char* argv[]){
   delete(mydata);
   delete(mycollection);
   delete(mysource);
-  delete(matrices);
-  delete(pcomp);
-  //delete(myminimizer);
+  delete(myminimizer);
 
 
   // Finalize MPI

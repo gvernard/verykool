@@ -8,12 +8,10 @@
 #include "multinest.h"
 //#include "simplex.hpp"
 
-class BaseParameterModel;
+class BaseLikelihoodModel;
 class ImagePlane;
 class BaseSourcePlane;
 class CollectionMassModels;
-class mymatrices;
-class precomp;
 
 
 
@@ -24,7 +22,7 @@ public:
   BaseMinimizer(){};
   ~BaseMinimizer(){};
 
-  virtual void minimize(std::map<std::string,std::string> minimizer,BaseParameterModel* mypars,ImagePlane* image,BaseSourcePlane* source,CollectionMassModels* mycollection,mymatrices* mat,precomp* pcomp,const std::string output) = 0;
+  virtual void minimize(std::map<std::string,std::string> minimizer,BaseLikelihoodModel* mypars,ImagePlane* image,BaseSourcePlane* source,CollectionMassModels* mycollection,const std::string output) = 0;
   virtual void output() = 0;
 };
 
@@ -37,7 +35,7 @@ public:
   Nothing(){};
   ~Nothing(){};
   
-  void minimize(std::map<std::string,std::string> minimizer,BaseParameterModel* mypars,ImagePlane* image,BaseSourcePlane* source,CollectionMassModels* mycollection,mymatrices* mat,precomp* pcomp,const std::string output){};
+  void minimize(std::map<std::string,std::string> minimizer,BaseLikelihoodModel* mypars,ImagePlane* image,BaseSourcePlane* source,CollectionMassModels* mycollection,const std::string output){};
   void output(){};
 };
 
@@ -45,13 +43,11 @@ public:
 // MultiNest class and related stuff
 //================================================================================================================================================
 struct extras{
-  BaseParameterModel* pars;
+  BaseLikelihoodModel* pars;
   ImagePlane* image;
   BaseSourcePlane* source;
   CollectionMassModels* mycollection;
-  mymatrices* mat;
   std::string output;
-  precomp* pcomp;
   int counter;
 };
 
@@ -64,7 +60,7 @@ public:
   MultiNest(){};
   ~MultiNest(){};
   
-  void minimize(std::map<std::string,std::string> minimizer,BaseParameterModel* pars,ImagePlane* image,BaseSourcePlane* source,CollectionMassModels* mycollection,mymatrices* mat,precomp* pcomp,const std::string output);
+  void minimize(std::map<std::string,std::string> minimizer,BaseLikelihoodModel* pars,ImagePlane* image,BaseSourcePlane* source,CollectionMassModels* mycollection,const std::string output);
   void output();
 };
 
@@ -129,7 +125,7 @@ public:
     return &dum;
   }
 
-  BaseMinimizer* createMinimizer(std::map<std::string,std::string> minimizer,BaseParameterModel* pars,ImagePlane* image,BaseSourcePlane* source,CollectionMassModels* collection,mymatrices* matrices,precomp* pcomp,const std::string output){
+  BaseMinimizer* createMinimizer(std::map<std::string,std::string> minimizer,BaseLikelihoodModel* pars,ImagePlane* image,BaseSourcePlane* source,CollectionMassModels* collection,const std::string output){
 
     if( minimizer["type"] == "test" ){
       printf("%-25s","using given parameters");

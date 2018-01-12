@@ -1,29 +1,40 @@
-import getdist.plots
+from getdist import plots,chains,mcsamples
 import numpy as np
 import sys
 import json
 import os.path
 import matplotlib
+from shutil import copyfile
+
 matplotlib.rc('font',**{'family':'serif', 'serif':['TimesNewRoman'],'size':25})
 matplotlib.rc('text', usetex=True)
 
-rootdir = sys.argv[1]
-roots   = ['corner']
+path = sys.argv[1]
+run  = sys.argv[2]
+rootdir = path+run+"output/"
+if len(sys.argv) > 3:
+    step = sys.argv[3]
+    copyfile(rootdir+str(step)+"_corner.txt",rootdir+"plt_corner.txt")
+else:
+    copyfile(rootdir+"corner.txt",rootdir+"plt_corner.txt")
+
 
 
 ### get the active parameter names from verykool
 ###################################################################################################################
-used_pars = np.genfromtxt(rootdir+'output/corner.paramnames',usecols=[0],dtype='str')
+names,labels = np.genfromtxt(rootdir+'plt_corner.paramnames',dtype='str',unpack=True)
+
 
 
 ### Create the corner plot
 ###################################################################################################################
-g = getdist.plots.getSubplotPlotter(chain_dir=rootdir+'output',subplot_size=4)
-#g.settings.axes_fontsize = 25
-#g.settings.lab_fontsize = 25
+#g = plots.getSubplotPlotter(chain_dir=rootdir,analysis_settings={'ignore_rows': 110},subplot_size=4)
+g = plots.getSubplotPlotter(chain_dir=rootdir,analysis_settings={"ignore_rows": 0.0,"smooth_scale_2D":0.9,"mult_bias_correction_order":1},subplot_size=4)
+##g.settings.axes_fontsize = 25
+##g.settings.lab_fontsize = 25
 g.settings.rcSizes()
-g.triangle_plot(roots,used_pars,filled=True,smooth_scale_2D=3,smooth_scale_1D=3,ignore_rows=0.3,mult_bias_correction_order=-1)
-
+#g.triangle_plot(['plt_corner'],names,filled=True,smooth_scale_2D=3,smooth_scale_1D=3,mult_bias_correction_order=-1)
+g.triangle_plot(['plt_corner'],names,filled=True)
 
 
 
@@ -82,5 +93,4 @@ if os.path.isfile(rootdir+'/vkl_input.json'):
 
 
 ### Export image
-g.export('corner.png')
-
+g.export('corner.pdf')

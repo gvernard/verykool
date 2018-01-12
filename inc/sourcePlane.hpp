@@ -15,11 +15,10 @@ BOOST_GEOMETRY_REGISTER_BOOST_TUPLE_CS(cs::cartesian)
 */
 
 #include "covKernels.hpp"
-
+#include "tableDefinition.hpp"
 
 typedef std::map<int,double>::iterator it_int_double;
 
-struct mytable;
 class Nlpar;
 class ImagePlane;
 class CollectionMassModels;
@@ -40,7 +39,10 @@ public:
   int eigenSparseMemoryAllocForH; // estimate of the non-zero elements per row of the regularization matrix H
   bool sample_reg = false;        // sampling regularization matrix related parameters
   BaseCovKernel* kernel;          // pointer to kernel class
+  mytable L;
+  mytable H;
   
+
   BaseSourcePlane(){};
 
   ~BaseSourcePlane(){
@@ -54,8 +56,8 @@ public:
 
 
   //virtual members
-  virtual void constructL(ImagePlane* image,CollectionMassModels* mycollection,mytable* L) = 0;
-  virtual void constructH(mytable* H) = 0;
+  virtual void constructL(ImagePlane* image,CollectionMassModels* mycollection) = 0;
+  virtual void constructH() = 0;
   virtual void outputSource(const std::string filename) = 0;
   virtual void outputSourceErrors(double* errors,const std::string filename) = 0;
 
@@ -72,8 +74,8 @@ public:
   //virtual members
   FixedSource(int source_i,int source_j,double size,std::string reg_scheme);
   ~FixedSource();
-  void constructL(ImagePlane* image,CollectionMassModels* mycollection,mytable* L);
-  void constructH(mytable* H);
+  void constructL(ImagePlane* image,CollectionMassModels* mycollection);
+  void constructH();
   void outputSource(const std::string filename);
   void outputSourceErrors(double* errors,const std::string filename);
 
@@ -95,8 +97,8 @@ public:
   //virtual members
   FloatingSource(int source_i,int source_j,double size,double x0,double y0,std::string reg_scheme);
   ~FloatingSource();
-  void constructL(ImagePlane* image,CollectionMassModels* mycollection,mytable* L);
-  void constructH(mytable* H);
+  void constructL(ImagePlane* image,CollectionMassModels* mycollection);
+  void constructH();
   void outputSource(const std::string filename);
   void outputSourceErrors(double* errors,const std::string filename);
 
@@ -121,8 +123,8 @@ public:
   AdaptiveSource(int Sm,std::string reg_scheme);
   AdaptiveSource(std::string mode,int Sm,int spacing,std::string reg_scheme);
   ~AdaptiveSource();
-  void constructL(ImagePlane* image,CollectionMassModels* mycollection,mytable* L);
-  void constructH(mytable* H);
+  void constructL(ImagePlane* image,CollectionMassModels* mycollection);
+  void constructH();
   void outputSource(const std::string filename);
   void outputSourceErrors(double* errors,const std::string filename);
 
