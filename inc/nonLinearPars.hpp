@@ -109,6 +109,19 @@ private:
 };
 
 
+class Log: public BasePrior {
+public:
+  Log(Nlpar* p);
+  ~Log(){};
+
+  double prior(double x);
+  double fromUnitCube(double u);
+  void printPars();
+  std::map<std::string,double> getPars();
+
+private:
+  double fac;
+};
 
 //This is a singleton class.
 class FactoryPrior {
@@ -128,6 +141,8 @@ public:
       return new Gauss(mother,stof(prior["mean"]),stof(prior["sdev"]));
     } else if( prior["type"] == "exp" ){
       return new Exp(mother,stof(prior["beta"]));
+    } else if( prior["type"] == "log" ){
+      return new Log(mother);
     } else {
       return NULL;
     }

@@ -109,8 +109,8 @@ public:
       ax += dumx;
       ay += dumy;
     }
-    xout = (1.-this->mpars["g1"])*xin + this->mpars["g2"]*yin - ax;
-    yout = this->mpars["g2"]*xin + (1.+this->mpars["g1"])*yin - ay;
+    xout = (1.0-this->mpars["g1"])*xin - this->mpars["g2"]*yin - ax;
+    yout = (1.0+this->mpars["g1"])*yin - this->mpars["g2"]*xin - ay;
   }
 };
 

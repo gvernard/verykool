@@ -189,3 +189,35 @@ std::map<std::string,double> Exp::getPars(){
   mymap["beta"] = this->beta;
   return mymap;
 }
+
+
+//Derived class from BasePrior: Log
+//===============================================================================================================
+//virtual
+Log::Log(Nlpar* p){
+  type = "log";
+  mother = p;
+  fac = 1.0/log(this->mother->max/this->mother->min);
+}
+
+//virtual
+double Log::prior(double x){
+  double p = this->fac/x;
+  return p;
+}
+
+//virtual
+double Log::fromUnitCube(double u){
+  return this->mother->ran*u + this->mother->min;
+}
+
+//virtual
+void Log::printPars(){
+  std::cout << "Logarithmic prior 1/x in the range: " << this->mother->min << "  -  " << this->mother->max <<std::endl;
+}
+
+//virtual
+std::map<std::string,double> Log::getPars(){
+  std::map<std::string,double> mymap;
+  return mymap;
+}

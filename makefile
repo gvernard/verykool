@@ -12,17 +12,17 @@ FORTRAN_FLAGS = -fPIC
 # Setting up verykool variables
 VERYKOOL_SRC   = src/verykool
 VERYKOOL_LIBS  = -lmultinest_mpi -lsimplex -lMinuit2 
-VERYKOOL_FLAGS = -fopenmp
+VERYKOOL_FLAGS = -fopenmp -g -frounding-math
 
 # Setting up cosmosis variables
 COSMOSIS_SRC   = src/cosmosis
-COSMOSIS_FLAGS = -fPIC -shared
+COSMOSIS_FLAGS = -fPIC -shared -g -frounding-math
 COSMOSIS_LIBS  = -lcosmosis
 
 
 # Setting up common variables
 COMMON_SRC   = src/common
-COMMON_FLAGS = -std=c++11 -fPIC
+COMMON_FLAGS = -std=c++11 -fPIC -g -frounding-math
 COMMON_LIBS  = -lgfortran -lCCfits -lcfitsio -ljsoncpp -lgmp -lCGAL
 DEPS         = imagePlane.hpp inputOutput.hpp massModels.hpp sourcePlane.hpp eigenAlgebra.hpp nonLinearPars.hpp likelihoodModels.hpp covKernels.hpp
 OBJ          = imagePlane.o   inputOutput.o   massModels.o   sourcePlane.o   eigenAlgebra.o   nonLinearPars.o   likelihoodModels.o   covKernels.o   fastell.o

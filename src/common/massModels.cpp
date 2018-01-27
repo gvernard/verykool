@@ -55,7 +55,7 @@ void Sie::defl(double xin,double yin,double& xout,double& yout){
   double fac   = 1.-q*q;
   double omega = q*q*x_t*x_t + y_t*y_t; // this does not depend on using omega, omega', or zeta, as long as I change correctly to these elliptical radii.
   double fac2  = sqrt(fac/omega);
-  
+
   double ax_t = (b/sqrt(fac))*atan(x_t*fac2);
   double ay_t = (b/sqrt(fac))*atanh(y_t*fac2);
   

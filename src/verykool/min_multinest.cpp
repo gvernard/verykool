@@ -60,41 +60,6 @@ void MultiNest::minimize(std::map<std::string,std::string> opt,BaseLikelihoodMod
 }
 
 
-/*
-void LogLike(double* Cube,int& ndim,int& npars,double& lnew,void* myextras){
-  extras* e = (extras*) myextras;
-  double pi = 3.14159265359;
-
-  std::map<std::string,double> means;
-  means["b"]  = 4.87;
-  means["q"]  = 0.6667;
-  means["pa"] = 164;
-  means["x0"] = 0;
-  means["y0"] = 0;
-
-  std::map<std::string,double> sdevs;
-  sdevs["b"]  = 0.5;
-  sdevs["q"]  = 0.05;
-  sdevs["pa"] = 5;
-  sdevs["x0"] = 0.1;
-  sdevs["y0"] = 0.1;
-
-  double val = 0;
-
-  lnew = 0;
-  for(int i=0;i<e->active.size();i++){
-    e->nlpars[e->active[i].index][e->active[i].nam]->fromUnitCube(Cube[i]);
-    val = e->nlpars[e->active[i].index][e->active[i].nam]->val;
-    //    std::cout << means[e->active[i].nam] << " " ;
-    std::cout << val << " " ;
-
-    lnew += -pow(val-means[e->active[i].nam],2)/(2*pow(sdevs[e->active[i].nam],2)) - 0.5*log(2*pi*sdevs[e->active[i].nam]);
-    //    lnew += -pow(val-means[e->active[i].nam],2);
-  }
-  std::cout << std::endl;
-}
-*/
-
 
 // Input arguments:
 //    ndim 						= dimensionality (total number of free parameters) of the problem
@@ -154,7 +119,7 @@ void MultiNestDumper(int& nSamples,int& nlive,int& nPar,double** physLive,double
   e->counter++;
   e->pars->outputLikelihoodModel(e->image,e->source,e->output + std::to_string(e->counter) + "_");
 
-
+  /*
   // lastlive holds the parameter values for the last set of live points, and has the same structure as nlpars, with an array of nlive points for each parameter
   std::vector<double*> lastlive(nPar);
   for(int i=0;i<nPar;i++){
@@ -173,36 +138,38 @@ void MultiNestDumper(int& nSamples,int& nlive,int& nPar,double** physLive,double
     fprintf(fh,"\n");
   }
   fclose(fh);
-
-
+  */
+  std::cout << "Npars   " << nPar << std::endl;
 
   // postdist holds the posterior probability, loglike, and the parameters
   double postdist[nSamples][nPar+2];
 
   for(int j=0;j<nSamples;j++){
-    if( posterior[0][(nPar+1)*nSamples+j] > 1.e-99 ){
-      postdist[j][0] = posterior[0][(nPar+1)*nSamples+j];//post goes first
-      //    postdist[j][1] = -2*log10(posterior[0][0*nSamples+j]);//and then -2*loglikelihood
-      postdist[j][1] = -posterior[0][(nPar)*nSamples+j];//and then -2*loglikelihood
-      
-      for(int i=0;i<nPar;i++){
-	postdist[j][2+i] = e->pars->active[i]->pri->fromUnitCube( posterior[0][i*nSamples+j] );
-      }
+    postdist[j][0] = posterior[0][(nPar+2)*j + (nPar+1)];
+    postdist[j][1] = posterior[0][(nPar+2)*j + nPar];
+    for(int i=0;i<nPar;i++){
+      postdist[j][2+i] = e->pars->active[i]->pri->fromUnitCube( posterior[0][(nPar+2)*j+i] );
     }
   }
 
   // File for the corner plot
   fh = fopen( (e->output + std::to_string(e->counter) + "_corner.txt").c_str() ,"w");
   for(int j=0;j<nSamples;j++){
-    if( postdist[j][0] > 1.e-99 ){
-      double dum = 1.;
-      fprintf(fh," %25.18e",dum);
-      fprintf(fh," %25.18e",postdist[j][0]);
-      for(int i=2;i<nPar+2;i++){
-	fprintf(fh," %25.18e",postdist[j][i]);
-      }
-      fprintf(fh,"\n");
+    for(int i=0;i<nPar+2;i++){
+      //      fprintf(fh," %25.18e",postdist[j][i]);
+      fprintf(fh," %25.18e",posterior[0][(nPar+2)*j + i]);
     }
+    fprintf(fh,"\n");
+
+    /*
+    double dum = 1.;
+    fprintf(fh," %25.18e",dum);
+    fprintf(fh," %25.18e",postdist[j][0]);
+    for(int i=0;i<nPar;i++){
+      fprintf(fh," %25.18e",postdist[j][2+i]);
+    }
+    fprintf(fh,"\n");
+    */
   }
   fclose(fh);
 

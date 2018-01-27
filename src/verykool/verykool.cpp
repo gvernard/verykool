@@ -36,7 +36,7 @@ int main(int argc,char* argv[]){
   BaseSourcePlane* mysource;
   Initialization::initialize_program(argv[1],argv[2],init,mypars,mydata,mycollection,mysource);
 
-  
+
   //=============== BEGIN:MINIMIZATION =========================
   printf("%-25s","Starting minimization");
   fflush(stdout);
@@ -48,14 +48,14 @@ int main(int argc,char* argv[]){
   std::cout << std::string(200,'=') << std::endl;
   fflush(stdout);
   //================= END:MINIMIZATION =========================
-  
+
 
   // Finalize output etc
   if( myrank == 0 ){
     Initialization::finalize_program(init,mypars,mydata,mycollection,mysource);
     //myminimizer->output();
   }
-  
+
 
 
   // Cleanup pointers
