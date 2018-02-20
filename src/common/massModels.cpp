@@ -52,19 +52,17 @@ void Sie::defl(double xin,double yin,double& xout,double& yout){
     }
   }
 
-  double fac   = 1.-q*q;
+  double fac   = 1.0-q*q;
   double omega = q*q*x_t*x_t + y_t*y_t; // this does not depend on using omega, omega', or zeta, as long as I change correctly to these elliptical radii.
   double fac2  = sqrt(fac/omega);
 
   double ax_t = (b/sqrt(fac))*atan(x_t*fac2);
   double ay_t = (b/sqrt(fac))*atanh(y_t*fac2);
   
-  //rotate back according to position angle, no need to translate
-  double ax =  ax_t*cos(-pa) + ay_t*sin(-pa);
-  double ay = -ax_t*sin(-pa) + ay_t*cos(-pa);
+  //rotate back according to position angle, no need to translate (this is equivalent to rotating by -pa using the same equations as above)
+  double ax =  ax_t*cos(pa) - ay_t*sin(pa);
+  double ay =  ax_t*sin(pa) + ay_t*cos(pa);
   
-  //  xout = xin - ax;
-  //  yout = yin - ay;
   xout = ax;
   yout = ay;
 }

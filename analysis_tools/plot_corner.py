@@ -4,6 +4,7 @@ import sys
 import json
 import os.path
 import matplotlib
+import re
 from shutil import copyfile
 
 matplotlib.rc('font',**{'family':'serif', 'serif':['TimesNewRoman'],'size':25})
@@ -44,50 +45,31 @@ g.triangle_plot(['plt_corner'],names,filled=True)
 #if os.path.isfile(rootdir+'data/params.json'):
 
 #tmp = rootdir.split('/')
-if os.path.isfile(rootdir+'/vkl_input.json'):
+if os.path.isfile(path+run+'/vkl_input.json'):
 
     # get all the parameter names and values from the true data
     true_params = {}
 
-    with open(rootdir+'/vkl_input.json') as json_input:    
-        true_pars = json.load(json_input)
-
-    for param in true_pars["physical"]:
-        true_params[param['nam']] = param['val']
-
-    if (len(true_pars["lenses"]) == 1) :
-        for param in true_pars["lenses"][0]["nlpars"]:
-            true_params[param['nam']] = param['val']
-    else:
-        for i in range(0,len(true_pars["lenses"])):
-            for param in true_pars["lenses"][i]["nlpars"]:
-                true_params[param['nam']+'_'+str(i)] = param['val']
-
-
-    # match the active parameters to their true values
-    final_params = np.empty([0])
-    final_values = np.empty([0])
-    for name in used_pars:
-        if name == 'lambda':
-            final_params = np.append(final_params,name)
-            final_values = np.append(final_values,0) 
-        else:
-            final_params = np.append(final_params,name)
-            final_values = np.append(final_values,true_params[name])
+    input_file = path+run+'/vkl_input.json'
+    f          = open(input_file,'r')
+    input_str  = f.read()
+    input_str  = re.sub('//.*?\n|/\*.*?\*/','',input_str,flags=re.S)
+    true_pars  = json.loads(input_str)
     
 
-    # add vertical lines at the location of the true values (exept "lambda")
-    for i in range(0,len(final_params)):
-        if final_params[i] != 'lambda':
-            for ax in g.subplots[i:,i]:
-                ax.axvline(final_values[i],color='black',ls='solid',alpha=0.5)
-        
-    # add horizontal lines at the location of the true values (exept "lambda")
-    for i in range(0,len(final_params)):
-        if final_params[i] != 'lambda':
-            for ax in g.subplots[i,:i]:
-                ax.axhline(final_values[i],color='black',ls='solid',alpha=0.5)
+    for param in true_pars["physical"]["nlpars"]:
+        true_params[param['nam']] = param['val']
 
+    for lens in true_pars["lenses"]:
+        for param in true_pars["lenses"][lens]["nlpars"]:
+            true_params[lens+'_'+param['nam']] = param['val']
+
+    for i in range(0,len(names)):
+        if names[i] != "lambda":
+            for ax in g.subplots[i:,i]:
+                ax.axvline(true_params[names[i]],color='black',ls='solid',alpha=0.5)
+            for ax in g.subplots[i,:i]:
+                ax.axhline(true_params[names[i]],color='black',ls='solid',alpha=0.5)
 
 
 

@@ -15,7 +15,7 @@ from matplotlib.patches import Polygon
 from matplotlib.collections import PatchCollection
 from matplotlib.colors import colorConverter
 from astropy.io import fits
-from astropy.visualization import astropy_mpl_style
+
 
 path = sys.argv[1]
 run  = sys.argv[2]
@@ -23,16 +23,19 @@ if len(sys.argv) > 3:
     step = sys.argv[3]
     out_path  = path+run+'output/'+str(step)+'_'
 else:
-    out_path  = path+run+'output/'+str(step)+'_'
+    step = ''
+    out_path  = path+run+'output/'
 
 mycmap    = 'Spectral'
 fig       = plt.figure(figsize=(12,8))
 data_path = path+'data/'
 
-hdulist = fits.open(data_path+'source.fits')
-srcrange = float(hdulist[0].header['size'])
-hdulist.close()
-#srcrange = 0.4
+if os.path.isfile(data_path+'source.fits'):
+    hdulist = fits.open(data_path+'source.fits')
+    srcrange = float(hdulist[0].header['size'])
+    hdulist.close()
+else:
+    srcrange = 1.4
 
 
 #dum = path.split('/')

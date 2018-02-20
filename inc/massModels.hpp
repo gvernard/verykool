@@ -95,7 +95,8 @@ public:
     for(int i=0;i<nlpars.size();i++){
       this->mpars[nlpars[i]->nam] = nlpars[i]->val;
     }
-    this->mpars["g1"]  = this->mpars["g"]*cos(2*this->mpars["phi"]);
+    this->mpars["phi"] *= 0.01745329251;
+      this->mpars["g1"]  = this->mpars["g"]*cos(2*this->mpars["phi"]);
     this->mpars["g2"]  = this->mpars["g"]*sin(2*this->mpars["phi"]);
   }
 

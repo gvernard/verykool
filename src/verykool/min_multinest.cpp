@@ -78,7 +78,10 @@ void MultiNestLogLike(double* Cube,int& ndim,int& npars,double& lnew,void* myext
   std::vector<double> new_pars;
   for(int i=0;i<e->pars->active.size();i++){
     new_pars.push_back( e->pars->active[i]->pri->fromUnitCube(Cube[i]) );
+    //    printf(" %25.18e",e->pars->active[i]->pri->fromUnitCube(Cube[i]));
   }
+  //  std::cout << std::endl;
+      
   e->pars->updateActive(new_pars);
   e->pars->updateLikelihoodModel(e->image,e->source,e->mycollection);
   lnew = e->pars->getLogLike(e->image,e->source);
@@ -139,39 +142,33 @@ void MultiNestDumper(int& nSamples,int& nlive,int& nPar,double** physLive,double
   }
   fclose(fh);
   */
-  std::cout << "Npars   " << nPar << std::endl;
+
 
   // postdist holds the posterior probability, loglike, and the parameters
-  double postdist[nSamples][nPar+2];
+  int Ncols = nPar + 2;
+  double postdist[nSamples][Ncols];
 
   for(int j=0;j<nSamples;j++){
-    postdist[j][0] = posterior[0][(nPar+2)*j + (nPar+1)];
-    postdist[j][1] = posterior[0][(nPar+2)*j + nPar];
-    for(int i=0;i<nPar;i++){
-      postdist[j][2+i] = e->pars->active[i]->pri->fromUnitCube( posterior[0][(nPar+2)*j+i] );
+    for(int i=0;i<Ncols-2;i++){
+      postdist[j][i] = e->pars->active[i]->pri->fromUnitCube( posterior[0][nSamples*i+j] );
     }
+    postdist[j][Ncols-2] = posterior[0][nSamples*(Ncols-2)+j];
+    postdist[j][Ncols-1] = posterior[0][nSamples*(Ncols-1)+j];
   }
+
 
   // File for the corner plot
   fh = fopen( (e->output + std::to_string(e->counter) + "_corner.txt").c_str() ,"w");
   for(int j=0;j<nSamples;j++){
-    for(int i=0;i<nPar+2;i++){
-      //      fprintf(fh," %25.18e",postdist[j][i]);
-      fprintf(fh," %25.18e",posterior[0][(nPar+2)*j + i]);
+    fprintf(fh," %25.18e",1.0);
+    fprintf(fh," %25.18e",postdist[j][Ncols-1]);
+    for(int i=0;i<Ncols-2;i++){
+      fprintf(fh," %25.18e",postdist[j][i]);
     }
     fprintf(fh,"\n");
-
-    /*
-    double dum = 1.;
-    fprintf(fh," %25.18e",dum);
-    fprintf(fh," %25.18e",postdist[j][0]);
-    for(int i=0;i<nPar;i++){
-      fprintf(fh," %25.18e",postdist[j][2+i]);
-    }
-    fprintf(fh,"\n");
-    */
   }
   fclose(fh);
+
 
   std::ifstream  src((e->output + std::to_string(e->counter) + "_corner.txt").c_str(),std::ios::binary);
   std::ofstream  dst((e->output + "corner.txt").c_str(), std::ios::binary);
@@ -189,7 +186,6 @@ void MultiNestDumper(int& nSamples,int& nlive,int& nPar,double** physLive,double
     sdevs[i] = paramConstr[0][nPar+i] * e->pars->active[i]->ran;
     bests[i] = e->pars->active[i]->pri->fromUnitCube( paramConstr[0][i] );
     maps[i]  = e->pars->active[i]->pri->fromUnitCube( paramConstr[0][i] );
-    //    (*(e->map_pars))[e->active[i].index][e->active[i].nam] = e->nlpars[e->active[i].index][e->active[i].nam]->val;  
   }
 
   /*

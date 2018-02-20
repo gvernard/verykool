@@ -289,7 +289,6 @@ double StandardLikelihood::getLogLike(ImagePlane* image,BaseSourcePlane* source)
   this->terms["like"] = val;
 
   return val;
-  //  return pow(nlpars[2]["b"]->val-6,2) + pow(nlpars[2]["q"]->val-6,2) + pow(nlpars[2]["pa"]->val-6,2) + pow(nlpars[2]["x0"]->val-6,2) + pow(nlpars[2]["y0"]->val-6,2);
 }
 
 
