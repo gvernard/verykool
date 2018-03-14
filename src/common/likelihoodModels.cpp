@@ -294,12 +294,12 @@ double StandardLikelihood::getLogLike(ImagePlane* image,BaseSourcePlane* source)
 
 void StandardLikelihood::outputLikelihoodModel(ImagePlane* image,BaseSourcePlane* source,std::string output){
   // Output reconstructed source
-  source->outputSource(output + "vkl_voronoi.dat");
+  source->outputSource(output);
   
   // Output errors of reconstructed source
   double* errors = (double*) calloc(source->Sm,sizeof(double));
   this->algebra->getSourceErrors(source->Sm,errors);
-  source->outputSourceErrors(errors,output + "vkl_voronoi_errors.dat");
+  source->outputSourceErrors(errors,output);
   free(errors);
 
   // Create mock data (lensed MAP source)

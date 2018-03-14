@@ -320,9 +320,10 @@ void FixedSource::constructH(){
 
 
 //virtual
-void FixedSource::outputSource(const std::string filename){
+void FixedSource::outputSource(const std::string path){
   //Write PNG:
   //writeArrayPngPP(filename,this->Sj,this->Si,this->src);
+  std::string filename = path + "vkl_source.fits";
 
   //Write FITS:
   long naxis    = 2;
@@ -353,7 +354,7 @@ void FixedSource::outputSource(const std::string filename){
 }
 
 //virtual
-void FixedSource::outputSourceErrors(double* errors,const std::string filename){}
+void FixedSource::outputSourceErrors(double* errors,const std::string path){}
 
 
 //Derived class from BaseSourcePlane: FloatingSource
@@ -553,9 +554,10 @@ void FloatingSource::constructH(){
 }
 
 //virtual
-void FloatingSource::outputSource(const std::string filename){
+void FloatingSource::outputSource(const std::string path){
   //Write PNG:
   //writeArrayPngPP(filename,this->Sj,this->Si,this->src);
+  std::string filename = path + "vkl_source.fits";
 
   //Write FITS:
   long naxis    = 2;
@@ -586,7 +588,7 @@ void FloatingSource::outputSource(const std::string filename){
 }
 
 //virtual
-void FloatingSource::outputSourceErrors(double* errors,const std::string filename){}
+void FloatingSource::outputSourceErrors(double* errors,const std::string path){}
 
 
 //Derived class from BaseSourcePlane: AdaptiveSource
@@ -1195,7 +1197,7 @@ void AdaptiveSource::writeTriangles(){
 }
 
 //virtual
-void AdaptiveSource::outputSource(const std::string filename){
+void AdaptiveSource::outputSource(const std::string path){
   typedef CGAL::Exact_predicates_inexact_constructions_kernel                  K;
   typedef CGAL::Delaunay_triangulation_2<K>                                    DT;
   typedef CGAL::Delaunay_triangulation_adaptation_traits_2<DT>                 AT;
@@ -1235,6 +1237,7 @@ void AdaptiveSource::outputSource(const std::string filename){
 
   //Locate the centres of the Voronoi cells and then get the vertices of the surrounding face
   //This code is based on an online example from the CGAL voronoi package
+  std::string filename = path + "vkl_voronoi.dat";
   FILE* fh = fopen(filename.c_str(),"w");
   for(int i=0;i<this->Sm;i++){
 
@@ -1255,6 +1258,18 @@ void AdaptiveSource::outputSource(const std::string filename){
 
   }
   fclose(fh);
+
+
+
+  // Output the source vertices and values
+  filename = path + "vkl_source_irregular.dat";
+  for(int i=0;i<this->Sm;i++){
+    fprintf(fh,"%12.5f %12.5f %12.5f\n",this->src[i],this->x[i],this->y[i]);
+  }  
+  fclose(fh);
+
+
+
 
   /*
   //Set up an image grid, match the value of its pixels to the voronoi cells, and output it as fits
@@ -1293,7 +1308,7 @@ void AdaptiveSource::outputSource(const std::string filename){
 
 
 //virtual
-void AdaptiveSource::outputSourceErrors(double* errors,const std::string filename){
+void AdaptiveSource::outputSourceErrors(double* errors,const std::string path){
   typedef CGAL::Exact_predicates_inexact_constructions_kernel                  K;
   typedef CGAL::Delaunay_triangulation_2<K>                                    DT;
   typedef CGAL::Delaunay_triangulation_adaptation_traits_2<DT>                 AT;
@@ -1333,7 +1348,7 @@ void AdaptiveSource::outputSourceErrors(double* errors,const std::string filenam
 
   //Locate the centres of the Voronoi cells and then get the vertices of the surrounding face
   //This code is based on an online example from the CGAL voronoi package
-  FILE* fh = fopen(filename.c_str(),"w");
+  FILE* fh = fopen((path+"vkl_voronoi_errors.dat").c_str(),"w");
   for(int i=0;i<this->Sm;i++){
 
     if( this->opposite_edges_per_vertex[i].size() != 0 ){

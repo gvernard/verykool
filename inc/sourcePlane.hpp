@@ -58,8 +58,8 @@ public:
   //virtual members
   virtual void constructL(ImagePlane* image,CollectionMassModels* mycollection) = 0;
   virtual void constructH() = 0;
-  virtual void outputSource(const std::string filename) = 0;
-  virtual void outputSourceErrors(double* errors,const std::string filename) = 0;
+  virtual void outputSource(const std::string path) = 0;
+  virtual void outputSourceErrors(double* errors,const std::string path) = 0;
 
 
   //non-virtual members
@@ -76,8 +76,8 @@ public:
   ~FixedSource();
   void constructL(ImagePlane* image,CollectionMassModels* mycollection);
   void constructH();
-  void outputSource(const std::string filename);
-  void outputSourceErrors(double* errors,const std::string filename);
+  void outputSource(const std::string path);
+  void outputSourceErrors(double* errors,const std::string path);
 
   //non-virtual members
   void setGrid(std::map<std::string,std::string> pars);
@@ -99,8 +99,8 @@ public:
   ~FloatingSource();
   void constructL(ImagePlane* image,CollectionMassModels* mycollection);
   void constructH();
-  void outputSource(const std::string filename);
-  void outputSourceErrors(double* errors,const std::string filename);
+  void outputSource(const std::string path);
+  void outputSourceErrors(double* errors,const std::string path);
 
   //non-virtual members
   void setGrid(std::map<std::string,std::string> pars);
@@ -125,8 +125,8 @@ public:
   ~AdaptiveSource();
   void constructL(ImagePlane* image,CollectionMassModels* mycollection);
   void constructH();
-  void outputSource(const std::string filename);
-  void outputSourceErrors(double* errors,const std::string filename);
+  void outputSource(const std::string path);
+  void outputSourceErrors(double* errors,const std::string path);
 
   //non-virtual members
   void createAdaGrid(ImagePlane* image,CollectionMassModels* mycollection);
