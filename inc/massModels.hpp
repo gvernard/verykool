@@ -43,6 +43,26 @@ public:
   void defl(double xin,double yin,double& xout,double& yout);
 };
 
+class Pert: public BaseMassModel{
+public:
+  int Ni;
+  int Nj;
+  double width;
+  double height;
+  double* dpsidx;
+  double* dpsidy;
+  double i0;
+  double j0;
+  double di;
+  double dj;
+
+  Pert(std::string filename,int Ni,int Nj,double width,double height);
+  ~Pert(){
+    free(dpsidx);
+    free(dpsidy);
+  }
+  void defl(double xin,double yin,double& xout,double& yout);
+};
 
 
 class FactoryMassModel{//This is a singleton class.
@@ -60,6 +80,14 @@ public:
       return new Sie(nlpars);
     } else if ( modelname == "spemd" ){
       return new Spemd(nlpars);
+    } else {
+      return NULL;
+    }
+  }
+
+  BaseMassModel* createMassModel(const std::string &modelname,std::map<std::string,std::string> pars){
+    if( modelname == "pert" ){
+      return new Pert(pars["filename"],std::stoi(pars["Ni"]),std::stoi(pars["Nj"]),std::stof(pars["width"]),std::stof(pars["height"]));
     } else {
       return NULL;
     }
@@ -96,15 +124,15 @@ public:
       this->mpars[nlpars[i]->nam] = nlpars[i]->val;
     }
     this->mpars["phi"] *= 0.01745329251;
-      this->mpars["g1"]  = this->mpars["g"]*cos(2*this->mpars["phi"]);
+    this->mpars["g1"]  = this->mpars["g"]*cos(2*this->mpars["phi"]);
     this->mpars["g2"]  = this->mpars["g"]*sin(2*this->mpars["phi"]);
   }
 
   void all_defl(double xin,double yin,double& xout,double& yout){
-    double ax   = 0.;
-    double ay   = 0.;
-    double dumx = 0.;
-    double dumy = 0.;
+    double ax   = 0.0;
+    double ay   = 0.0;
+    double dumx = 0.0;
+    double dumy = 0.0;
     for(int i=0;i<this->models.size();i++){
       this->models[i]->defl(xin,yin,dumx,dumy);
       ax += dumx;

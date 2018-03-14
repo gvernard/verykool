@@ -35,7 +35,7 @@ if os.path.isfile(data_path+'source.fits'):
     srcrange = float(hdulist[0].header['size'])
     hdulist.close()
 else:
-    srcrange = 2.4
+    srcrange = 0.4
 
 
 #dum = path.split('/')

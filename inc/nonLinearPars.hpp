@@ -5,6 +5,7 @@
 #include <vector>
 #include <map>
 #include <iostream>
+#include <cstdlib>
 
 // In this file: BasePrior, Uni, Gauss, Exp, and FactoryPrior
 //               Nlpar
@@ -21,7 +22,7 @@ public:
   double min;
   double max;
   double ran;
-  BasePrior* pri;
+  BasePrior* pri = NULL;
 
 
   Nlpar(){};

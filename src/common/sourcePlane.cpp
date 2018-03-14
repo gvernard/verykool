@@ -1185,11 +1185,11 @@ AdaptiveSource::xypoint AdaptiveSource::intersection_point_y(xypoint p0,xypoint 
 
 //non-virtual
 void AdaptiveSource::writeTriangles(){
-  a_triangle t;
+  a_triangle triangle;
   FILE* fh = fopen("triangles.dat","w");
   for(int i=0;i<this->n_triangles;i++){
-    t = this->triangles[i];
-    fprintf(fh,"%10.5f%10.5f%10.5f%10.5f%10.5f%10.5f\n",this->x[t.a],this->y[t.a],this->x[t.b],this->y[t.b],this->x[t.c],this->y[t.c]);
+    triangle = this->triangles[i];
+    fprintf(fh,"%10.5f%10.5f%10.5f%10.5f%10.5f%10.5f\n",this->x[triangle.a],this->y[triangle.a],this->x[triangle.b],this->y[triangle.b],this->x[triangle.c],this->y[triangle.c]);
   }
   fclose(fh);
 }
