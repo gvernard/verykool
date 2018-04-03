@@ -117,8 +117,8 @@ void FixedSource::constructL(ImagePlane* image,CollectionMassModels* mycollectio
   long included = 0;
   double xp     = 0;
   double yp     = 0;
-  double dx     = (this->xmax - this->xmin)/(Si - 1);
-  double dy     = (this->ymax - this->ymin)/(Sj - 1);
+  double dx     = (this->xmax - this->xmin)/(Si);
+  double dy     = (this->ymax - this->ymin)/(Sj);
   double norm   = 1./(dx*dy);
   int ic        = 0;
   int jc        = 0;
@@ -442,8 +442,8 @@ void FloatingSource::constructL(ImagePlane* image,CollectionMassModels* mycollec
   long included = 0;
   double xp     = 0;
   double yp     = 0;
-  double dx     = (this->xmax - this->xmin)/(Si - 1);
-  double dy     = (this->ymax - this->ymin)/(Sj - 1);
+  double dx     = (this->xmax - this->xmin)/(Si);
+  double dy     = (this->ymax - this->ymin)/(Sj);
   double norm   = 1./(dx*dy);
   int ic        = 0;
   int jc        = 0;
@@ -599,7 +599,6 @@ AdaptiveSource::AdaptiveSource(int a,std::string reg_scheme){
   type    = "adaptive";
   mode    = "random";
   spacing = 0;
-  reg     = reg_scheme;
   Sm      = a;
   Si      = a;
   Sj      = 0;
@@ -609,6 +608,17 @@ AdaptiveSource::AdaptiveSource(int a,std::string reg_scheme){
   src = (double*) calloc(Sm,sizeof(double));
   x   = (double*) calloc(Sm,sizeof(double));
   y   = (double*) calloc(Sm,sizeof(double));
+
+  reg = reg_scheme;
+  if( reg == "identity"){
+    eigenSparseMemoryAllocForH = 1;
+  } else if( reg == "gradient" ){
+    eigenSparseMemoryAllocForH = 8;
+  } else if( reg == "curvature" ){
+    eigenSparseMemoryAllocForH = 8;
+  } else if( reg == "covariance_kernel" ){
+    constructH(); // I need to call this function in order to set the number of non-zero entries per sparse matrix row (this number varies for a random covariance kernel)
+  }
 }
 
 //virtual
@@ -616,7 +626,6 @@ AdaptiveSource::AdaptiveSource(std::string m,int a,int b,std::string reg_scheme)
   type    = "adaptive";
   mode    = m;
   spacing = b;
-  reg     = reg_scheme;
   Sm      = a;// + 8;
   Si      = a;// + 8;
   Sj      = 0;
@@ -626,6 +635,17 @@ AdaptiveSource::AdaptiveSource(std::string m,int a,int b,std::string reg_scheme)
   src = (double*) calloc(Sm,sizeof(double));
   x   = (double*) calloc(Sm,sizeof(double));
   y   = (double*) calloc(Sm,sizeof(double));
+
+  reg = reg_scheme;
+  if( reg == "identity"){
+    eigenSparseMemoryAllocForH = 1;
+  } else if( reg == "gradient" ){
+    eigenSparseMemoryAllocForH = 8;
+  } else if( reg == "curvature" ){
+    eigenSparseMemoryAllocForH = 8;
+  } else if( reg == "covariance_kernel" ){
+    constructH(); // I need to call this function in order to set the number of non-zero entries per sparse matrix row (this number varies for a random covariance kernel)
+  }
 }
 
 //virtual
@@ -758,8 +778,8 @@ void AdaptiveSource::createAdaGrid(ImagePlane* image,CollectionMassModels* mycol
 
     int i0    = floor(Ni/2);
     int j0    = floor(Nj/2);
-    double di = image->width/(Ni-1);
-    double dj = image->height/(Nj-1);
+    double di = image->width/(Ni);
+    double dj = image->height/(Nj);
     
     int count = 0;
     double xtmp,ytmp;
@@ -894,7 +914,6 @@ void AdaptiveSource::constructH(){
 
   if( this->reg == "identity" ){//---------------------------> zero order
     
-    this->eigenSparseMemoryAllocForH = 1;
     for(int i=0;i<this->H.Ti;i++){
       tmp.push_back({i,i,1});
     }
@@ -905,7 +924,6 @@ void AdaptiveSource::constructH(){
 
 
 
-    this->eigenSparseMemoryAllocForH = 8;
     for(int i=0;i<this->Sm;i++){
       
       xypoint p0 = {this->x[i],this->y[i]};
@@ -1032,7 +1050,6 @@ void AdaptiveSource::constructH(){
 
   } else if ( this->reg == "curvature" ){//-------------------> second order
 
-    this->eigenSparseMemoryAllocForH = 8;
     for(int i=0;i<this->Sm;i++){
       
       xypoint p0 = {this->x[i],this->y[i]};
@@ -1262,11 +1279,12 @@ void AdaptiveSource::outputSource(const std::string path){
 
 
   // Output the source vertices and values
-  filename = path + "vkl_source_irregular.dat";
+  std::string filename2 = path + "vkl_source_irregular.dat";
+  FILE* fh2 = fopen(filename2.c_str(),"w");
   for(int i=0;i<this->Sm;i++){
-    fprintf(fh,"%12.5f %12.5f %12.5f\n",this->src[i],this->x[i],this->y[i]);
+    fprintf(fh2,"%12.5f %12.5f %12.5f\n",this->src[i],this->x[i],this->y[i]);
   }  
-  fclose(fh);
+  fclose(fh2);
 
 
 

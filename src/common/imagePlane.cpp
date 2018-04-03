@@ -37,8 +37,8 @@ ImagePlane::ImagePlane(const std::string filepath,int i,int j,double w,double h)
   
   int i0    = floor(Ni/2);
   int j0    = floor(Nj/2);
-  double di = width/(Ni-1);
-  double dj = height/(Nj-1);
+  double di = width/(Ni);
+  double dj = height/(Nj);
   //  double di = width/Ni;
   //  double dj = height/Nj;
 
@@ -71,8 +71,8 @@ ImagePlane::ImagePlane(int i,int j,double w,double h){
 
   int i0    = floor(i/2);
   int j0    = floor(j/2);
-  double di = width/(i-1);
-  double dj = height/(j-1);
+  double di = width/(i);
+  double dj = height/(j);
 
   for(int ii=0;ii<Ni;ii++){
     for(int jj=0;jj<Nj;jj++){

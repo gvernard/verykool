@@ -42,7 +42,6 @@ void Initialization::initialize_program(std::string path,std::string run,Initial
 
 
 
-
   // Initialize mass model parameters ------------------------------------------------------------------------------------------------------------------------------
   mycollection = new CollectionMassModels(mypars->getPhysicalPars());
   mycollection->models.resize(init->mmodel.size());
@@ -70,11 +69,9 @@ void Initialization::initialize_program(std::string path,std::string run,Initial
   //  }
 
 
-
   // Initialize precomputed algebraic quantities -------------------------------------------------------------------------------------------------------------------
   //Precompute a number of algebraic quantities (table products etc)                                                                [<---algebra package dependent]
   mypars->initializeAlgebra(mydata,mysource);
-
 
 
 

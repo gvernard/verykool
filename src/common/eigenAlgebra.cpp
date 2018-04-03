@@ -4,6 +4,7 @@
 #include "sourcePlane.hpp"
 #include "likelihoodModels.hpp"
 
+#include <iostream>
 
 StandardAlgebra::StandardAlgebra(StandardLikelihood* a){
   this->likeModel = a;
@@ -18,7 +19,7 @@ void StandardAlgebra::setAlgebraInit(ImagePlane* image,BaseSourcePlane* source){
   Eigen::Map<Eigen::VectorXd> d(image->img,Nm);
   
   Eigen::SparseMatrix<double> SS(image->S.Ti,image->S.Tj);
-  SS.reserve(Eigen::VectorXi::Constant(image->S.Ti,1));//overestimating the covariance matrix number of entries per row
+  SS.reserve(Eigen::VectorXi::Constant(image->S.Ti,1));//overestimating the mask matrix number of entries per row
   for(int i=0;i<image->S.tri.size();i++){  SS.insert(image->S.tri[i].i,image->S.tri[i].j) = image->S.tri[i].v;  }
 
   Eigen::SparseMatrix<double> CC(image->C.Ti,image->C.Tj);
