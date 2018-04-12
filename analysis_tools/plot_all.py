@@ -17,6 +17,21 @@ from matplotlib.colors import colorConverter
 from astropy.io import fits
 
 
+import matplotlib.colors as colors
+from matplotlib.mlab import bivariate_normal
+
+class MidpointNormalize(colors.Normalize):
+    def __init__(self, vmin=None, vmax=None, midpoint=None, clip=False):
+        self.midpoint = midpoint
+        colors.Normalize.__init__(self, vmin, vmax, clip)
+
+    def __call__(self, value, clip=None):
+        x, y = [self.vmin, self.midpoint, self.vmax], [0, 0.5, 1]
+        return np.ma.masked_array(np.interp(value, x, y))
+
+
+
+
 path = sys.argv[1]
 run  = sys.argv[2]
 if len(sys.argv) > 3:
@@ -26,7 +41,8 @@ else:
     step = ''
     out_path  = path+run+'output/'
 
-mycmap    = 'Spectral'
+mycmap_div    = 'Spectral'
+mycmap_seq    = 'YlGnBu'
 fig       = plt.figure(figsize=(12,8))
 data_path = path+'data/'
 
@@ -36,6 +52,7 @@ if os.path.isfile(data_path+'source.fits'):
     hdulist.close()
 else:
     srcrange = 0.4
+
 
 
 #dum = path.split('/')
@@ -62,99 +79,118 @@ xticks = np.arange(math.ceil( -pars['iplane']['siz_x']/2.),math.floor( pars['ipl
 xticks = np.append(xticks,math.floor( pars['iplane']['siz_x']/2.))
 yticks = np.arange(math.ceil( -pars['iplane']['siz_y']/2.),math.floor( pars['iplane']['siz_y']/2.),1)
 yticks = np.append(yticks,math.floor( pars['iplane']['siz_y']/2.))
-srcxticks = np.arange(-srcrange,srcrange,1)
+srcxticks = np.arange(-srcrange,srcrange,2*srcrange/4.0)
 srcxticks = np.append(srcxticks,srcrange)
-srcyticks = np.arange(-srcrange,srcrange,1)
+srcyticks = np.arange(-srcrange,srcrange,2*srcrange/4.0)
 srcyticks = np.append(srcyticks,srcrange)
 
 
 
-# Real/Mock image data and model
+
+
+
+# Real/Mock image data and model. They need to share the same color scale
+#########################################################################################################################
+
+# Read data
 im_data  = fits.getdata(data_path+'image.fits',ext=0)
 im_data  = im_data[::-1,:]
+# Read model
 im_model = fits.getdata(out_path+'vkl_image.fits',ext=0)
 im_model = im_model[::-1,:]
+# Read mask
 mask     = fits.getdata(data_path+'mask.fits',ext=0)
 
-d_max  = np.amax(im_data)
-d_min  = np.amin(im_data)
-m_max  = np.amax(im_model)
-m_min  = np.amin(im_model)
-dm_max = np.maximum(d_max,m_max)
-dm_min = np.minimum(d_min,m_min)
+# Set color scale
+limit = max([abs(np.amax(im_data)),abs(np.amin(im_data)),abs(np.amax(im_model)),abs(np.amin(im_model))])
 
+
+# Plot data
 data = fig.add_subplot(231)
 data.set_title('DATA')
 data.set_xlabel('arcsec')
 data.set_ylabel('arcsec')
-im = data.imshow(im_data,interpolation='nearest',cmap=mycmap,extent=[xmin,xmax,ymin,ymax],vmin=dm_min,vmax=dm_max)
+#im = data.imshow(im_data,interpolation='none',cmap=mycmap_seq,extent=[xmin,xmax,ymin,ymax],vmin=d_min,vmax=d_max,norm=MidpointNormalize(midpoint=0.0))
+im = data.imshow(im_data,interpolation='none',cmap=mycmap_div,extent=[xmin,xmax,ymin,ymax],vmin=-limit,vmax=limit)
 data.set_xticks(xticks)
 data.set_yticks(yticks)
+# Plot colorbar
 divider = make_axes_locatable(data)
 cax = divider.append_axes("right",size="5%",pad=0.05)
-fig.colorbar(im,cax=cax,ticks=MultipleLocator(0.2),format="%4.1f")
-data.contour(mask,levels=[0],extent=[xmin,xmax,ymin,ymax],colors='#001A47')
+#fig.colorbar(im,cax=cax,ticks=MultipleLocator(0.2),format="%4.1f")
+fig.colorbar(im,cax=cax,format="%5.2f")
+# Plot mask contour
+data.contour(mask,levels=[0.5],extent=[xmin,xmax,ymin,ymax],colors='#001A47')
 
+
+# Plot model
 model = fig.add_subplot(232)
 model.set_title('MODEL')
 model.set_xlabel('arcsec')
 model.set_ylabel('arcsec')
-im = model.imshow(im_model,interpolation='nearest',cmap=mycmap,extent=[xmin,xmax,ymin,ymax],vmin=dm_min,vmax=dm_max)
+#im = data.imshow(im_data,interpolation='none',cmap=mycmap_seq,extent=[xmin,xmax,ymin,ymax],vmin=d_min,vmax=d_max,norm=MidpointNormalize(midpoint=0.0))
+im = model.imshow(im_model,interpolation='none',cmap=mycmap_div,extent=[xmin,xmax,ymin,ymax],vmin=-limit,vmax=limit)
 model.set_xticks(xticks)
 model.set_yticks(yticks)
+# Plot colorbar
 divider = make_axes_locatable(model)
 cax = divider.append_axes("right",size="5%",pad=0.05)
-fig.colorbar(im,cax=cax,ticks=MultipleLocator(0.2),format="%4.1f")
-model.contour(mask,levels=[0],extent=[xmin,xmax,ymin,ymax],colors='#001A47')
+#fig.colorbar(im,cax=cax,ticks=MultipleLocator(0.2),format="%4.1f")
+fig.colorbar(im,cax=cax,format="%5.2f")
+# Plot mask contour
+model.contour(mask,levels=[0.5],extent=[xmin,xmax,ymin,ymax],colors='#001A47')
+
+
+
 
 
 # Residual image between data and model
+#########################################################################################################################
+# Read residuals
 im_res = fits.getdata(out_path+'vkl_residual.fits',ext=0)
 im_res = im_res[::-1,:]
+
+# Set color scale
+limit = max([abs(np.amax(im_res)),abs(np.amin(im_res))])
+
+# Plot residuals
 res = fig.add_subplot(233)
 res.set_title('RESIDUAL')
 res.set_xlabel('arcsec')
 res.set_ylabel('arcsec')
-im = res.imshow(im_res,interpolation='nearest',cmap=mycmap,extent=[xmin,xmax,ymin,ymax])
+im = res.imshow(im_res,interpolation='none',cmap=mycmap_div,extent=[xmin,xmax,ymin,ymax],vmin=-limit,vmax=limit)
 res.set_xticks(xticks)
 res.set_yticks(yticks)
+# Plot colorbar
 divider = make_axes_locatable(res)
 cax = divider.append_axes("right",size="5%",pad=0.05)
-fig.colorbar(im,cax=cax,ticks=MultipleLocator(0.2),format="%4.1f")
+#fig.colorbar(im,cax=cax,ticks=MultipleLocator(0.2),format="%4.1f")
+#cax.yaxis.set_major_locator(matplotlib.ticker.MaxNLocator(4))
+fig.colorbar(im,cax=cax,format="%5.2f")
 
 
 
-# True source (in case of mock data)
+
+# True source (in case of mock data) and reconstructed adaptive source. They need to share the same color scale
+#########################################################################################################################
+# Read true source if it exists
 if os.path.isfile(data_path+'source.fits'):
     im_src = fits.getdata(data_path+'source.fits',ext=0)
     im_src = im_src[::-1,:]
-    src = fig.add_subplot(234)
-    src.set_title('TRUE SOURCE')
-    src.set_xlabel('arcsec')
-    src.set_ylabel('arcsec')
-    im = src.imshow(im_src,interpolation='nearest',cmap=mycmap,extent=[-srcrange,srcrange,srcrange,-srcrange])
-    src.set_xticks(srcxticks)
-    src.set_yticks(srcyticks)
-    divider = make_axes_locatable(src)
-    cax = divider.append_axes("right",size="5%",pad=0.05)
-    fig.colorbar(im,cax=cax,ticks=MultipleLocator(0.2),format="%4.1f")
+    max_true = max([abs(np.amax(im_src)),abs(np.amin(im_src))])
 else:
-    src = fig.add_subplot(234)
-    src.axis('off')
+    max_true = 0
 
-
-
-# Reconstructed adaptive source
+# Read reconstructed adaptive source
 f        = open(out_path+'vkl_voronoi.dat')
 content  = [x.strip('\n') for x in f.readlines()]
-cells    = []
-colors   = []
+zvalues  = []
 polygons = []
 
-dumcmap = matplotlib.cm.get_cmap(mycmap)
+dumcmap = matplotlib.cm.get_cmap(mycmap_seq)
 for c in content:
     cell = np.fromstring(c,sep=' ')
-    colors.append( dumcmap(cell[0]) )
+
     length = cell.shape[0]
     points = []
     for i in range(1,length,2):
@@ -163,13 +199,41 @@ for c in content:
     polygon = Polygon(points,True)
     polygons.append(polygon)
 
+    zvalues.append( cell[0] )
 
-col = PatchCollection(polygons,alpha=1.0)
-col.set_color(colors)
 
+
+# Set color scale
+limit = max([max_true,abs(max(zvalues)),abs(min(zvalues))])
+
+
+# Plot real source if it exists
+if os.path.isfile(data_path+'source.fits'):
+    src = fig.add_subplot(234)
+    src.set_title('TRUE SOURCE')
+    src.set_xlabel('arcsec')
+    src.set_ylabel('arcsec')
+    im = src.imshow(im_src,interpolation='none',cmap=mycmap_div,extent=[-srcrange,srcrange,srcrange,-srcrange],vmin=-limit,vmax=limit)
+    src.set_xticks(srcxticks)
+    src.set_yticks(srcyticks)
+    # Plot colorbar
+    divider = make_axes_locatable(src)
+    cax = divider.append_axes("right",size="5%",pad=0.05)
+    #fig.colorbar(im,cax=cax,ticks=MultipleLocator(0.2),format="%4.1f")
+    fig.colorbar(im,cax=cax,format="%5.2f")
+else:
+    src = fig.add_subplot(234)
+    src.axis('off')
+
+
+
+# Plot reconstructed adaptive source
+col = PatchCollection(polygons,alpha=1.0,cmap=mycmap_div)
+col.set_clim(-limit,limit)
+col.set_edgecolor('face')
+col.set_array(np.array(zvalues))
 
 vkl_src = fig.add_subplot(235)
-
 vkl_src.add_collection(col)
 vkl_src.set_ylim(-srcrange,srcrange)
 vkl_src.set_xlim(-srcrange,srcrange)
@@ -180,9 +244,12 @@ vkl_src.set_xticks(srcxticks)
 vkl_src.set_yticks(srcyticks)
 plt.gca().set_aspect('equal',adjustable='box')
 vkl_src.plot()
+# Plot colorbar
 divider = make_axes_locatable(vkl_src)
 cax = divider.append_axes("right",size="5%",pad=0.05)
-plt.colorbar(im,cax=cax,ticks=MultipleLocator(0.2),format="%4.1f")
+#plt.colorbar(col,cax=cax,ticks=MultipleLocator(0.2),format="%4.1f")
+plt.colorbar(col,cax=cax,format="%5.2f")
+
 
 
 
@@ -190,16 +257,16 @@ plt.colorbar(im,cax=cax,ticks=MultipleLocator(0.2),format="%4.1f")
 
 
 # Errors on reconstructed adaptive source
+#########################################################################################################################
 f        = open(out_path+'vkl_voronoi_errors.dat')
 content  = [x.strip('\n') for x in f.readlines()]
-cells    = []
-colors   = []
+zvalues  = []
 polygons = []
 
-dumcmap = matplotlib.cm.get_cmap(mycmap)
+dumcmap = matplotlib.cm.get_cmap(mycmap_div)
 for c in content:
     cell = np.fromstring(c,sep=' ')
-    colors.append( dumcmap(cell[0]) )
+
     length = cell.shape[0]
     points = []
     for i in range(1,length,2):
@@ -208,10 +275,11 @@ for c in content:
     polygon = Polygon(points,True)
     polygons.append(polygon)
 
+    zvalues.append( cell[0] )
 
-col = PatchCollection(polygons,alpha=1.0)
-col.set_color(colors)
-
+col = PatchCollection(polygons,alpha=1.0,cmap=mycmap_seq)
+col.set_edgecolor('face')
+col.set_array(np.array(zvalues))
 
 vkl_err = fig.add_subplot(236)
 
@@ -225,9 +293,11 @@ vkl_err.set_xticks(srcxticks)
 vkl_err.set_yticks(srcyticks)
 plt.gca().set_aspect('equal',adjustable='box')
 vkl_err.plot()
+# Plot colorbar
 divider = make_axes_locatable(vkl_err)
 cax = divider.append_axes("right",size="5%",pad=0.05)
-plt.colorbar(im,cax=cax,ticks=MultipleLocator(0.2),format="%4.1f")
+#plt.colorbar(im,cax=cax,ticks=MultipleLocator(0.2),format="%4.1f")
+plt.colorbar(col,cax=cax,format="%5.2f")
 
 
 
