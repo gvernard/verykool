@@ -1225,25 +1225,6 @@ void AdaptiveSource::outputSource(const std::string path){
   typedef Voronoi::Ccb_halfedge_circulator                                     Ccb_halfedge_circulator;
   typedef K::Point_2                                                           Point;
 
-  //Scale the source solution between 0 and 1
-  double* ss = (double*) calloc(this->Sm,sizeof(double));
-
-  double max = 0.;
-  for(int i=0;i<this->Sm;i++){
-    if( this->src[i] > max ){
-      max = this->src[i];
-    }
-  }
-  double min = 100.;
-  for(int i=0;i<this->Sm;i++){
-    if( this->src[i] < min ){
-      min = this->src[i];
-    }
-  }
-  for(int i=0;i<this->Sm;i++){
-    ss[i] = (src[i]-min)/(max-min);
-  }
-
   //Calculate the Voronoi graph
   Voronoi voronoi;
   std::vector<Point> points;
@@ -1259,7 +1240,7 @@ void AdaptiveSource::outputSource(const std::string path){
   for(int i=0;i<this->Sm;i++){
 
     if( this->opposite_edges_per_vertex[i].size() != 0 ){
-      fprintf(fh,"%12.5f",ss[i]);
+      fprintf(fh,"%12.5f",src[i]);
 
       Locate_result f   = voronoi.locate(Point(this->x[i],this->y[i]));
       Face_handle* face = boost::get<Face_handle>(&f);
@@ -1276,8 +1257,6 @@ void AdaptiveSource::outputSource(const std::string path){
   }
   fclose(fh);
 
-
-
   // Output the source vertices and values
   std::string filename2 = path + "vkl_source_irregular.dat";
   FILE* fh2 = fopen(filename2.c_str(),"w");
@@ -1285,43 +1264,6 @@ void AdaptiveSource::outputSource(const std::string path){
     fprintf(fh2,"%12.5f %12.5f %12.5f\n",this->src[i],this->x[i],this->y[i]);
   }  
   fclose(fh2);
-
-
-
-
-  /*
-  //Set up an image grid, match the value of its pixels to the voronoi cells, and output it as fits
-  std::string fitsname = path + "vkl_source.fits";
-
-  double width  = 1.2;
-  double height = 1.2;
-
-  ImagePlane myfits(50,50,width,height);
-  double xmin = - width/2.;
-  double xmax =   width/2.;
-  double ymin = - height/2.;
-  double ymax =   height/2.;
-
-  for(int i=0;i<this->Sm;i++){
-    if( xmin < this->x[i] && this->x[i] < xmax && ymin < this->y[i] && this->y[i] < ymax ){
-      std::cout << this->x[i] << " " << this->y[i] << std::endl;
-      Locate_result ri = voronoi.locate(Point(this->x[i],this->y[i]));
-
-      for(int m=0;m<myfits.Nm;m++){
-	Locate_result rm = voronoi.locate(Point(myfits.x[m],myfits.y[m]));
-	if( rm == ri ){
-	  myfits.img[m] = ss[i];
-	  break;
-	}
-      }
-
-    }
-  }
-  myfits.writeImage(fitsname);
-  */
-
-
-  free(ss);
 }
 
 
@@ -1337,25 +1279,6 @@ void AdaptiveSource::outputSourceErrors(double* errors,const std::string path){
   typedef Voronoi::Ccb_halfedge_circulator                                     Ccb_halfedge_circulator;
   typedef K::Point_2                                                           Point;
 
-  //Scale the errors between 0 and 1 (same is done for the source)
-  double* ee = (double*) calloc(this->Sm,sizeof(double));
-
-  double max = 0.;
-  for(int i=0;i<this->Sm;i++){
-    if( errors[i] > max ){
-      max = errors[i];
-    }
-  }
-  double min = 100.;
-  for(int i=0;i<this->Sm;i++){
-    if( errors[i] < min ){
-      min = errors[i];
-    }
-  }
-  for(int i=0;i<this->Sm;i++){
-    ee[i] = (errors[i]-min)/(max-min);
-  }
-
   //Calculate the Voronoi graph
   Voronoi voronoi;
   std::vector<Point> points;
@@ -1370,7 +1293,7 @@ void AdaptiveSource::outputSourceErrors(double* errors,const std::string path){
   for(int i=0;i<this->Sm;i++){
 
     if( this->opposite_edges_per_vertex[i].size() != 0 ){
-      fprintf(fh,"%12.5f",ee[i]);
+      fprintf(fh,"%12.5f",errors[i]);
 
       Locate_result f   = voronoi.locate(Point(this->x[i],this->y[i]));
       Face_handle* face = boost::get<Face_handle>(&f);
@@ -1386,8 +1309,6 @@ void AdaptiveSource::outputSourceErrors(double* errors,const std::string path){
 
   }
   fclose(fh);
-
-  free(ee);
 }
 
 
