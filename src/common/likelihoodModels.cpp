@@ -283,7 +283,7 @@ void StandardLikelihood::updateLikelihoodModel(ImagePlane* image,BaseSourcePlane
 double StandardLikelihood::getLogLike(ImagePlane* image,BaseSourcePlane* source){
   double pi  = 3.14159265358979323846;
 
-  this->terms["Nilog2p"] = -(image->lookup.size()*log10(2*pi)/2.0); // for some reason i need the outer parenthsis here, otherwise there is amemory problem
+  this->terms["Nilog2p"] = -(image->lookup.size()*log10(2*pi)/2.0); // for some reason i need the outer parenthsis here, otherwise there is a memory problem
   this->terms["Nslogl"]  = source->Sm*log10(Nlpar::getValueByName("lambda",this->reg))/2.0;
   double val = terms["chi2"] + Nlpar::getValueByName("lambda",this->reg)*terms["reg"] + terms["Nilog2p"] + terms["Nslogl"] + terms["detC"] + terms["detHtH"] + terms["detA"];
   this->terms["like"] = val;
@@ -385,20 +385,21 @@ void StandardLikelihood::outputLikelihoodModel(ImagePlane* image,BaseSourcePlane
 
 //Derived class from BaseLikelihoodModel: SourceCovarianceKernel
 //===============================================================================================================
+
+// void  SourceCovarianceKernel::updateLikelihoodModel(ImagePlane* image,BaseSourcePlane* source,CollectionMassModels* mycollection){
+//
+//   SAME AS StandardLikelihood
+//
+//}
+
 double SourceCovarianceKernel::getLogLike(ImagePlane* image,BaseSourcePlane* source){
-  /*
   double pi  = 3.14159265358979323846;
 
-  getMin(image,source,pcomp);
-  double g   = pcomp->chi2/2. + pcomp->reg/2.;
-  double f1  = image->lookup.size()*log10(2*pi)/2.;
-  //double f2  = source->Sm*log10(nlpars[1]["lambda"]->val)/2.;
-  double val = -g -f1 +(pcomp->detC)/2. +(pcomp->detHtH)/2. -(pcomp->detA)/2.;
-  
+  this->terms["Nilog2p"] = -(image->lookup.size()*log10(2*pi)/2.0); // for some reason i need the outer parenthsis here, otherwise there is a memory problem
+  double val = terms["chi2"] + terms["reg"] + terms["Nilog2p"] + terms["detC"] + terms["detHtH"] + terms["detA"];
+  this->terms["like"] = val;
+
   return val;
-  */
-  //  return pow(nlpars[2]["b"]->val-6,2) + pow(nlpars[2]["q"]->val-6,2) + pow(nlpars[2]["pa"]->val-6,2) + pow(nlpars[2]["x0"]->val-6,2) + pow(nlpars[2]["y0"]->val-6,2);
-  return 0;
 }
 
 

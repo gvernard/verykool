@@ -60,13 +60,21 @@ void Initialization::initialize_program(std::string path,std::string run,Initial
     ada->createAdaGrid(mydata,mycollection);
     ada->createDelaunay();
   }
-  if( init->source["sample_reg"] == "true" ){
-    mysource->sample_reg = true;
+  if( init->source["reg"] == "covariance_kernel" ){
+    SourceCovarianceKernel* mycovpars = dynamic_cast<SourceCovarianceKernel*>(mypars);
+    std::vector<Nlpar*> covreg = mycovpars->getRegPars();
+
+    mysource->kernel = FactoryCovKernel::getInstance()->createCovKernel(init->source["kernel"],covreg);
+
+    for(int i=0;i<covreg.size();i++){
+      if( covreg[i]->fix == 0 ){
+	mysource->sample_reg = true;
+      }
+    }
+
+    mysource->constructH();
   }
-  //  if( mysource->reg == "covariance_kernel" ){
-  //    Standard* my_standard_pars = dynamic_cast<Standard*>(mypars);
-  //    mysource->kernel = FactoryCovKernel::getInstance()->createCovKernel(init->source["kernel"],my_standard_pars->getRegPars());
-  //  }
+
 
 
   // Initialize precomputed algebraic quantities -------------------------------------------------------------------------------------------------------------------

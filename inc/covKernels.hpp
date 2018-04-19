@@ -3,7 +3,7 @@
 
 #include <string>
 #include <vector>
-
+#include <iostream>
 
 class Nlpar;
 
@@ -51,7 +51,7 @@ public:
     return &dum;
   }
 
-  BaseCovKernel* createCovKernel(std::string kernel_type,std::vector<Nlpar*> pars){
+  BaseCovKernel* createCovKernel(const std::string kernel_type,std::vector<Nlpar*> pars){
     if( kernel_type == "gauss" ){
       return new GaussKernel(pars);
     } else if( kernel_type == "power_law" ){

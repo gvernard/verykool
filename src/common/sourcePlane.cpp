@@ -643,9 +643,10 @@ AdaptiveSource::AdaptiveSource(std::string m,int a,int b,std::string reg_scheme)
     eigenSparseMemoryAllocForH = 8;
   } else if( reg == "curvature" ){
     eigenSparseMemoryAllocForH = 8;
-  } else if( reg == "covariance_kernel" ){
-    constructH(); // I need to call this function in order to set the number of non-zero entries per sparse matrix row (this number varies for a random covariance kernel)
   }
+  //  } else if( reg == "covariance_kernel" ){
+  //    constructH(); // I need to call this function in order to set the number of non-zero entries per sparse matrix row (this number varies for a random covariance kernel)
+  //  }
 }
 
 //virtual

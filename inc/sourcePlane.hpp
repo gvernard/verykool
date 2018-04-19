@@ -5,6 +5,7 @@
 #include <vector>
 #include <cstdlib>
 #include <map>
+#include <iostream>
 
 /*
 #include <boost/geometry.hpp> 

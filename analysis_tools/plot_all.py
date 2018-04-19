@@ -297,7 +297,7 @@ vkl_err.plot()
 divider = make_axes_locatable(vkl_err)
 cax = divider.append_axes("right",size="5%",pad=0.05)
 #plt.colorbar(im,cax=cax,ticks=MultipleLocator(0.2),format="%4.1f")
-plt.colorbar(col,cax=cax,format="%5.2f")
+plt.colorbar(col,cax=cax,format="%6.4f")
 
 
 
