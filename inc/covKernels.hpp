@@ -16,6 +16,7 @@ public:
   ~BaseCovKernel(){};
   
   virtual double getCovariance(double r) = 0;
+  virtual double getCovarianceSelf() = 0;
   virtual void setParameters(std::vector<Nlpar*> pars) = 0;
 };
 
@@ -26,9 +27,21 @@ public:
 
   GaussKernel(std::vector<Nlpar*> pars);
   double getCovariance(double r);
+  double getCovarianceSelf();
   void setParameters(std::vector<Nlpar*> pars);
 private:
   double fac = 0.39894228; // 1/sqrt(2*pi)
+};
+
+class ModGaussKernel: public BaseCovKernel {
+public:
+  double ampl;
+  double sdev;
+
+  ModGaussKernel(std::vector<Nlpar*> pars);
+  double getCovariance(double r);
+  double getCovarianceSelf();
+  void setParameters(std::vector<Nlpar*> pars);
 };
 
 class PowerLawKernel: public BaseCovKernel {
@@ -38,6 +51,7 @@ public:
 
   PowerLawKernel(std::vector<Nlpar*> pars);
   double getCovariance(double r);
+  double getCovarianceSelf();
   void setParameters(std::vector<Nlpar*> pars);
 };
 
@@ -52,7 +66,9 @@ public:
   }
 
   BaseCovKernel* createCovKernel(const std::string kernel_type,std::vector<Nlpar*> pars){
-    if( kernel_type == "gauss" ){
+    if( kernel_type == "modgauss" ){
+      return new ModGaussKernel(pars);
+    } else if( kernel_type == "gauss" ){
       return new GaussKernel(pars);
     } else if( kernel_type == "power_law" ){
       return new PowerLawKernel(pars);

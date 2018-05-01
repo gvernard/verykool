@@ -694,7 +694,7 @@ void AdaptiveSource::constructL(ImagePlane* image,CollectionMassModels* mycollec
 	wb = (-yac*xxc+xac*yyc)/den;
 	wc = 1. - wa - wb;
 	
-	if( wa <= 1. && wb <= 1. && wc <= 1. ){
+	if( 0.0 <= wa && wa <= 1.0 && 0.0 <= wb && wb <= 1.0 && 0.0 <= wc && wc <= 1.0 ){
 	  tmp.push_back({i,   triangle.a,   wa});
 	  tmp.push_back({i,   triangle.b,   wb});
 	  tmp.push_back({i,   triangle.c,   wc});
@@ -1139,21 +1139,24 @@ void AdaptiveSource::constructH(){
     // will use a BaseCovKernel class, which will be member of the BaseSourcePlane class
 
     int* nonZeroRow = (int*) calloc(this->Sm,sizeof(int));
-    
-    for(int i=0;i<this->Sm-1;i++){
-      tmp.push_back({i,i,1});
+
+    double cov;
+    for(int i=0;i<this->Sm;i++){
+      cov = this->kernel->getCovarianceSelf();
+      tmp.push_back({i,i,cov});
       nonZeroRow[i]++;
-      for(int j=i+1;j<this->Sm;j++){
-	double r = sqrt( pow(this->x[j]-this->x[i],2) + pow(this->y[j]-this->y[i],2) );
-	if( r < this->kernel->rmax ){
-	  double cov = this->kernel->getCovariance(r);
-	  tmp.push_back({i,j,r});
-	  tmp.push_back({j,i,r});
-	  nonZeroRow[i]++;
-	  nonZeroRow[j]++;
+      for(int j=0;j<this->Sm;j++){
+	if( i != j ){
+	  double r = hypot(this->x[j]-this->x[i],this->y[j]-this->y[i]);
+	  //	  if( r < this->kernel->rmax ){
+	    cov = this->kernel->getCovariance(r);
+	    tmp.push_back({i,j,cov});
+	    nonZeroRow[i]++;
+	    //	  }
 	}
       }
     }
+
 
     int maxNonZero = 0;
     for(int i=0;i<this->Sm;i++){
@@ -1225,6 +1228,21 @@ void AdaptiveSource::outputSource(const std::string path){
   typedef Voronoi::Face_handle                                                 Face_handle;
   typedef Voronoi::Ccb_halfedge_circulator                                     Ccb_halfedge_circulator;
   typedef K::Point_2                                                           Point;
+
+
+  /*
+  // Write the regularization matrix of the source as an image
+  ImagePlane matrix(this->Sm,this->Sm,1.0,1.0);
+  for(int i=0;i<this->H.tri.size();i++){
+    int nx = this->H.tri[i].i;
+    int ny = this->H.tri[i].j;
+    matrix.img[nx*this->Sm + ny] = this->H.tri[i].v;
+  }
+  matrix.writeImage(path+"Hmatrix.fits");
+  */
+
+
+
 
   //Calculate the Voronoi graph
   Voronoi voronoi;

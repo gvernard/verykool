@@ -56,7 +56,7 @@ void StandardAlgebra::setAlgebraInit(ImagePlane* image,BaseSourcePlane* source){
 
 
   //calculate determinant of CC
-  double detC = 0.;
+  double detC = 0.0;
   solver.analyzePattern(CC);
   solver.factorize(CC);
   diag = solver.vectorD();
@@ -79,6 +79,22 @@ void StandardAlgebra::setAlgebraInit(ImagePlane* image,BaseSourcePlane* source){
   Eigen::SparseMatrix<double> HtH(Sm,Sm);
   if( source->reg == "covariance_kernel" ){
     // calculate the inverse of the source covariance matrix stored in H, and store it in HtH
+    Eigen::Matrix<double,Eigen::Dynamic,Eigen::Dynamic> inv(Sm,Sm);
+    Eigen::SimplicialLDLT<Eigen::SparseMatrix<double> > solver;
+    solver.compute(HH);
+    Eigen::VectorXd idc(HH.cols()),c(HH.cols());
+    for(int i=0;i<Sm;i++){
+      for(int j=0;j<idc.size();j++){
+	idc[j] = 0;
+      }
+      idc[i] = 1;
+      //this needs to be done in two steps, otherwise it does not work when using LU
+      c = solver.solve(idc);
+      inv.col(i) = c;
+    }
+    HtH = inv.sparseView();
+    
+    inv.resize(0,0);
   } else {
     // calculate the product HtH of a derivative based H matrix
     Eigen::SparseMatrix<double> HHt(Sm,Sm);
@@ -135,8 +151,8 @@ void StandardAlgebra::setAlgebraRuntime(ImagePlane* image,BaseSourcePlane* sourc
   Eigen::SparseMatrix<double> M(Nm,Sm);
   Eigen::SparseMatrix<double> Mt(Sm,Nm);
 
-  M         = this->B*LL;
-  Mt        = M.transpose();
+  M        = this->B*LL;
+  Mt       = M.transpose();
   this->M  = M;
   this->Mt = Mt;
 
@@ -152,7 +168,6 @@ void StandardAlgebra::setAlgebraRuntime(ImagePlane* image,BaseSourcePlane* sourc
     // Calculate HtH
     if( source->sample_reg ){
       // calculate the inverse of the source covariance matrix stored in H, and store it in HtH
-
       Eigen::Matrix<double,Eigen::Dynamic,Eigen::Dynamic> inv(Sm,Sm);
       Eigen::SimplicialLDLT<Eigen::SparseMatrix<double> > solver;
       solver.compute(HH);
@@ -193,6 +208,8 @@ void StandardAlgebra::setAlgebraRuntime(ImagePlane* image,BaseSourcePlane* sourc
       dum = *(diag.data()+i);
       if( dum > 1.e-20 ){
 	detHtH += log10( dum );
+      } else if( dum <= 0 ){
+	std::cout << "Negative eigenvalue in detHtH: " << dum << std::endl;
       }
     }
     this->likeModel->terms["detHtH"] = detHtH/2.0;
@@ -242,7 +259,7 @@ void StandardAlgebra::solveLinearSparseS(ImagePlane* image,BaseSourcePlane* sour
   }
 
   //Calculate determinant of A from the LDLT(Cholesky) decomposition
-  double detA = 0.;
+  double detA = 0.0;
   Eigen::VectorXd diag = solver.vectorD();
   for(int i=0;i<diag.size();i++){
     detA += log10( *(diag.data()+i) );
