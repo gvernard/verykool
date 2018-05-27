@@ -236,7 +236,7 @@ void ImagePlane::readC(const std::string flag,const std::string filepath){
     std::ifstream infile(filepath);
     infile >> value;
     for(int i=0;i<this->Nm;i++){
-      this->C.tri.push_back({i,i,1./pow(value,2)});
+      this->C.tri.push_back({i,i,1.0/pow(value,2)});
     }
     infile.close();
 
@@ -252,7 +252,7 @@ void ImagePlane::readC(const std::string flag,const std::string filepath){
       while( true ){
 	infile >> i >> i >> value;
 	if( infile.eof() ) break;
-	this->C.tri.push_back({i,i,1./pow(value,2)});
+	this->C.tri.push_back({i,i,1.0/pow(value,2)});
       }
       infile.close();
 
@@ -280,7 +280,7 @@ void ImagePlane::readC(const std::string flag,const std::string filepath){
     while( true ){
       infile >> i >> j >> value;
       if( infile.eof() ) break;
-      this->C.tri.push_back({i,j,1./pow(value,2)});
+      this->C.tri.push_back({i,j,1.0/pow(value,2)});
     }
     infile.close();
 

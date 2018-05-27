@@ -8,6 +8,8 @@
 #include <iostream>
 
 #include "nonLinearPars.hpp"
+#include "imagePlane.hpp"
+#include "tableDefinition.hpp"
 
 
 extern "C"{
@@ -45,23 +47,27 @@ public:
 
 class Pert: public BaseMassModel{
 public:
-  int Ni;
-  int Nj;
-  double width;
-  double height;
-  double* dpsidx;
-  double* dpsidy;
-  double i0;
-  double j0;
+  ImagePlane* dpsi;
+  double* dpsi_dx;
+  double* dpsi_dy;
+  mytable Ddpsi;
+
+  Pert(std::string filename,int Ni,int Nj,double width,double height);
+  Pert(ImagePlane* new_dpsi);
+  ~Pert(){
+    delete(dpsi);
+    free(dpsi_dx);
+    free(dpsi_dy);
+  }
+  void defl(double xin,double yin,double& xout,double& yout);
+  void updateDpsi(double* new_dpsi);
+
+private:
+  int i0;
+  int j0;
   double di;
   double dj;
 
-  Pert(std::string filename,int Ni,int Nj,double width,double height);
-  ~Pert(){
-    free(dpsidx);
-    free(dpsidy);
-  }
-  void defl(double xin,double yin,double& xout,double& yout);
 };
 
 

@@ -7,8 +7,8 @@
 #include "json/json.h"
 
 #include "nonLinearPars.hpp"
-#include "massModels.hpp"
 #include "imagePlane.hpp"
+#include "massModels.hpp"
 #include "sourcePlane.hpp"
 #include "eigenAlgebra.hpp"
 

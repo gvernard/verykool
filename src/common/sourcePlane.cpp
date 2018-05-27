@@ -1176,6 +1176,65 @@ void AdaptiveSource::constructH(){
 }
 
 
+//virtual
+mytable AdaptiveSource::getDerivativeTable(ImagePlane* plane,CollectionMassModels* mycollection){
+  double xp,yp;
+  double wa,wb,wc;
+  double ybc,xac,xcb,yac,xxc,yyc,den;
+  double vx,vy,vz,ux,uy,uz;
+  double dx,dy;
+  a_triangle triangle;
+
+  mytable table;
+  table.Ti  = plane->Nm;
+  table.Tj  = 2*plane->Nm;
+
+
+  for(int i=0;i<plane->Nm;i++){
+    mycollection->all_defl(plane->x[i],plane->y[i],xp,yp);
+    
+    for(int j=0;j<this->n_triangles;j++){
+      triangle = this->triangles[j];
+      
+      ybc = this->y[triangle.b] - this->y[triangle.c];//(yb-yc)
+      xac = this->x[triangle.a] - this->x[triangle.c];//(xa-xc)
+      xcb = this->x[triangle.c] - this->x[triangle.b];//(xc-xb)
+      yac = this->y[triangle.a] - this->y[triangle.c];//(ya-yc)
+      xxc = xp                  - this->x[triangle.c];//(x -xc)
+      yyc = yp                  - this->y[triangle.c];//(y -yc)
+      den = ybc*xac + xcb*yac;
+      
+      wa = ( ybc*xxc+xcb*yyc)/den;
+      wb = (-yac*xxc+xac*yyc)/den;
+      wc = 1.0 - wa - wb;
+      
+      if( 0.0 <= wa && wa <= 1.0 && 0.0 <= wb && wb <= 1.0 && 0.0 <= wc && wc <= 1.0 ){
+	vx = this->x[triangle.b] - this->x[triangle.c];
+	vy = this->y[triangle.b] - this->y[triangle.c];
+	vz = this->src[triangle.b] - this->src[triangle.c];
+
+	ux = this->x[triangle.a] - this->x[triangle.c];
+	uy = this->y[triangle.a] - this->y[triangle.c];
+	uz = this->src[triangle.a] - this->src[triangle.c];
+
+	dx = vy*uz - vz*uy;
+	dy = vz*ux - vx*uz;
+
+	table.tri.push_back({i,2*i,dx});
+	table.tri.push_back({i,2*i+1,dy});
+	break;
+      }
+    }
+  }
+
+  return table;
+}
+
+
+
+
+
+
 //private
 AdaptiveSource::xypoint AdaptiveSource::intersection_point_x(xypoint p0,xypoint p1,xypoint p2){
   xypoint pint;

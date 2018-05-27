@@ -59,6 +59,7 @@ public:
   //virtual members
   virtual void constructL(ImagePlane* image,CollectionMassModels* mycollection) = 0;
   virtual void constructH() = 0;
+  virtual mytable getDerivativeTable(ImagePlane* image,CollectionMassModels* mycollection) = 0;
   virtual void outputSource(const std::string path) = 0;
   virtual void outputSourceErrors(double* errors,const std::string path) = 0;
 
@@ -77,6 +78,7 @@ public:
   ~FixedSource();
   void constructL(ImagePlane* image,CollectionMassModels* mycollection);
   void constructH();
+  mytable getDerivativeTable(ImagePlane* image,CollectionMassModels* mycollection){};
   void outputSource(const std::string path);
   void outputSourceErrors(double* errors,const std::string path);
 
@@ -100,6 +102,7 @@ public:
   ~FloatingSource();
   void constructL(ImagePlane* image,CollectionMassModels* mycollection);
   void constructH();
+  mytable getDerivativeTable(ImagePlane* image,CollectionMassModels* mycollection){};
   void outputSource(const std::string path);
   void outputSourceErrors(double* errors,const std::string path);
 
@@ -126,6 +129,7 @@ public:
   ~AdaptiveSource();
   void constructL(ImagePlane* image,CollectionMassModels* mycollection);
   void constructH();
+  mytable getDerivativeTable(ImagePlane* image,CollectionMassModels* mycollection);
   void outputSource(const std::string path);
   void outputSourceErrors(double* errors,const std::string path);
 

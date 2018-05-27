@@ -4,7 +4,10 @@
 #include <vector>
 #include <map>
 #include <cstdlib>
-#include <CCfits/CCfits>
+
+#include "imagePlane.hpp"
+#include "tableDefinition.hpp"
+
 
 //Abstract class: BaseMassModel
 //===============================================================================================================
@@ -106,84 +109,98 @@ void Spemd::defl(double xin,double yin,double& xout,double& yout){
 //Derived class from BaseMassModel: Pert (perturbations on a grid)
 //===============================================================================================================
 Pert::Pert(std::string filepath,int a,int b,double c,double d){
-  Ni     = a;
-  Nj     = b;
-  width  = c;
-  height = d;
-  int Nm = Ni*Nj;
+  this->dpsi = new ImagePlane(filepath,a,b,c,d);
 
+  this->dpsi_dx = (double*) calloc(this->dpsi->Nm,sizeof(double));
+  this->dpsi_dy = (double*) calloc(this->dpsi->Nm,sizeof(double));
 
-  // Read the .fits file with the potential corrections
-  std::unique_ptr<CCfits::FITS> pInfile(new CCfits::FITS(filepath,CCfits::Read,true));
-  CCfits::PHDU& image = pInfile->pHDU();
-  image.readAllKeys();
+  this->Ddpsi.Ti = 2*this->dpsi->Nm;
+  this->Ddpsi.Tj = this->dpsi->Nm;
 
-  std::valarray<float> psi(image.axis(0)*image.axis(1));
-  std::valarray<float> tmp;
-  image.read(tmp);
+  this->i0 = this->dpsi->Ni/2.0;
+  this->j0 = this->dpsi->Nj/2.0;
+  this->di = this->dpsi->width/(this->dpsi->Ni);
+  this->dj = this->dpsi->height/(this->dpsi->Nj);
 
+  updateDpsi(this->dpsi->img);
+}
 
-  //convert FITS standard (bottom to top) to the one used in this code (top to bottom)
-  for(int j=0;j<Nj;j++){
-    for(int i=0;i<Ni;i++){
-      psi[j*Ni+i] = tmp[(Nj-j-1)*Ni+i];
-    }
-  }
+Pert::Pert(ImagePlane* new_dpsi){
+  // make a deep copy of the ImagePlane object
 
+  this->dpsi_dx = (double*) calloc(this->dpsi->Nm,sizeof(double));
+  this->dpsi_dy = (double*) calloc(this->dpsi->Nm,sizeof(double));
 
-  // Set the pixel coordinates
-  i0 = Ni/2.0;
-  j0 = Nj/2.0;
-  di = width/(Ni);
-  dj = height/(Nj);
+  this->Ddpsi.Ti = 2*this->dpsi->Nm;
+  this->Ddpsi.Tj = this->dpsi->Nm;
 
+  this->i0 = this->dpsi->Ni/2.0;
+  this->j0 = this->dpsi->Nj/2.0;
+  this->di = this->dpsi->width/(this->dpsi->Ni);
+  this->dj = this->dpsi->height/(this->dpsi->Nj);
 
-  // Calculate gradients
-  dpsidx = (double*) calloc(Nm,sizeof(double));
-  dpsidy = (double*) calloc(Nm,sizeof(double));
+  updateDpsi(this->dpsi->img);
+}
 
+void Pert::updateDpsi(double* new_dpsi){
+  int Ni = this->dpsi->Ni;
+  int Nj = this->dpsi->Nj;
+
+  for(int i=0;i<this->dpsi->Nm;i++){
+    this->dpsi->img[i] = new_dpsi[i];
+  }  
+
+  // Calculate derivatives:
   // first row
-  dpsidx[0] = (psi[1]-psi[0])/dj;
-  dpsidy[0] = (psi[Nj]-psi[0])/di;
+  this->dpsi_dx[0] = (this->dpsi->img[1]-this->dpsi->img[0])/dj;
+  this->dpsi_dy[0] = (this->dpsi->img[Nj]-this->dpsi->img[0])/di;
   for(int j=1;j<Nj-1;j++){
-    dpsidx[j] = (psi[j+1]-psi[j-1])/(2*dj);
-    dpsidy[j] = (psi[Nj+j]-psi[j])/di;
+    this->dpsi_dx[j] = (this->dpsi->img[j+1]-this->dpsi->img[j-1])/(2*dj);
+    this->dpsi_dy[j] = (this->dpsi->img[Nj+j]-this->dpsi->img[j])/di;
   }
-  dpsidx[Nj-1] = (psi[Nj-1]-psi[Nj-2])/dj;
-  dpsidy[Nj-1] = (psi[Nj+Nj-1]-psi[Nj-1])/di;
+  this->dpsi_dx[Nj-1] = (this->dpsi->img[Nj-1]-this->dpsi->img[Nj-2])/dj;
+  this->dpsi_dy[Nj-1] = (this->dpsi->img[Nj+Nj-1]-this->dpsi->img[Nj-1])/di;
 
   // in-between rows
   for(int i=1;i<Ni-1;i++){
-    dpsidx[i*Nj+0] = (psi[i*Nj+1]-psi[i*Nj+0])/dj;
-    dpsidy[i*Nj+0] = (psi[(i+1)*Nj+0]-psi[(i-1)*Nj+0])/(2*di);
+    this->dpsi_dx[i*Nj+0] = (this->dpsi->img[i*Nj+1]-this->dpsi->img[i*Nj+0])/dj;
+    this->dpsi_dy[i*Nj+0] = (this->dpsi->img[(i+1)*Nj+0]-this->dpsi->img[(i-1)*Nj+0])/(2*di);
     for(int j=1;j<Nj-1;j++){
-      dpsidx[i*Nj+j] = (psi[i*Nj+j+1]-psi[i*Nj+j-1])/(2*dj);
-      dpsidy[i*Nj+j] = (psi[(i+1)*Nj+j]-psi[(i-1)*Nj+j])/(2*di);
+      this->dpsi_dx[i*Nj+j] = (this->dpsi->img[i*Nj+j+1]-this->dpsi->img[i*Nj+j-1])/(2*dj);
+      this->dpsi_dy[i*Nj+j] = (this->dpsi->img[(i+1)*Nj+j]-this->dpsi->img[(i-1)*Nj+j])/(2*di);
     }
-    dpsidx[i*Nj+Nj-1] = (psi[i*Nj+Nj-1]-psi[i*Nj+Nj-2])/dj;
-    dpsidy[i*Nj+Nj-1] = (psi[(i+1)*Nj+Nj-1]-psi[(i-1)*Nj+Nj-1])/(2*di);
+    this->dpsi_dx[i*Nj+Nj-1] = (this->dpsi->img[i*Nj+Nj-1]-this->dpsi->img[i*Nj+Nj-2])/dj;
+    this->dpsi_dy[i*Nj+Nj-1] = (this->dpsi->img[(i+1)*Nj+Nj-1]-this->dpsi->img[(i-1)*Nj+Nj-1])/(2*di);
   }
 
   // last row
-  dpsidx[(Ni-1)*Nj+0] = (psi[(Ni-1)*Nj+1]-psi[(Ni-1)*Nj+0])/dj;
-  dpsidy[(Ni-1)*Nj+0] = (psi[(Ni-1)*Nj+0]-psi[(Ni-2)*Nj+0])/di;
+  this->dpsi_dx[(Ni-1)*Nj+0] = (this->dpsi->img[(Ni-1)*Nj+1]-this->dpsi->img[(Ni-1)*Nj+0])/dj;
+  this->dpsi_dy[(Ni-1)*Nj+0] = (this->dpsi->img[(Ni-1)*Nj+0]-this->dpsi->img[(Ni-2)*Nj+0])/di;
   for(int j=1;j<Nj-1;j++){
-    dpsidx[(Ni-1)*Nj+j] = (psi[(Ni-1)*Nj+j+1]-psi[(Ni-1)*Nj+j-1])/(2*dj);
-    dpsidy[(Ni-1)*Nj+j] = (psi[(Ni-1)*Nj+j]-psi[(Ni-2)*Nj+j])/di;
+    this->dpsi_dx[(Ni-1)*Nj+j] = (this->dpsi->img[(Ni-1)*Nj+j+1]-this->dpsi->img[(Ni-1)*Nj+j-1])/(2*dj);
+    this->dpsi_dy[(Ni-1)*Nj+j] = (this->dpsi->img[(Ni-1)*Nj+j]-this->dpsi->img[(Ni-2)*Nj+j])/di;
   }
-  dpsidx[(Ni-1)*Nj+Nj-1] = (psi[(Ni-1)*Nj+Nj-1]-psi[(Ni-1)*Nj+Nj-2])/dj;
-  dpsidy[(Ni-1)*Nj+Nj-1] = (psi[(Ni-1)*Nj+Nj-1]-psi[(Ni-2)*Nj+Nj-1])/di;
+  this->dpsi_dx[(Ni-1)*Nj+Nj-1] = (this->dpsi->img[(Ni-1)*Nj+Nj-1]-this->dpsi->img[(Ni-1)*Nj+Nj-2])/dj;
+  this->dpsi_dy[(Ni-1)*Nj+Nj-1] = (this->dpsi->img[(Ni-1)*Nj+Nj-1]-this->dpsi->img[(Ni-2)*Nj+Nj-1])/di;
 
+
+  // Create Ddpsi table
+  std::vector<mytriplet> tmp;//need to make sure that the Ddpsi triplet vector is a new one
+
+  for(int i=0;i<this->dpsi->Nm;i++){
+    tmp.push_back({2*i,i,this->dpsi_dx[i]});
+    tmp.push_back({2*i+1,i,this->dpsi_dy[i]});
+  }
+
+  this->Ddpsi.tri.swap(tmp);
 }
 
 void Pert::defl(double xin,double yin,double& xout,double& yout){
   int j = floor(xin/dj+j0);
   int i = floor(-yin/di+i0);
 
-  double ax = dpsidx[i*Nj+j];
-  double ay = dpsidy[i*Nj+j];
-  //double ax = 0;
-  //double ay = 0;
+  double ax = this->dpsi_dx[i*this->dpsi->Nj+j];
+  double ay = this->dpsi_dy[i*this->dpsi->Nj+j];
 
   xout = ax;
   yout = ay;

@@ -7,7 +7,7 @@ path         = sys.argv[1]
 run_old      = sys.argv[2]
 run_new      = sys.argv[3]
 changes_file = sys.argv[4]
-
+    
 
 
 
@@ -16,7 +16,7 @@ changes_file = sys.argv[4]
 if not os.path.isdir(path+run_old):
     print "Old run: '" + run_old + "' does not exist!"
     sys.exit()
-    
+
 if os.path.isdir(path+run_new):
     answer = ''
     while answer != 'y' and answer != 'n':
@@ -34,30 +34,10 @@ else:
 # Read vkl_input.json
 options = common_funcs.get_json(path+run_old+"vkl_input.json",True)
 
-# Read 'best' parameters from run_old
-vkl_output = common_funcs.get_json(path+run_old+"output/vkl_output.json",False)
-best = vkl_output["json_active"]
-  
 # Read changes to be made to vkl_input.json
 changes = common_funcs.get_json(changes_file,True)
 
 
-
-
-# Update all the parameter values (the old active parameters)
-#########################################################################
-for list_name in best:
-    if list_name == "lenses":
-        for i,lens in enumerate(best["lenses"]):
-            if "priors" in changes:
-                common_funcs.update_nlpar_with_prior(options["lenses"][str(lens)]["nlpars"],best["lenses"][lens],changes["priors"])
-            else:
-                common_funcs.update_nlpar(options["lenses"][str(lens)]["nlpars"],best["lenses"][lens])
-    else:
-        if "priors" in changes:
-            common_funcs.update_nlpar_with_prior(options[list_name]["nlpars"],best[list_name],changes["priors"])
-        else:
-            common_funcs.update_nlpar(options[list_name]["nlpars"],best[list_name])
 
     
 # Loop over the first level of changes and apply them
@@ -91,3 +71,4 @@ for change in changes:
 f = open(path+run_new+"vkl_input.json","w")
 json.dump(options,f,indent=4,separators=(',',': '))
 f.close()
+

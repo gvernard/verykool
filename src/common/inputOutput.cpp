@@ -10,8 +10,8 @@
 
 #include "nonLinearPars.hpp"
 #include "likelihoodModels.hpp"
-#include "massModels.hpp"
 #include "imagePlane.hpp"
+#include "massModels.hpp"
 #include "sourcePlane.hpp"
 
 

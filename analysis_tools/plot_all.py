@@ -149,6 +149,7 @@ model.contour(mask,levels=[0.5],extent=[xmin,xmax,ymin,ymax],colors='#001A47')
 # Read residuals
 im_res = fits.getdata(out_path+'vkl_residual.fits',ext=0)
 im_res = im_res[::-1,:]
+im_res = im_res*np.flipud(np.array(mask))
 
 # Set color scale
 limit = max([abs(np.amax(im_res)),abs(np.amin(im_res))])
@@ -167,8 +168,8 @@ cax = divider.append_axes("right",size="5%",pad=0.05)
 #fig.colorbar(im,cax=cax,ticks=MultipleLocator(0.2),format="%4.1f")
 #cax.yaxis.set_major_locator(matplotlib.ticker.MaxNLocator(4))
 fig.colorbar(im,cax=cax,format="%5.2f")
-
-
+res.contour(mask,levels=[0.5],extent=[xmin,xmax,ymin,ymax],colors='#001A47')
+res.imshow(np.flipud(np.ma.masked_where(mask>0,mask)),interpolation='none',cmap='Greys',extent=[xmin,xmax,ymin,ymax])
 
 
 # True source (in case of mock data) and reconstructed adaptive source. They need to share the same color scale
