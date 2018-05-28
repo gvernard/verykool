@@ -80,14 +80,14 @@ Spemd::Spemd(std::vector<Nlpar*> nlpars){
 }
 
 void Spemd::defl(double xin,double yin,double& xout,double& yout){
-  double b  = this->mpars["b"];
   double q  = this->mpars["q"];
+  double b  = this->mpars["b"] * q;
   double pa = this->mpars["pa"] * 0.01745329251;//in rad
   double x0 = this->mpars["x0"];
   double y0 = this->mpars["y0"];
   double e  = this->mpars["e"];
   double s2 = this->mpars["s"] * this->mpars["s"];
-  double defl[2] = {0.,0.};
+  double defl[2] = {0.0,0.0};
 
   //rotate according to position angle and translate to the lens center
   double x_t =  (xin-x0)*cos(pa) + (yin-y0)*sin(pa);
