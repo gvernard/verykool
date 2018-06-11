@@ -10,9 +10,9 @@
 
 //ImagePlane class implementation
 //============================================================================================
-ImagePlane::ImagePlane(const std::string filepath,int i,int j,double w,double h){
-  Nj     = i;
-  Ni     = j;
+ImagePlane::ImagePlane(const std::string filepath,int j,int i,double w,double h){
+  Ni     = i;
+  Nj     = j;
   Nm     = Ni*Nj;
   width  = w;
   height = h;
@@ -39,8 +39,6 @@ ImagePlane::ImagePlane(const std::string filepath,int i,int j,double w,double h)
   int j0    = floor(Nj/2);
   double di = width/(Ni);
   double dj = height/(Nj);
-  //  double di = width/Ni;
-  //  double dj = height/Nj;
 
   for(int ii=0;ii<Ni;ii++){
     for(int jj=0;jj<Nj;jj++){
@@ -51,7 +49,7 @@ ImagePlane::ImagePlane(const std::string filepath,int i,int j,double w,double h)
   }
 }
 
-ImagePlane::ImagePlane(int i,int j,double w,double h){
+ImagePlane::ImagePlane(int j,int i,double w,double h){
   Ni     = i;
   Nj     = j;
   Nm     = Ni*Nj;

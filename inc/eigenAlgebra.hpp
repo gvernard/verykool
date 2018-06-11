@@ -11,6 +11,8 @@
 class ImagePlane;
 class BaseSourcePlane;
 class StandardLikelihood;
+class PerturbationsLikelihood;
+class Pert;
 
 class StandardAlgebra {
 public:
@@ -35,5 +37,21 @@ private:
   Eigen::SparseMatrix<double> A;
   Eigen::SparseMatrix<double> HtH;
 };
+
+
+class PerturbationsAlgebra {
+public:
+  PerturbationsAlgebra(PerturbationsLikelihood* a);
+  ~PerturbationsAlgebra(){};
+
+  void setAlgebraInit(ImagePlane* mydata,Pert* mypert);
+
+private:
+  PerturbationsLikelihood* likeModel;
+
+  Eigen::SparseMatrix<double> B;
+  Eigen::SparseMatrix<double> Dpsi;
+};
+
 
 #endif /* ALGEBRA_HPP */

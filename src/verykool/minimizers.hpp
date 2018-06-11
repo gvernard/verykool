@@ -22,7 +22,7 @@ public:
   BaseMinimizer(){};
   ~BaseMinimizer(){};
 
-  virtual void minimize(std::map<std::string,std::string> minimizer,BaseLikelihoodModel* mypars,ImagePlane* image,BaseSourcePlane* source,CollectionMassModels* mycollection,const std::string output) = 0;
+  virtual void minimize(std::map<std::string,std::string> minimizer,BaseLikelihoodModel* mypars,const std::string output) = 0;
   virtual void output() = 0;
 };
 
@@ -35,7 +35,7 @@ public:
   Nothing(){};
   ~Nothing(){};
   
-  void minimize(std::map<std::string,std::string> minimizer,BaseLikelihoodModel* mypars,ImagePlane* image,BaseSourcePlane* source,CollectionMassModels* mycollection,const std::string output){};
+  void minimize(std::map<std::string,std::string> minimizer,BaseLikelihoodModel* mypars,const std::string output){};
   void output(){};
 };
 
@@ -44,9 +44,6 @@ public:
 //================================================================================================================================================
 struct extras{
   BaseLikelihoodModel* pars;
-  ImagePlane* image;
-  BaseSourcePlane* source;
-  CollectionMassModels* mycollection;
   std::string output;
   int counter;
 };
@@ -60,7 +57,7 @@ public:
   MultiNest(){};
   ~MultiNest(){};
   
-  void minimize(std::map<std::string,std::string> minimizer,BaseLikelihoodModel* pars,ImagePlane* image,BaseSourcePlane* source,CollectionMassModels* mycollection,const std::string output);
+  void minimize(std::map<std::string,std::string> minimizer,BaseLikelihoodModel* pars,const std::string output);
   void output();
 };
 
@@ -125,7 +122,7 @@ public:
     return &dum;
   }
 
-  BaseMinimizer* createMinimizer(std::map<std::string,std::string> minimizer,BaseLikelihoodModel* pars,ImagePlane* image,BaseSourcePlane* source,CollectionMassModels* collection,const std::string output){
+  BaseMinimizer* createMinimizer(std::map<std::string,std::string> minimizer,BaseLikelihoodModel* pars,const std::string output){
 
     if( minimizer["type"] == "test" ){
       printf("%-25s","using given parameters");

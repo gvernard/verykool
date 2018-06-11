@@ -15,10 +15,12 @@
 class vkl_vars {
 public:
   Initialization* init;
-  BaseLikelihoodModel* mypars;
-  ImagePlane* mydata;
-  CollectionMassModels* mycollection;
-  BaseSourcePlane* mysource;
+  ImagePlane* image;
+  BaseSourcePlane* source;
+  CollectionMassModels* collection;
+  BaseLikelihoodModel* smooth_like;
+  BaseLikelihoodModel* pert_like;
+  Pert* pert_mass_model;
 
   std::string cosmosis_output;
   std::string path;
@@ -50,11 +52,11 @@ extern "C" {
     status |= options->get_val("output","filename",dum->cosmosis_output);
     
 
-    Initialization::initialize_program(dum->path,dum->run,dum->init,dum->mypars,dum->mydata,dum->mycollection,dum->mysource);
+    Initialization::initialize_program(dum->path,dum->run,dum->init,dum->smooth_like,dum->image,dum->collection,dum->source,dum->pert_like,dum->pert_mass_model);
     
 
     printf("%-25s","Starting minimization");
-    printf("%6s%9s\n","using ",dum->init->minimizer["type"].c_str());
+    printf("%6s%9s\n","using ",dum->init->smooth_minimizer["type"].c_str());
     fflush(stdout);
 
     return (void*) dum;
@@ -70,7 +72,7 @@ extern "C" {
     vkl_vars* dum = (vkl_vars*) config;
 
 
-    std::vector<std::string> full_names = dum->mypars->getActiveFullNames();
+    std::vector<std::string> full_names = dum->smooth_like->getActiveFullNames();
     std::vector<double> values;
     for(int i=0;i<full_names.size();i++){
       double val;
@@ -78,9 +80,9 @@ extern "C" {
       values.push_back(val);
     }
 
-    dum->mypars->updateActive(values);
-    dum->mypars->updateLikelihoodModel(dum->mydata,dum->mysource,dum->mycollection);
-    double like = dum->mypars->getLogLike(dum->mydata,dum->mysource);
+    dum->smooth_like->updateActive(values);
+    dum->smooth_like->updateLikelihoodModel();
+    double like = dum->smooth_like->getLogLike();
     
     
     //double like = 99.99;
@@ -98,16 +100,16 @@ extern "C" {
     fflush(stdout);
     
     vkl_vars* dum = (vkl_vars*) config;
-    Initialization::finalize_program(dum->init,dum->mypars,dum->mydata,dum->mycollection,dum->mysource);
+    Initialization::finalize_smooth(dum->init,dum->smooth_like,dum->image,dum->collection,dum->source);
 
 
     // Rewrite the cosmosis EMCEE output to the correct format for a corner plot
-    std::cout << dum->init->minimizer["type"] << std::endl;
-    if( dum->init->minimizer["type"] == "cosmosis_emcee" ){
+    std::cout << dum->init->smooth_minimizer["type"] << std::endl;
+    if( dum->init->smooth_minimizer["type"] == "cosmosis_emcee" ){
       std::ifstream mystream(dum->cosmosis_output+".txt");
       std::string line;
       FILE* fh     = fopen((dum->path+dum->run+"output/corner.txt").c_str(),"w");
-      int ncols    = dum->mypars->active.size()+1;
+      int ncols    = dum->smooth_like->active.size()+1;
       double* vals = (double*) malloc(ncols*sizeof(double));
       while( std::getline(mystream,line) ){
 	//	std::cout <<  line.substr(0,20) << std::endl;

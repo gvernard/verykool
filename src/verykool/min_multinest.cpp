@@ -13,7 +13,7 @@
 
 //Functions related to the calculation of the Bayesian evidence and parameter estimation using MultiNest
 //==============================================================================================================================
-void MultiNest::minimize(std::map<std::string,std::string> opt,BaseLikelihoodModel* pars,ImagePlane* image,BaseSourcePlane* source,CollectionMassModels* mycollection,const std::string output){
+void MultiNest::minimize(std::map<std::string,std::string> opt,BaseLikelihoodModel* pars,const std::string output){
 
   int myndims = pars->active.size();
   
@@ -54,7 +54,7 @@ void MultiNest::minimize(std::map<std::string,std::string> opt,BaseLikelihoodMod
   //  void* context  = 0;			// not required by MultiNest, any additional information user wants to pass
 
   int counter = 0;
-  extras myextras = {pars,image,source,mycollection,output,counter};
+  extras myextras = {pars,output,counter};
 
   nested::run(IS,mmodal,ceff,nlive,tol,efr,ndims,nPar,nClsPar,maxModes,updInt,Ztol,root,seed,pWrap,fb,resume,outfile,initMPI,logZero,maxiter,MultiNestLogLike,MultiNestDumper,&myextras);
 }
@@ -83,8 +83,8 @@ void MultiNestLogLike(double* Cube,int& ndim,int& npars,double& lnew,void* myext
   //  std::cout << std::endl;
       
   e->pars->updateActive(new_pars);
-  e->pars->updateLikelihoodModel(e->image,e->source,e->mycollection);
-  lnew = e->pars->getLogLike(e->image,e->source);
+  e->pars->updateLikelihoodModel();
+  lnew = e->pars->getLogLike();
   e->pars->printActive();
   e->pars->printTerms();
 }
@@ -120,7 +120,7 @@ void MultiNestDumper(int& nSamples,int& nlive,int& nPar,double** physLive,double
   FILE* fh;
 
   e->counter++;
-  e->pars->outputLikelihoodModel(e->image,e->source,e->output + std::to_string(e->counter) + "_");
+  e->pars->outputLikelihoodModel(e->output + std::to_string(e->counter) + "_");
 
   /*
   // lastlive holds the parameter values for the last set of live points, and has the same structure as nlpars, with an array of nlive points for each parameter

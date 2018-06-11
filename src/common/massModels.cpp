@@ -108,21 +108,35 @@ void Spemd::defl(double xin,double yin,double& xout,double& yout){
 
 //Derived class from BaseMassModel: Pert (perturbations on a grid)
 //===============================================================================================================
+Pert::Pert(int a,int b,double c,double d){
+  this->dpsi = new ImagePlane(a,b,c,d);
+
+  this->dpsi_dx = (double*) calloc(this->dpsi->Nm,sizeof(double));
+  this->dpsi_dy = (double*) calloc(this->dpsi->Nm,sizeof(double));
+
+  this->Bdev.Ti = 2*this->dpsi->Nm;
+  this->Bdev.Tj = this->dpsi->Nm;
+
+  this->di = this->dpsi->height/(this->dpsi->Ni);
+  this->dj = this->dpsi->width/(this->dpsi->Nj);
+
+  createBdev();  
+}
+
 Pert::Pert(std::string filepath,int a,int b,double c,double d){
   this->dpsi = new ImagePlane(filepath,a,b,c,d);
 
   this->dpsi_dx = (double*) calloc(this->dpsi->Nm,sizeof(double));
   this->dpsi_dy = (double*) calloc(this->dpsi->Nm,sizeof(double));
 
-  this->Ddpsi.Ti = 2*this->dpsi->Nm;
-  this->Ddpsi.Tj = this->dpsi->Nm;
+  this->Bdev.Ti = 2*this->dpsi->Nm;
+  this->Bdev.Tj = this->dpsi->Nm;
 
-  this->i0 = this->dpsi->Ni/2.0;
-  this->j0 = this->dpsi->Nj/2.0;
-  this->di = this->dpsi->width/(this->dpsi->Ni);
-  this->dj = this->dpsi->height/(this->dpsi->Nj);
+  this->di = this->dpsi->height/(this->dpsi->Ni);
+  this->dj = this->dpsi->width/(this->dpsi->Nj);
 
   updateDpsi(this->dpsi->img);
+  createBdev();
 }
 
 Pert::Pert(ImagePlane* new_dpsi){
@@ -131,15 +145,14 @@ Pert::Pert(ImagePlane* new_dpsi){
   this->dpsi_dx = (double*) calloc(this->dpsi->Nm,sizeof(double));
   this->dpsi_dy = (double*) calloc(this->dpsi->Nm,sizeof(double));
 
-  this->Ddpsi.Ti = 2*this->dpsi->Nm;
-  this->Ddpsi.Tj = this->dpsi->Nm;
+  this->Bdev.Ti = 2*this->dpsi->Nm;
+  this->Bdev.Tj = this->dpsi->Nm;
 
-  this->i0 = this->dpsi->Ni/2.0;
-  this->j0 = this->dpsi->Nj/2.0;
-  this->di = this->dpsi->width/(this->dpsi->Ni);
-  this->dj = this->dpsi->height/(this->dpsi->Nj);
+  this->di = this->dpsi->height/(this->dpsi->Ni);
+  this->dj = this->dpsi->width/(this->dpsi->Nj);
 
   updateDpsi(this->dpsi->img);
+  createBdev();
 }
 
 void Pert::updateDpsi(double* new_dpsi){
@@ -183,25 +196,166 @@ void Pert::updateDpsi(double* new_dpsi){
   this->dpsi_dx[(Ni-1)*Nj+Nj-1] = (this->dpsi->img[(Ni-1)*Nj+Nj-1]-this->dpsi->img[(Ni-1)*Nj+Nj-2])/dj;
   this->dpsi_dy[(Ni-1)*Nj+Nj-1] = (this->dpsi->img[(Ni-1)*Nj+Nj-1]-this->dpsi->img[(Ni-2)*Nj+Nj-1])/di;
 
-
-  // Create Ddpsi table
-  std::vector<mytriplet> tmp;//need to make sure that the Ddpsi triplet vector is a new one
-
-  for(int i=0;i<this->dpsi->Nm;i++){
-    tmp.push_back({2*i,i,this->dpsi_dx[i]});
-    tmp.push_back({2*i+1,i,this->dpsi_dy[i]});
-  }
-
-  this->Ddpsi.tri.swap(tmp);
 }
 
-void Pert::defl(double xin,double yin,double& xout,double& yout){
-  int j = floor(xin/dj+j0);
-  int i = floor(-yin/di+i0);
+void Pert::createBdev(){
+  // This function creates the table of finite difference coefficients for the x and y derivatives of dpsi.
+  // The result is a Ndpsi x Ndpsi sparse matrix.
+  // The coefficients are the same as in function Pert::updateDpsi
+  int Nj = this->dpsi->Nj;
+  int Ni = this->dpsi->Ni;
 
-  double ax = this->dpsi_dx[i*this->dpsi->Nj+j];
-  double ay = this->dpsi_dy[i*this->dpsi->Nj+j];
+  std::vector<mytriplet> tmp;//need to make sure that the Ddpsi triplet vector is a new one
+
+  // Calculate derivatives:
+  // first row
+  tmp.push_back({  0,  0,         -1.0/dj });
+  tmp.push_back({  0,  1,          1.0/dj });
+  tmp.push_back({  1,  0,         -1.0/di });
+  tmp.push_back({  1, Nj,          1.0/di });
+  for(int j=1;j<Nj-1;j++){
+    tmp.push_back({   2*j,  j-1, -1.0/(2.0*dj) });
+    tmp.push_back({   2*j,  j+1,  1.0/(2.0*dj) });
+    tmp.push_back({ 2*j+1,    j,       -1.0/di });
+    tmp.push_back({ 2*j+1, j+Nj,        1.0/di });
+  }
+  tmp.push_back({   2*(Nj-1),    Nj-2,      -1.0/dj });
+  tmp.push_back({   2*(Nj-1),    Nj-1,       1.0/dj });
+  tmp.push_back({ 2*(Nj-1)+1,    Nj-1,      -1.0/di });
+  tmp.push_back({ 2*(Nj-1)+1, Nj+Nj-1,       1.0/di });
+
+  // in-between rows
+  for(int i=1;i<Ni-1;i++){
+    tmp.push_back({   2*(i*Nj),     i*Nj,       -1.0/dj });
+    tmp.push_back({   2*(i*Nj),   i*Nj+1,        1.0/dj });
+    tmp.push_back({ 2*(i*Nj)+1, (i-1)*Nj, -1.0/(2.0*di) });
+    tmp.push_back({ 2*(i*Nj)+1, (i+1)*Nj,  1.0/(2.0*di) });
+    for(int j=1;j<Nj-1;j++){
+      tmp.push_back({   2*(i*Nj+j),   i*Nj+j-1, -1.0/(2.0*dj) });
+      tmp.push_back({   2*(i*Nj+j),   i*Nj+j+1,  1.0/(2.0*dj) });
+      tmp.push_back({ 2*(i*Nj+j)+1, (i-1)*Nj+j, -1.0/(2.0*di) });
+      tmp.push_back({ 2*(i*Nj+j)+1, (i+1)*Nj+j,  1.0/(2.0*di) });
+    }
+    tmp.push_back({   2*(i*Nj+Nj-1),     i*Nj+Nj-2,       -1.0/dj });
+    tmp.push_back({   2*(i*Nj+Nj-1),     i*Nj+Nj-1,        1.0/dj });
+    tmp.push_back({ 2*(i*Nj+Nj-1)+1, (i-1)*Nj+Nj-1, -1.0/(2.0*di) });
+    tmp.push_back({ 2*(i*Nj+Nj-1)+1, (i+1)*Nj+Nj-1,  1.0/(2.0*di) });
+  }
+
+  // last row
+  tmp.push_back({   2*(Ni-1)*Nj,   (Ni-1)*Nj,       -1.0/dj });
+  tmp.push_back({   2*(Ni-1)*Nj, (Ni-1)*Nj+1,        1.0/dj });
+  tmp.push_back({ 2*(Ni-1)*Nj+1,   (Ni-2)*Nj,       -1.0/di });
+  tmp.push_back({ 2*(Ni-1)*Nj+1,   (Ni-1)*Nj,        1.0/di });
+  for(int j=1;j<Nj-1;j++){
+    tmp.push_back({   2*((Ni-1)*Nj+j), (Ni-1)*Nj+j-1, -1.0/(2.0*dj) });
+    tmp.push_back({   2*((Ni-1)*Nj+j), (Ni-1)*Nj+j+1,  1.0/(2.0*dj) });
+    tmp.push_back({ 2*((Ni-1)*Nj+j)+1,   (Ni-2)*Nj+j,       -1.0/di });
+    tmp.push_back({ 2*((Ni-1)*Nj+j)+1,   (Ni-1)*Nj+j,        1.0/di });
+  }
+  tmp.push_back({   2*((Ni-1)*Nj+Nj-1), (Ni-1)*Nj+Nj-2,   -1.0/dj });
+  tmp.push_back({   2*((Ni-1)*Nj+Nj-1), (Ni-1)*Nj+Nj-1,    1.0/dj });
+  tmp.push_back({ 2*((Ni-1)*Nj+Nj-1)+1, (Ni-2)*Nj+Nj-1,   -1.0/di });
+  tmp.push_back({ 2*((Ni-1)*Nj+Nj-1)+1, (Ni-1)*Nj+Nj-1,    1.0/di });
+
+  this->Bdev.tri.swap(tmp);
+}
+
+
+
+void Pert::createAint(ImagePlane* data){
+  this->Aint.Ti = 2*data->Nm;
+  this->Aint.Tj = 2*this->dpsi->Nm;
+
+  std::vector<mytriplet> tmp;
+
+  int i,j;
+  double xa,ya,xb,yb,w00,w10,w01,w11,f00,f10,f01,f11;
+  double den = this->di*this->dj;
+
+  int Nj = this->dpsi->Nj;
+
+  for(int k=0;k<data->Nm;k++){
+    int j = floor( (data->x[k]+this->dpsi->width/2.0)/dj );
+    int i = floor( (data->y[k]+this->dpsi->height/2.0)/di );  
+
+    if( j == this->dpsi->Nj-1 ){
+      j = j-2;
+    }
+    if( i == this->dpsi->Ni-1 ){
+      i = i-2;
+    }
+
+    ya  = data->y[k] - this->dpsi->y[i+1];
+    yb  = this->dpsi->y[i] - data->y[k];
+    xa  = data->x[k] - this->dpsi->x[j];
+    xb  = this->dpsi->x[j+1] - data->x[k];
+
+    w00 = xb*ya/den;
+    w10 = xb*yb/den;
+    w01 = xa*ya/den;
+    w11 = xa*yb/den;
+
+    tmp.push_back({ 2*k,       2*(i*Nj+j),  w00 });
+    tmp.push_back({ 2*k,   2*((i+1)*Nj+j),  w10 });
+    tmp.push_back({ 2*k,     2*(i*Nj+j+1),  w01 });
+    tmp.push_back({ 2*k, 2*((i+1)*Nj+j+1),  w11 });
+
+    tmp.push_back({ 2*k+1,       2*(i*Nj+j)+1,  w00 });
+    tmp.push_back({ 2*k+1,   2*((i+1)*Nj+j)+1,  w10 });
+    tmp.push_back({ 2*k+1,     2*(i*Nj+j+1)+1,  w01 });
+    tmp.push_back({ 2*k+1, 2*((i+1)*Nj+j+1)+1,  w11 });
+  }
+
+  this->Aint.tri.swap(tmp);
+}
+
+
+
+
+void Pert::defl(double xin,double yin,double& xout,double& yout){
+  int j = floor( (xin+this->dpsi->width/2.0)/dj );
+  int i = floor( (yin+this->dpsi->height/2.0)/di );  
+
+  if( j == this->dpsi->Nj-1 ){
+    j = j-2;
+  }
+  if( i == this->dpsi->Ni-1 ){
+    i = i-2;
+  }
+  
+  double den,xa,ya,xb,yb,w00,w10,w01,w11,f00,f10,f01,f11;
+
+  // Be careful: the indices count from top left in the interpolation scheme below
+  ya  = yin - this->dpsi->y[i+1];
+  yb  = this->dpsi->y[i] - yin;
+  xa  = xin - this->dpsi->x[j];
+  xb  = this->dpsi->x[j+1] - xin;
+  den = this->di*this->dj;
+
+  w00 = xb*ya;
+  w10 = xb*yb;
+  w01 = xa*ya;
+  w11 = xa*yb;
+
+  // Derivative on x
+  f00 = this->dpsi_dx[i*this->dpsi->Nj+j];
+  f10 = this->dpsi_dx[(i+1)*this->dpsi->Nj+j];
+  f01 = this->dpsi_dx[i*this->dpsi->Nj+j+1];
+  f11 = this->dpsi_dx[(i+1)*this->dpsi->Nj+j+1];
+  double ax = (f00*w00 + f10*w10 + f01*w01 + f11*w11)/den;
+
+  // Derivative on y
+  f00 = this->dpsi_dy[i*this->dpsi->Nj+j];
+  f10 = this->dpsi_dy[(i+1)*this->dpsi->Nj+j];
+  f01 = this->dpsi_dy[i*this->dpsi->Nj+j+1];
+  f11 = this->dpsi_dy[(i+1)*this->dpsi->Nj+j+1];
+  double ay = (f00*w00 + f10*w10 + f01*w01 + f11*w11)/den;
 
   xout = ax;
   yout = ay;
+
 }
+
+
+

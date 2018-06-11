@@ -1,4 +1,4 @@
-include "likelihoodModels.hpp"
+#include "likelihoodModels.hpp"
 
 #include <string>
 #include <vector>
@@ -63,11 +63,14 @@ void BaseLikelihoodModel::printTerms(){
 
 //Derived class from BaseLikelihoodModel: StandardLikelihood
 //===============================================================================================================
-StandardLikelihood::StandardLikelihood(std::vector<Nlpar*> a,std::vector<Nlpar*> b,std::vector< std::vector<Nlpar*> > c,std::vector<std::string> d){
+StandardLikelihood::StandardLikelihood(std::vector<Nlpar*> a,std::vector<Nlpar*> b,std::vector< std::vector<Nlpar*> > c,std::vector<std::string> d,ImagePlane* e,BaseSourcePlane* f,CollectionMassModels* g){
   physical = a;
   reg = b;
   lenses = c;
   lens_names = d;
+  image = e;
+  source = f;
+  collection = g;
 
   for(int i=0;i<this->physical.size();i++){
     if( this->physical[i]->getActive() ){
@@ -249,42 +252,42 @@ Json::Value StandardLikelihood::getActiveNamesValues(){
 }
 
 
-void StandardLikelihood::initializeAlgebra(ImagePlane* image,BaseSourcePlane* source){
-  this->algebra->setAlgebraInit(image,source);
+void StandardLikelihood::initializeAlgebra(){
+  this->algebra->setAlgebraInit(this->image,this->source);
 }
 
 
 
-void StandardLikelihood::updateLikelihoodModel(ImagePlane* image,BaseSourcePlane* source,CollectionMassModels* mycollection){
-  for(int i=0;i<mycollection->models.size();i++){
-    mycollection->models[i]->setMassPars(this->lenses[i]);
+void StandardLikelihood::updateLikelihoodModel(){
+  for(int i=0;i<this->collection->models.size();i++){
+    this->collection->models[i]->setMassPars(this->lenses[i]);
   }
-  mycollection->setPhysicalPars(this->physical);
+  this->collection->setPhysicalPars(this->physical);
 
-  if( source->sample_reg ){
-    source->kernel->setParameters(this->reg);
+  if( this->source->sample_reg ){
+    this->source->kernel->setParameters(this->reg);
   }
 
-  if( source->type == "adaptive" ){
-    AdaptiveSource* ada = dynamic_cast<AdaptiveSource*>(source);
-    ada->createAdaGrid(image,mycollection);
+  if( this->source->type == "adaptive" ){
+    AdaptiveSource* ada = dynamic_cast<AdaptiveSource*>(this->source);
+    ada->createAdaGrid(this->image,this->collection);
     ada->createDelaunay();
   }
 
-  if( source->sample_reg || source->type == "adaptive" ){
-    source->constructH();
+  if( this->source->sample_reg || this->source->type == "adaptive" ){
+    this->source->constructH();
   }
 
-  source->constructL(image,mycollection);
-  this->algebra->setAlgebraRuntime(image,source,Nlpar::getValueByName("lambda",this->reg));
-  this->algebra->solveLinearSparseS(image,source);
+  this->source->constructL(this->image,this->collection);
+  this->algebra->setAlgebraRuntime(this->image,this->source,Nlpar::getValueByName("lambda",this->reg));
+  this->algebra->solveLinearSparseS(this->image,this->source);
 }
 
-double StandardLikelihood::getLogLike(ImagePlane* image,BaseSourcePlane* source){
+double StandardLikelihood::getLogLike(){
   double pi  = 3.14159265358979323846;
 
-  this->terms["Nilog2p"] = -(image->lookup.size()*log10(2*pi)/2.0); // for some reason i need the outer parenthsis here, otherwise there is a memory problem
-  this->terms["Nslogl"]  = source->Sm*log10(Nlpar::getValueByName("lambda",this->reg))/2.0;
+  this->terms["Nilog2p"] = -(this->image->lookup.size()*log10(2*pi)/2.0); // for some reason i need the outer parenthsis here, otherwise there is a memory problem
+  this->terms["Nslogl"]  = this->source->Sm*log10(Nlpar::getValueByName("lambda",this->reg))/2.0;
   double val = terms["chi2"] + Nlpar::getValueByName("lambda",this->reg)*terms["reg"] + terms["Nilog2p"] + terms["Nslogl"] + terms["detC"] + terms["detHtH"] + terms["detA"];
   this->terms["like"] = val;
 
@@ -292,28 +295,28 @@ double StandardLikelihood::getLogLike(ImagePlane* image,BaseSourcePlane* source)
 }
 
 
-void StandardLikelihood::outputLikelihoodModel(ImagePlane* image,BaseSourcePlane* source,std::string output){
+void StandardLikelihood::outputLikelihoodModel(std::string output){
   // Output reconstructed source
-  source->outputSource(output);
+  this->source->outputSource(output);
 
   // Output errors of reconstructed source
-  double* errors = (double*) calloc(source->Sm,sizeof(double));
-  this->algebra->getSourceErrors(source->Sm,errors);
-  source->outputSourceErrors(errors,output);
+  double* errors = (double*) calloc(this->source->Sm,sizeof(double));
+  this->algebra->getSourceErrors(this->source->Sm,errors);
+  this->source->outputSourceErrors(errors,output);
   free(errors);
 
   // Create mock data (lensed MAP source)
-  ImagePlane mock_data(image->Nj,image->Ni,image->width,image->height);
-  this->algebra->getMockData(&mock_data,source);
+  ImagePlane mock_data(this->image->Nj,this->image->Ni,this->image->width,this->image->height);
+  this->algebra->getMockData(&mock_data,this->source);
   
   // Output image of the model (model)
   mock_data.writeImage(output + "vkl_image.fits");
   
   // Output residual image (diference between mydata and mock_data)
-  ImagePlane residual(image->Nj,image->Ni,image->width,image->height);
-  for(int i=0;i<image->Ni;i++){
-    for(int j=0;j<image->Nj;j++){
-      residual.img[i*image->Nj+j] = image->img[i*image->Nj+j] - mock_data.img[i*image->Nj+j];
+  ImagePlane residual(this->image->Nj,this->image->Ni,this->image->width,this->image->height);
+  for(int i=0;i<this->image->Ni;i++){
+    for(int j=0;j<this->image->Nj;j++){
+      residual.img[i*this->image->Nj+j] = this->image->img[i*this->image->Nj+j] - mock_data.img[i*this->image->Nj+j];
     }
   }
   residual.writeImage(output + "vkl_residual.fits");
@@ -329,7 +332,7 @@ void StandardLikelihood::outputLikelihoodModel(ImagePlane* image,BaseSourcePlane
   std::vector<std::string> all_names = this->getFullNames();
   std::vector<double> all_values = this->getValues();
   for(int i=0;i<all_names.size();i++){
-    std::cout << all_names[i] << " " << all_values[i] << std::endl;    
+    std::cout << all_names[i] << " " << all_values[i] << std::endl;
     pars[all_names[i]] = all_values[i];
   }
   json_output["full_pars"] = pars;
@@ -351,10 +354,10 @@ void StandardLikelihood::outputLikelihoodModel(ImagePlane* image,BaseSourcePlane
 
   // Write generic parameters
   Json::Value other;
-  other["Nsource"] = source->Sm;
-  other["Ndata"]   = image->Nm;
-  other["Nmask"]   = static_cast<int>( image->lookup.size() );
-  other["Psize"]   = image->width/image->Ni;
+  other["Nsource"] = this->source->Sm;
+  other["Ndata"]   = this->image->Nm;
+  other["Nmask"]   = static_cast<int>( this->image->lookup.size() );
+  other["Psize"]   = this->image->width/this->image->Ni;
   json_output["generic"] = other;
 
   /*
@@ -392,15 +395,39 @@ void StandardLikelihood::outputLikelihoodModel(ImagePlane* image,BaseSourcePlane
 //
 //}
 
-double SourceCovarianceKernel::getLogLike(ImagePlane* image,BaseSourcePlane* source){
+double SourceCovarianceKernel::getLogLike(){
   double pi  = 3.14159265358979323846;
 
-  this->terms["Nilog2p"] = -(image->lookup.size()*log10(2*pi)/2.0); // for some reason i need the outer parenthsis here, otherwise there is a memory problem
+  this->terms["Nilog2p"] = -(this->image->lookup.size()*log10(2*pi)/2.0); // for some reason i need the outer parenthsis here, otherwise there is a memory problem
   double val = terms["chi2"] + terms["reg"] + terms["Nilog2p"] + terms["detC"] + terms["detHtH"] + terms["detA"];
   this->terms["like"] = val;
 
   return val;
 }
+
+
+
+//Derived class from BaseLikelihoodModel: PerturbationsLikelihood
+//===============================================================================================================
+void PerturbationsLikelihood::initializeAlgebra(){
+  this->algebra->setAlgebraInit(this->image,this->pert_mass_model);
+}
+
+
+PerturbationsLikelihood::PerturbationsLikelihood(ImagePlane* a,Pert* b){
+  this->image = a;
+  this->pert_mass_model = b;
+  this->algebra = new PerturbationsAlgebra(this);
+
+  terms["A"] = 0.0;
+  terms["B"] = 0.0;
+  terms["C"] = 0.0;
+}
+
+PerturbationsLikelihood::~PerturbationsLikelihood(){
+  delete(algebra);
+}
+
 
 
 

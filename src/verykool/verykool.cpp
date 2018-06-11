@@ -28,43 +28,83 @@ int main(int argc,char* argv[]){
 
 
 
+  //=============== BEGIN:INITIALIZATION =======================
   // Initialize variables
-  Initialization* init;
-  BaseLikelihoodModel* mypars;
-  ImagePlane* mydata;
-  CollectionMassModels* mycollection;
-  BaseSourcePlane* mysource;
-  Initialization::initialize_program(argv[1],argv[2],init,mypars,mydata,mycollection,mysource);
+  Initialization* init = 0;
+  ImagePlane* mydata = 0;
+  BaseSourcePlane* mysource = 0;
+  CollectionMassModels* mycollection = 0;
+  BaseLikelihoodModel* smooth_like = 0;
+  BaseLikelihoodModel* pert_like = 0;
+  Pert* pert_mass_model = 0;
+  BaseMinimizer* smooth_minimizer = 0;
+  BaseMinimizer* pert_minimizer = 0;
+
+  Initialization::initialize_program(argv[1],argv[2],init,smooth_like,mydata,mycollection,mysource,pert_like,pert_mass_model);
+  //================= END:INITIALIZATION =======================
 
 
-  //=============== BEGIN:MINIMIZATION =========================
-  printf("%-25s","Starting minimization");
+
+
+
+
+  //=============== BEGIN:SMOOTH MODEL =========================
+  printf("%-25s","Starting smooth minimization ");
   fflush(stdout);
  
-  BaseMinimizer* myminimizer = FactoryMinimizer::getInstance()->createMinimizer(init->minimizer,mypars,mydata,mysource,mycollection,init->output);
-  myminimizer->minimize(init->minimizer,mypars,mydata,mysource,mycollection,init->output);
+  smooth_minimizer = FactoryMinimizer::getInstance()->createMinimizer(init->smooth_minimizer,smooth_like,init->output);
+  smooth_minimizer->minimize(init->smooth_minimizer,smooth_like,init->output);
 
   printf("%+7s\n","...done");
   std::cout << std::string(200,'=') << std::endl;
   fflush(stdout);
-  //================= END:MINIMIZATION =========================
-
 
   // Finalize output etc
   if( myrank == 0 ){
-    Initialization::finalize_program(init,mypars,mydata,mycollection,mysource);
+    Initialization::finalize_smooth(init,smooth_like,mydata,mycollection,mysource);
     //myminimizer->output();
   }
+
+  delete(smooth_minimizer);
+  //================= END:SMOOTH MODEL =========================
+
+
+
+
+  //=============== BEGIN:PERTURBATIONS =========================
+  if( init->perturbations.size() > 0 ){
+    printf("%-25s","Starting perturbation minimization ");
+    fflush(stdout);
+    
+    //    BaseMinimizer* pert_minimizer = FactoryMinimizer::getInstance()->createMinimizer(init->pert_minimizer,pert_like,mydata,mysource,mycollection,init->output);
+    //    pert_minimizer->minimize(init->pert_minimizer,pert_like,mydata,mysource,mycollection,init->output);
+
+    printf("%+7s\n","...done");
+    std::cout << std::string(200,'=') << std::endl;
+    fflush(stdout);
+
+    
+    if( myrank == 0 ){
+      Initialization::finalize_pert();
+      //myminimizer->output();
+    }
+    
+    //    delete(pert_minimizer);
+  }
+  //================= END:PERTURBATIONS =========================
+
 
 
 
   // Cleanup pointers
   delete(init);
   delete(mydata);
-  delete(mycollection);
   delete(mysource);
-  delete(myminimizer);
-
+  delete(mycollection);
+  delete(smooth_like);
+  delete(pert_like);
+  delete(pert_mass_model);
+  
 
   // Finalize MPI
   MPI_Finalize();

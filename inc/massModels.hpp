@@ -50,8 +50,10 @@ public:
   ImagePlane* dpsi;
   double* dpsi_dx;
   double* dpsi_dy;
-  mytable Ddpsi;
+  mytable Aint;
+  mytable Bdev;
 
+  Pert(int Ni,int Nj,double width,double height);
   Pert(std::string filename,int Ni,int Nj,double width,double height);
   Pert(ImagePlane* new_dpsi);
   ~Pert(){
@@ -61,13 +63,12 @@ public:
   }
   void defl(double xin,double yin,double& xout,double& yout);
   void updateDpsi(double* new_dpsi);
+  void createAint(ImagePlane* data);
+  void createBdev();
 
 private:
-  int i0;
-  int j0;
   double di;
   double dj;
-
 };
 
 
@@ -105,7 +106,7 @@ private:
 
 
 
-class CollectionMassModels{
+class CollectionMassModels {
 public:
   int n;
   std::vector<BaseMassModel*> models;

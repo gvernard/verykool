@@ -2,6 +2,7 @@
 
 #include "imagePlane.hpp"
 #include "sourcePlane.hpp"
+#include "massModels.hpp"
 #include "likelihoodModels.hpp"
 
 #include <iostream>
@@ -320,5 +321,40 @@ void StandardAlgebra::getSourceErrors(int Sm,double* errors){
     errors[i] = diag[i];
   }
 
+}
+
+
+// Class: PerturbationsAlgebra
+//===============================================================================================================
+PerturbationsAlgebra::PerturbationsAlgebra(PerturbationsLikelihood* a){
+  this->likeModel = a;
+}
+
+void PerturbationsAlgebra::setAlgebraInit(ImagePlane* image,Pert* pertMassModel){
+
+  Eigen::SparseMatrix<double> BB(image->B.Ti,image->B.Tj);
+  BB.reserve(Eigen::VectorXi::Constant(image->B.Ti,900));//overestimating the number of entries per row of the blurring matrix BB (900 for a 30x30 psf)
+  for(int i=0;i<image->B.tri.size();i++){  BB.insert(image->B.tri[i].j,image->B.tri[i].i) = image->B.tri[i].v;  }//for column-major (swap the i and j indices of tri struct)
+  
+  Eigen::SparseMatrix<double> AA(pertMassModel->Aint.Ti,pertMassModel->Aint.Tj);
+  AA.reserve(Eigen::VectorXi::Constant(pertMassModel->Aint.Ti,4));//setting the non-zero coefficients per row of the interpolation matrix (4 for bi-linear interpolation scheme, etc)
+  for(int i=0;i<pertMassModel->Aint.tri.size();i++){  AA.insert(pertMassModel->Aint.tri[i].i,pertMassModel->Aint.tri[i].j) = pertMassModel->Aint.tri[i].v;  }
+  
+  Eigen::SparseMatrix<double> TT(pertMassModel->Bdev.Ti,pertMassModel->Bdev.Tj);
+  TT.reserve(Eigen::VectorXi::Constant(pertMassModel->Bdev.Ti,2));//setting the non-zero coefficients per row of the derivative matrix (2 for first order gradient, etc)
+  for(int i=0;i<pertMassModel->Bdev.tri.size();i++){  TT.insert(pertMassModel->Bdev.tri[i].i,pertMassModel->Bdev.tri[i].j) = pertMassModel->Bdev.tri[i].v;  }
+
+
+  
+  Eigen::SparseMatrix<double> Dpsi(2*image->Nm,pertMassModel->dpsi->Nm);
+  Dpsi = (AA * TT);
+
+  this->B    = BB;
+  this->Dpsi = Dpsi;
+  
+
+  BB.resize(0,0);
+  AA.resize(0,0);
+  TT.resize(0,0);
 }
 

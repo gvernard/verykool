@@ -10,9 +10,13 @@
 int main(int argc,char* argv[]){
   std::string path(argv[1]);
   std::string run(argv[2]);
+  ImagePlane* dum_image = 0;
+  BaseSourcePlane* dum_source = 0;
+  CollectionMassModels* dum_collection = 0;
+  Pert* dum_pert = 0;
+  std::string like_model_name = "standard";
 
-
-  BaseLikelihoodModel* mypars = FactoryLikelihoodModel::getInstance()->createLikelihoodModel(path,run);
+  BaseLikelihoodModel* mypars = FactoryLikelihoodModel::getInstance()->createLikelihoodModel(path,run,like_model_name,dum_image,dum_source,dum_collection,dum_pert);
 
   std::vector<std::string> names = mypars->getActiveFullNames();
   

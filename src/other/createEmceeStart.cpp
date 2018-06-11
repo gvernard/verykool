@@ -13,20 +13,26 @@
 int main(int argc,char* argv[]){
   std::string path(argv[1]);
   std::string run(argv[2]);
-
+  ImagePlane* dum_image = 0;
+  BaseSourcePlane* dum_source = 0;
+  CollectionMassModels* dum_collection = 0;
+  Pert* dum_pert = 0;
+  BaseLikelihoodModel* dum_smooth_like;
+  BaseLikelihoodModel* dum_pert_like;
+  std::string like_model_name = "standard";
 
   Initialization* init = new Initialization();
-  init->parseInputJSON(path,run);
-  BaseLikelihoodModel* mypars = FactoryLikelihoodModel::getInstance()->createLikelihoodModel(path,run);
+  Initialization::initialize_program(path,run,init,dum_smooth_like,dum_image,dum_collection,dum_source,dum_pert_like,dum_pert);
+  BaseLikelihoodModel* mypars = FactoryLikelihoodModel::getInstance()->createLikelihoodModel(path,run,like_model_name,dum_image,dum_source,dum_collection,dum_pert);
 
-  if( init->minimizer["type"] != "cosmosis_emcee" ){
+  if( init->smooth_minimizer["type"] != "cosmosis_emcee" ){
     std::cout << "wrong minimizer, it has to be cosmosis_emcee" << std::endl;
     return 0;
   } 
 
 
   int ncols = mypars->active.size();
-  int nrows = stoi(init->minimizer["walkers"]);
+  int nrows = std::stoi(init->smooth_minimizer["walkers"]);
 
 
   FILE* fh = fopen((path+run+"emcee_start.txt").c_str(),"w");
