@@ -29,6 +29,7 @@ public:
   ImagePlane(const std::string filepath,int i,int j,double w,double h);  //used to read images
   ImagePlane(int i,int j,double w,double h);                             //used to create images
   ImagePlane(int i,double w,double h);                                   //used to create masked images
+  ImagePlane(const ImagePlane& image);
   ~ImagePlane();
 
   void writeImage(const std::string filename);

@@ -44,6 +44,40 @@ void BaseSourcePlane::normalize(){
 //virtual
 FixedSource::FixedSource(int i,int j,double size,std::string reg_scheme){
   type = "fixed";
+  Si   = i;
+  Sj   = j;
+  Sm   = Si*Sj;
+  H.Ti = Sm;
+  H.Tj = Sm;
+
+  src  = (double*) calloc(Sm,sizeof(double));
+  x    = (double*) calloc(Sm,sizeof(double));
+  y    = (double*) calloc(Sm,sizeof(double));
+  s_dx = (double*) calloc(Sm,sizeof(double));
+  s_dy = (double*) calloc(Sm,sizeof(double));
+
+  std::map<std::string,std::string> pars;
+  pars["size"] = std::to_string(size);
+
+  this->setGridSquare(pars);
+  this->boundPolygon();
+
+  reg = reg_scheme;
+  if( reg == "identity"){
+    eigenSparseMemoryAllocForH = 1;
+  } else if( reg == "gradient" ){
+    eigenSparseMemoryAllocForH = 8;
+  } else if( reg == "curvature" ){
+    eigenSparseMemoryAllocForH = 8;
+  } else if( reg == "covariance_kernel" ){
+    // I need to call constructH() in order to set the number of non-zero entries per sparse matrix row (this number varies for a random covariance kernel).
+    // This happens at the initialization of the likelihood model (BaseLikelihoodModel->initializeAlgebra()) just before setting the algebra.
+    // So, do nothing here.
+  }
+}
+
+FixedSource::FixedSource(int i,int j,double width,double height,std::string reg_scheme){
+  type = "fixed";
   reg  = reg_scheme;
   Si   = i;
   Sj   = j;
@@ -51,28 +85,48 @@ FixedSource::FixedSource(int i,int j,double size,std::string reg_scheme){
   H.Ti = Sm;
   H.Tj = Sm;
 
-  src = (double*) calloc(Sm,sizeof(double));
-  x   = (double*) calloc(Sm,sizeof(double));
-  y   = (double*) calloc(Sm,sizeof(double));
+  src  = (double*) calloc(Sm,sizeof(double));
+  x    = (double*) calloc(Sm,sizeof(double));
+  y    = (double*) calloc(Sm,sizeof(double));
+  s_dx = (double*) calloc(Sm,sizeof(double));
+  s_dy = (double*) calloc(Sm,sizeof(double));
 
-  std::map<std::string,std::string> pars;
-  pars["size"] = std::to_string(size);
-
-  this->setGrid(pars);
+  this->setGridRect(width,height);
   this->boundPolygon();
 }
 
-//virtual
-FixedSource::~FixedSource(){}
+FixedSource::FixedSource(const FixedSource& source){
+  type = "fixed";
+  reg = source.reg;
+  Si = source.Si;
+  Sj = source.Sj;
+  Sm = source.Sm;
+  width = source.width;
+  height = source.height;
+
+  src  = (double*) calloc(Sm,sizeof(double));
+  x    = (double*) calloc(Sm,sizeof(double));
+  y    = (double*) calloc(Sm,sizeof(double));
+  s_dx = (double*) calloc(Sm,sizeof(double));
+  s_dy = (double*) calloc(Sm,sizeof(double));
+  for(int i=0;i<Sm;i++){
+    src[i] = source.src[i];
+  }
+
+  this->setGridRect(width,height);
+  this->boundPolygon();
+}
 
 //non-virtual
-void FixedSource::setGrid(std::map<std::string,std::string> pars){
+void FixedSource::setGridSquare(std::map<std::string,std::string> pars){
   double size = stof(pars["size"]);
 
   this->xmax =  size;
   this->xmin = -size;
   this->ymax =  size;
   this->ymin = -size;
+  this->width  = xmax - xmin;
+  this->height = ymax - ymin;
 
   double dx = (this->xmax - this->xmin)/this->Sj;
   double dy = (this->ymax - this->ymin)/this->Si;
@@ -80,6 +134,29 @@ void FixedSource::setGrid(std::map<std::string,std::string> pars){
   this->xmax -= dx;
   this->ymax -= dy;
 
+  for(int j=0;j<this->Sj;j++){
+    for(int i=0;i<this->Si;i++){
+      this->x[j*this->Si+i] = this->xmin + i*dx;
+      this->y[j*this->Si+i] = this->ymin + (this->Sj-1-j)*dy;//reflect y-axis
+    }
+  }
+}
+
+//non-virtual
+void FixedSource::setGridRect(double width,double height){
+  // set xmin,xmax,ymin,ymax,width,height, andx and y grids
+  this->xmax =  width/2.0;
+  this->xmin = -width/2.0;
+  this->ymax =  height/2.0;
+  this->ymin = -height/2.0;
+  this->width  = width;
+  this->height = height;
+
+  double dx = this->width/this->Sj;
+  double dy = this->height/this->Si;
+
+  this->xmax -= dx;
+  this->ymax -= dy;
   for(int j=0;j<this->Sj;j++){
     for(int i=0;i<this->Si;i++){
       this->x[j*this->Si+i] = this->xmin + i*dx;
@@ -369,9 +446,11 @@ FloatingSource::FloatingSource(int i,int j,double size,double x0,double y0,std::
   H.Ti = Si*Sj;
   H.Tj = Si*Sj;
 
-  src = (double*) calloc(i*j,sizeof(double));
-  x   = (double*) calloc(i*j,sizeof(double));
-  y   = (double*) calloc(i*j,sizeof(double));
+  src  = (double*) calloc(i*j,sizeof(double));
+  x    = (double*) calloc(i*j,sizeof(double));
+  y    = (double*) calloc(i*j,sizeof(double));
+  s_dx = (double*) calloc(i*j,sizeof(double));
+  s_dy = (double*) calloc(i*j,sizeof(double));
 
   std::map<std::string,std::string> pars;
   pars["size"] = std::to_string(size);
@@ -605,9 +684,11 @@ AdaptiveSource::AdaptiveSource(int a,std::string reg_scheme){
   H.Ti    = Sm;
   H.Tj    = Sm;
 
-  src = (double*) calloc(Sm,sizeof(double));
-  x   = (double*) calloc(Sm,sizeof(double));
-  y   = (double*) calloc(Sm,sizeof(double));
+  src  = (double*) calloc(Sm,sizeof(double));
+  x    = (double*) calloc(Sm,sizeof(double));
+  y    = (double*) calloc(Sm,sizeof(double));
+  s_dx = (double*) calloc(Sm,sizeof(double));
+  s_dy = (double*) calloc(Sm,sizeof(double));
 
   reg = reg_scheme;
   if( reg == "identity"){
@@ -617,7 +698,9 @@ AdaptiveSource::AdaptiveSource(int a,std::string reg_scheme){
   } else if( reg == "curvature" ){
     eigenSparseMemoryAllocForH = 8;
   } else if( reg == "covariance_kernel" ){
-    constructH(); // I need to call this function in order to set the number of non-zero entries per sparse matrix row (this number varies for a random covariance kernel)
+    // I need to call constructH() in order to set the number of non-zero entries per sparse matrix row (this number varies for a random covariance kernel).
+    // This happens at the initialization of the likelihood model (BaseLikelihoodModel->initializeAlgebra()) just before setting the algebra.
+    // So, do nothing here.
   }
 }
 
@@ -632,9 +715,11 @@ AdaptiveSource::AdaptiveSource(std::string m,int a,int b,std::string reg_scheme)
   H.Ti    = Sm;
   H.Tj    = Sm;
 
-  src = (double*) calloc(Sm,sizeof(double));
-  x   = (double*) calloc(Sm,sizeof(double));
-  y   = (double*) calloc(Sm,sizeof(double));
+  src  = (double*) calloc(Sm,sizeof(double));
+  x    = (double*) calloc(Sm,sizeof(double));
+  y    = (double*) calloc(Sm,sizeof(double));
+  s_dx = (double*) calloc(Sm,sizeof(double));
+  s_dy = (double*) calloc(Sm,sizeof(double));
 
   reg = reg_scheme;
   if( reg == "identity"){
@@ -643,10 +728,11 @@ AdaptiveSource::AdaptiveSource(std::string m,int a,int b,std::string reg_scheme)
     eigenSparseMemoryAllocForH = 8;
   } else if( reg == "curvature" ){
     eigenSparseMemoryAllocForH = 8;
+  } else if( reg == "covariance_kernel" ){
+    // I need to call constructH() in order to set the number of non-zero entries per sparse matrix row (this number varies for a random covariance kernel).
+    // This happens at the initialization of the likelihood model (BaseLikelihoodModel->initializeAlgebra()) just before setting the algebra.
+    // So, do nothing here.
   }
-  //  } else if( reg == "covariance_kernel" ){
-  //    constructH(); // I need to call this function in order to set the number of non-zero entries per sparse matrix row (this number varies for a random covariance kernel)
-  //  }
 }
 
 //virtual
@@ -1174,6 +1260,140 @@ void AdaptiveSource::constructH(){
 
   this->H.tri.swap(tmp);
 }
+
+//virtual
+void AdaptiveSource::constructDs(ImagePlane* image,CollectionMassModels* collection){
+
+  // Calculate the derivative at every source grid point
+  double* dev_x_val   = (double*) malloc(2*sizeof(double));
+  double* dev_x_coord = (double*) malloc(2*sizeof(double));
+  double* dev_y_val   = (double*) malloc(2*sizeof(double));
+  double* dev_y_coord = (double*) malloc(2*sizeof(double));
+  for(int i=0;i<this->Sm;i++){
+    
+    xypoint p0 = {this->x[i],this->y[i]};
+    std::vector<int> indices = this->opposite_edges_per_vertex[i];
+      
+    if( indices.size() == 0 ){
+
+      //we are on a convex-hull point that has zero source derivative
+      this->s_dx[i] = 0.0;
+      this->s_dy[i] = 0.0;
+
+    } else {
+	
+      double ymin,ymax,xmin,xmax;
+      int i_x = 0;
+      int i_y = 0;
+
+      for(int j=0;j<indices.size();j=j+2){	
+	xypoint p1 = {this->x[indices[j]],this->y[indices[j]]};
+	xypoint p2 = {this->x[indices[j+1]],this->y[indices[j+1]]};
+	
+	//Smoothing in the x-direction
+	if( p1.y > p2.y ){
+	  ymax = p1.y;
+	  ymin = p2.y;
+	} else {
+	  ymax = p2.y;
+	  ymin = p1.y;
+	}
+	//Find intersection point (if it exists), interpolate to get the weights, and add them to <map>weights
+	if( ymin <= p0.y && p0.y <= ymax ){
+	  xypoint pint = intersection_point_x(p0,p1,p2);
+	  double l2 = ((p1.y-p0.y)*(pint.x-p1.x)+(p0.x-p1.x)*(pint.y-p1.y))/((p2.y-p1.y)*(p0.x-p1.x)+(p1.x-p2.x)*(p0.y-p1.y));
+	  double l1 = 1.0 - l2;
+	  dev_x_val[i_x]   = l1*this->src[indices[j]] + l2*this->src[indices[j+1]];
+	  dev_x_coord[i_x] = pint.x - p0.x;
+	  i_x++;
+	}
+
+	//Smoothing in the y-direction
+	if( p1.x > p2.x ){
+	  xmax = p1.x;
+	  xmin = p2.x;
+	} else {
+	  xmax = p2.x;
+	  xmin = p1.x;
+	}	
+	//Find intersection point (if it exists), interpolate to get the weights, and add them to <map>weights
+	if( xmin <= p0.x && p0.x <= xmax ){
+	  xypoint pint = intersection_point_y(p0,p1,p2);
+	  double l2 = ((p1.y-p0.y)*(pint.x-p1.x)+(p0.x-p1.x)*(pint.y-p1.y))/((p2.y-p1.y)*(p0.x-p1.x)+(p1.x-p2.x)*(p0.y-p1.y));
+	  double l1 = 1.0 - l2;
+	  dev_y_val[i_y]   = l1*this->src[indices[j]] + l2*this->src[indices[j+1]];
+	  dev_y_coord[i_y] = pint.y - p0.y;
+	  i_y++;
+	}
+	
+      }
+      
+      if( dev_x_coord[0] > dev_x_coord[1] ){
+	this->s_dx[i] = (dev_x_val[0] - dev_x_val[1])/(dev_x_coord[0] - dev_x_coord[1]);
+      } else {
+	this->s_dx[i] = (dev_x_val[1] - dev_x_val[0])/(dev_x_coord[1] - dev_x_coord[0]);
+      }
+
+      if( dev_y_coord[0] > dev_y_coord[1] ){
+	this->s_dy[i] = (dev_y_val[0] - dev_y_val[1])/(dev_y_coord[0] - dev_y_coord[1]);
+      } else {
+	this->s_dy[i] = (dev_y_val[1] - dev_y_val[0])/(dev_y_coord[1] - dev_y_coord[0]);
+      }
+     
+    }
+    
+  }
+  free(dev_x_coord);
+  free(dev_y_coord);
+  free(dev_x_val);
+  free(dev_y_val);
+  
+
+  // Deflect the image grid, find the triangle that each ray belongs to, and interpolate between the derivatives of the vertices
+  // or get the derivative of the vertex if the ray is part of the adaptive grid.
+  double xp,yp;
+  double wa,wb,wc;
+  double ybc,xac,xcb,yac,xxc,yyc,den;
+  double vx,vy,vz,ux,uy,uz;
+  double dx,dy;
+  a_triangle triangle;
+
+  this->Ds.Ti = image->Nm;
+  this->Ds.Tj = 2*image->Nm;
+  std::vector<mytriplet> tmp;
+
+  for(int i=0;i<image->Nm;i++){
+    collection->all_defl(image->x[i],image->y[i],xp,yp);
+    
+    for(int j=0;j<this->n_triangles;j++){
+      triangle = this->triangles[j];
+      
+      ybc = this->y[triangle.b] - this->y[triangle.c];//(yb-yc)
+      xac = this->x[triangle.a] - this->x[triangle.c];//(xa-xc)
+      xcb = this->x[triangle.c] - this->x[triangle.b];//(xc-xb)
+      yac = this->y[triangle.a] - this->y[triangle.c];//(ya-yc)
+      xxc = xp                  - this->x[triangle.c];//(x -xc)
+      yyc = yp                  - this->y[triangle.c];//(y -yc)
+      den = ybc*xac + xcb*yac;
+      
+      wa = ( ybc*xxc+xcb*yyc)/den;
+      wb = (-yac*xxc+xac*yyc)/den;
+      wc = 1.0 - wa - wb;
+      
+      if( 0.0 <= wa && wa <= 1.0 && 0.0 <= wb && wb <= 1.0 && 0.0 <= wc && wc <= 1.0 ){
+	double dev_x = wa*this->s_dx[triangle.a] + wb*this->s_dx[triangle.b] + wc*this->s_dx[triangle.c];
+	double dev_y = wa*this->s_dy[triangle.a] + wb*this->s_dy[triangle.b] + wc*this->s_dy[triangle.c];
+	
+	tmp.push_back({i,2*i,dev_x});
+	tmp.push_back({i,2*i+1,dev_y});
+	break;
+      }
+    }
+  }
+
+  this->Ds.tri.swap(tmp);
+}
+
 
 
 //virtual

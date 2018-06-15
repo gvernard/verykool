@@ -63,14 +63,16 @@ void BaseLikelihoodModel::printTerms(){
 
 //Derived class from BaseLikelihoodModel: StandardLikelihood
 //===============================================================================================================
-StandardLikelihood::StandardLikelihood(std::vector<Nlpar*> a,std::vector<Nlpar*> b,std::vector< std::vector<Nlpar*> > c,std::vector<std::string> d,ImagePlane* e,BaseSourcePlane* f,CollectionMassModels* g){
+StandardLikelihood::StandardLikelihood(std::vector<Nlpar*> a,std::vector<Nlpar*> b,std::vector< std::vector<Nlpar*> > c,std::vector<std::string> d,ImagePlane* e,ImagePlane* f,ImagePlane* g,BaseSourcePlane* h,CollectionMassModels* k){
   physical = a;
   reg = b;
   lenses = c;
   lens_names = d;
   image = e;
-  source = f;
-  collection = g;
+  model = f;
+  res = g;
+  source = h;
+  collection = k;
 
   for(int i=0;i<this->physical.size();i++){
     if( this->physical[i]->getActive() ){
@@ -253,6 +255,7 @@ Json::Value StandardLikelihood::getActiveNamesValues(){
 
 
 void StandardLikelihood::initializeAlgebra(){
+  this->source->constructH(); // this call needs to be before setting the algebra (sets the number of non-zero elements per sparse matrix row)
   this->algebra->setAlgebraInit(this->image,this->source);
 }
 
@@ -260,7 +263,9 @@ void StandardLikelihood::initializeAlgebra(){
 
 void StandardLikelihood::updateLikelihoodModel(){
   for(int i=0;i<this->collection->models.size();i++){
-    this->collection->models[i]->setMassPars(this->lenses[i]);
+    if( this->collection->models[i]->type != "pert"){
+      this->collection->models[i]->setMassPars(this->lenses[i]);
+    }
   }
   this->collection->setPhysicalPars(this->physical);
 
@@ -294,6 +299,16 @@ double StandardLikelihood::getLogLike(){
   return val;
 }
 
+void StandardLikelihood::getModelImage(){
+  this->algebra->getMockData(this->model,this->source);
+}
+
+void StandardLikelihood::getResiduals(){
+  this->getModelImage();
+  for(int i=0;i<this->image->Nm;i++){
+    this->res->img[i] = this->image->img[i] - this->model->img[i];
+  }
+}
 
 void StandardLikelihood::outputLikelihoodModel(std::string output){
   // Output reconstructed source
@@ -304,25 +319,12 @@ void StandardLikelihood::outputLikelihoodModel(std::string output){
   this->algebra->getSourceErrors(this->source->Sm,errors);
   this->source->outputSourceErrors(errors,output);
   free(errors);
-
-  // Create mock data (lensed MAP source)
-  ImagePlane mock_data(this->image->Nj,this->image->Ni,this->image->width,this->image->height);
-  this->algebra->getMockData(&mock_data,this->source);
   
-  // Output image of the model (model)
-  mock_data.writeImage(output + "vkl_image.fits");
+  // Output image of the model and the residuals
+  this->getResiduals();
+  this->res->writeImage(output + "vkl_residual.fits");
+  this->model->writeImage(output + "vkl_image.fits"); // model has already been computed by the call to getResiduals()
   
-  // Output residual image (diference between mydata and mock_data)
-  ImagePlane residual(this->image->Nj,this->image->Ni,this->image->width,this->image->height);
-  for(int i=0;i<this->image->Ni;i++){
-    for(int j=0;j<this->image->Nj;j++){
-      residual.img[i*this->image->Nj+j] = this->image->img[i*this->image->Nj+j] - mock_data.img[i*this->image->Nj+j];
-    }
-  }
-  residual.writeImage(output + "vkl_residual.fits");
-  
-
-
 
   // Output various quantities in json format
   Json::Value json_output;
@@ -348,9 +350,6 @@ void StandardLikelihood::outputLikelihoodModel(std::string output){
   // Write structured active parameter names and values
   Json::Value json_active = this->getActiveNamesValues();
   json_output["json_active"] = json_active;
-
-
-
 
   // Write generic parameters
   Json::Value other;
@@ -378,7 +377,6 @@ void StandardLikelihood::outputLikelihoodModel(std::string output){
   json_output["terms"] = terms;
   */
 
-
   std::ofstream jsonfile(output+"vkl_output.json");
   jsonfile << json_output;
   jsonfile.close();
@@ -386,7 +384,7 @@ void StandardLikelihood::outputLikelihoodModel(std::string output){
 
 
 
-//Derived class from BaseLikelihoodModel: SourceCovarianceKernel
+//Derived class from StandardLikelihood: SourceCovarianceKernel
 //===============================================================================================================
 
 // void  SourceCovarianceKernel::updateLikelihoodModel(ImagePlane* image,BaseSourcePlane* source,CollectionMassModels* mycollection){
@@ -409,15 +407,39 @@ double SourceCovarianceKernel::getLogLike(){
 
 //Derived class from BaseLikelihoodModel: PerturbationsLikelihood
 //===============================================================================================================
-void PerturbationsLikelihood::initializeAlgebra(){
-  this->algebra->setAlgebraInit(this->image,this->pert_mass_model);
+PerturbationsLikelihood::PerturbationsLikelihood(std::vector<Nlpar*> reg,ImagePlane* image,BaseSourcePlane* source,CollectionMassModels* collection,Pert* pert){
+  this->reg = reg;
+  this->image = image;
+  this->source = source;
+  this->collection = collection;
+  this->pert_mass_model = pert;
+  this->algebra = new PerturbationsAlgebra(this);
+
+  for(int i=0;i<this->reg.size();i++){
+    if( this->reg[i]->getActive() ){
+      active.push_back( this->reg[i] );
+    }
+  }
+
+  terms["A"] = 0.0;
+  terms["B"] = 0.0;
+  terms["C"] = 0.0;
 }
 
-
-PerturbationsLikelihood::PerturbationsLikelihood(ImagePlane* a,Pert* b){
-  this->image = a;
-  this->pert_mass_model = b;
+PerturbationsLikelihood::PerturbationsLikelihood(std::vector<Nlpar*> reg,ImagePlane* image,BaseSourcePlane* source,CollectionMassModels* collection,Pert* pert,BaseLikelihoodModel* likeModel){
+  this->reg = reg;
+  this->image = image;
+  this->source = source;
+  this->collection = collection;
+  this->pert_mass_model = pert;
+  this->smooth_like = likeModel;
   this->algebra = new PerturbationsAlgebra(this);
+
+  for(int i=0;i<this->reg.size();i++){
+    if( this->reg[i]->getActive() ){
+      active.push_back( this->reg[i] );
+    }
+  }
 
   terms["A"] = 0.0;
   terms["B"] = 0.0;
@@ -428,7 +450,89 @@ PerturbationsLikelihood::~PerturbationsLikelihood(){
   delete(algebra);
 }
 
+std::vector<Nlpar*> PerturbationsLikelihood::getRegPars(){
+  return this->reg;
+}
 
+void PerturbationsLikelihood::initializePert(BaseLikelihoodModel* smooth_like){
+  // Add smooth likelihood model to the perturbations likelihood model
+  this->smooth_like = smooth_like;
+
+  
+  // Add grid of additive perturbations to the mass model collection
+  Pert* additive_pert = new Pert(this->pert_mass_model->dpsi); // This memory is free-ed by the call to the CollectionMassModels destructor
+  double* zeros = (double*) calloc(this->pert_mass_model->dpsi->Sm,sizeof(double));
+  additive_pert->updateDpsi(zeros);
+  free(zeros);
+  this->collection->models.push_back(additive_pert);
+  
+  
+  // Calculate residuals of the smooth model and pass them to the pert_like model
+  this->smooth_like->getResiduals();
+
+  // Finally, I need to initialize the H matrix of the Dpsi
+  this->pert_mass_model->dpsi->constructH();
+}
+
+void PerturbationsLikelihood::initializeAlgebra(){
+  StandardLikelihood* like_pointer = dynamic_cast<StandardLikelihood*>(this->smooth_like);
+  this->algebra->setAlgebraInitPert(this->image,this->pert_mass_model,like_pointer->res->img);
+}
+
+void PerturbationsLikelihood::updateLikelihoodModel(){
+  // Solve for the new source
+  //-------------------------------------------------------------------------------
+  this->smooth_like->updateLikelihoodModel();
+  
+  // Solve for the new perturbations
+  //-------------------------------------------------------------------------------
+  if( this->pert_mass_model->dpsi->sample_reg ){
+    this->pert_mass_model->dpsi->constructH();
+  }
+  this->source->constructDs(this->image,this->collection);
+  this->algebra->setAlgebraRuntimePert(this->image,this->source,this->pert_mass_model,this->smooth_like,Nlpar::getValueByName("lambda",this->reg));
+  this->algebra->solvePert(this->image,this->pert_mass_model->dpsi,this->smooth_like);
+  
+  // Update the mass model with the new perturbations
+  //-------------------------------------------------------------------------------
+  Pert* dum_pert = dynamic_cast<Pert*>(this->collection->models.back());
+  for(int i=0;i<this->pert_mass_model->dpsi->Sm;i++){
+    dum_pert->dpsi->src[i] += pert_mass_model->dpsi->src[i];
+  }
+}
+
+double PerturbationsLikelihood::getLogLike(){
+}
+
+void PerturbationsLikelihood::outputLikelihoodModel(std::string output){
+  StandardLikelihood* like_pointer = dynamic_cast<StandardLikelihood*>(this->smooth_like);
+
+  // Output reconstructed source
+  this->source->outputSource(output + "pert_");
+
+  // Output errors of reconstructed source
+  double* errors = (double*) calloc(this->source->Sm,sizeof(double));
+  like_pointer->algebra->getSourceErrors(this->source->Sm,errors);
+  this->source->outputSourceErrors(errors,output + "pert_");
+  free(errors);
+
+  // Output image of the model and the residuals
+  like_pointer->getResiduals();
+  like_pointer->res->writeImage(output + "pert_vkl_residual.fits");
+  like_pointer->model->writeImage(output + "pert_vkl_image.fits"); // model has already been computed by the call to getResiduals()
+
+
+  // Output the potential perturbations
+  Pert* pert_pointer = dynamic_cast<Pert*>(this->collection->models.back());
+  pert_pointer->outputDpsi(output + "pert_vkl_perturbations.fits");
+  pert_pointer->outputConvergence(output + "pert_vkl_convergence.fits");
+}
+
+
+//Derived class from PerturbationsLikelihood: PerturbationsCovarianceKernel
+//===============================================================================================================
+double PerturbationsCovarianceKernel::getLogLike(){
+}
 
 
 

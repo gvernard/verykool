@@ -9,6 +9,7 @@
 
 #include "nonLinearPars.hpp"
 #include "imagePlane.hpp"
+#include "sourcePlane.hpp"
 #include "tableDefinition.hpp"
 
 
@@ -17,9 +18,10 @@ extern "C"{
 }
 
 
-class BaseMassModel{
+class BaseMassModel {
 public:
   int n;
+  std::string type;
   std::map<std::string,double> mpars;
 
   BaseMassModel(){};
@@ -47,15 +49,16 @@ public:
 
 class Pert: public BaseMassModel{
 public:
-  ImagePlane* dpsi;
+  FixedSource* dpsi; // Need to be FixedSource rather than ImagePlane because of the required regularization
   double* dpsi_dx;
   double* dpsi_dy;
   mytable Aint;
   mytable Bdev;
+  mytable Ds;
 
   Pert(int Ni,int Nj,double width,double height);
   Pert(std::string filename,int Ni,int Nj,double width,double height);
-  Pert(ImagePlane* new_dpsi);
+  Pert(FixedSource* new_dpsi);
   ~Pert(){
     delete(dpsi);
     free(dpsi_dx);
@@ -64,7 +67,10 @@ public:
   void defl(double xin,double yin,double& xout,double& yout);
   void updateDpsi(double* new_dpsi);
   void createAint(ImagePlane* data);
-  void createBdev();
+  void createDpsiDev();
+  void createSourceDev(ImagePlane* data,BaseSourcePlane* source);
+  void outputDpsi(const std::string output);
+  void outputConvergence(const std::string output);
 
 private:
   double di;
@@ -72,7 +78,7 @@ private:
 };
 
 
-class FactoryMassModel{//This is a singleton class.
+class FactoryMassModel {//This is a singleton class.
 public:
   FactoryMassModel(FactoryMassModel const&) = delete;//Stop the compiler generating methods of copy the object.
   void operator=(FactoryMassModel const&) = delete;

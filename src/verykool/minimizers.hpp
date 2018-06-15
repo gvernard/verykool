@@ -35,7 +35,7 @@ public:
   Nothing(){};
   ~Nothing(){};
   
-  void minimize(std::map<std::string,std::string> minimizer,BaseLikelihoodModel* mypars,const std::string output){};
+  void minimize(std::map<std::string,std::string> minimizer,BaseLikelihoodModel* mypars,const std::string output);
   void output(){};
 };
 
