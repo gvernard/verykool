@@ -30,9 +30,11 @@ ImagePlane::ImagePlane(const std::string filepath,int j,int i,double w,double h)
   std::valarray<float> contents(image.axis(0)*image.axis(1));
   this->readFits(filepath,contents);
 
-  img = (double*) calloc(Nm,sizeof(double));
-  x   = (double*) calloc(Nm,sizeof(double));
-  y   = (double*) calloc(Nm,sizeof(double));
+  img    = (double*) calloc(Nm,sizeof(double));
+  x      = (double*) calloc(Nm,sizeof(double));
+  y      = (double*) calloc(Nm,sizeof(double));
+  defl_x = (double*) calloc(Nm,sizeof(double));
+  defl_y = (double*) calloc(Nm,sizeof(double));
   active = (int*) calloc(Nm,sizeof(int));
   
   int i0    = floor(Ni/2);
@@ -62,9 +64,11 @@ ImagePlane::ImagePlane(int j,int i,double w,double h){
   B.Ti = Nm;
   B.Tj = Nm;
 
-  img = (double*) calloc(Nm,sizeof(double));
-  x   = (double*) calloc(Nm,sizeof(double));
-  y   = (double*) calloc(Nm,sizeof(double));
+  img    = (double*) calloc(Nm,sizeof(double));
+  x      = (double*) calloc(Nm,sizeof(double));
+  y      = (double*) calloc(Nm,sizeof(double));
+  defl_x = (double*) calloc(Nm,sizeof(double));
+  defl_y = (double*) calloc(Nm,sizeof(double));
   active = (int*) calloc(Nm,sizeof(int));
 
   int i0    = floor(i/2);
@@ -93,9 +97,11 @@ ImagePlane::ImagePlane(int i,double w,double h){
   B.Ti = Nm;
   B.Tj = Nm;
 
-  img = (double*) calloc(Nm,sizeof(double));
-  x   = (double*) calloc(Nm,sizeof(double));
-  y   = (double*) calloc(Nm,sizeof(double));
+  img    = (double*) calloc(Nm,sizeof(double));
+  x      = (double*) calloc(Nm,sizeof(double));
+  y      = (double*) calloc(Nm,sizeof(double));
+  defl_x = (double*) calloc(Nm,sizeof(double));
+  defl_y = (double*) calloc(Nm,sizeof(double));
   active = (int*) calloc(Nm,sizeof(int));
 }
 
@@ -103,6 +109,8 @@ ImagePlane::~ImagePlane(){
   free(img);
   free(x);
   free(y);
+  free(defl_x);
+  free(defl_y);
   free(active);
 }
 

@@ -20,6 +20,8 @@ public:
   double* img;               //values of the pixels
   double* x;                 //pixel x-coordinates in arcsec
   double* y;                 //pixel y-coordinates in arcsec
+  double* defl_x;            //deflected x coordinates
+  double* defl_y;            //deflected y coordinates
   int* active;               //active image pixels used in the construction of the adaptive grid
   mytable B;
   mytable C;

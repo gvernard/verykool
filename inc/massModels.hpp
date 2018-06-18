@@ -112,42 +112,12 @@ public:
   std::vector<BaseMassModel*> models;
   std::map<std::string,double> mpars;
   
-  CollectionMassModels(){
-    this->mpars["g1"] = 0.0;
-    this->mpars["g2"] = 0.0;
-  }
-  CollectionMassModels(std::vector<Nlpar*> nlpars){
-    this->setPhysicalPars(nlpars);
-  };
-  ~CollectionMassModels(){
-    for(int i=0;i<this->models.size();i++){
-      delete(this->models[i]);
-    }
-    mpars.clear();
-  };
-
-  void setPhysicalPars(std::vector<Nlpar*> nlpars){
-    for(int i=0;i<nlpars.size();i++){
-      this->mpars[nlpars[i]->nam] = nlpars[i]->val;
-    }
-    this->mpars["phi"] *= 0.01745329251;
-    this->mpars["g1"]  = this->mpars["g"]*cos(2*this->mpars["phi"]);
-    this->mpars["g2"]  = this->mpars["g"]*sin(2*this->mpars["phi"]);
-  }
-
-  void all_defl(double xin,double yin,double& xout,double& yout){
-    double ax   = 0.0;
-    double ay   = 0.0;
-    double dumx = 0.0;
-    double dumy = 0.0;
-    for(int i=0;i<this->models.size();i++){
-      this->models[i]->defl(xin,yin,dumx,dumy);
-      ax += dumx;
-      ay += dumy;
-    }
-    xout = (1.0-this->mpars["g1"])*xin - this->mpars["g2"]*yin - ax;
-    yout = (1.0+this->mpars["g1"])*yin - this->mpars["g2"]*xin - ay;
-  }
+  CollectionMassModels();
+  CollectionMassModels(std::vector<Nlpar*> nlpars);
+  ~CollectionMassModels();
+  void setPhysicalPars(std::vector<Nlpar*> nlpars);
+  void all_defl(double xin,double yin,double& xout,double& yout);
+  void all_defl(ImagePlane* image);
 };
 
 #endif /* MASS_MODELS_HPP */
