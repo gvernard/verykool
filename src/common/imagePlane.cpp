@@ -99,24 +99,6 @@ ImagePlane::ImagePlane(int i,double w,double h){
   active = (int*) calloc(Nm,sizeof(int));
 }
 
-ImagePlane::ImagePlane(const ImagePlane& image){
-  Ni = image.Ni;
-  Nj = image.Nj;
-  Nm = image.Nm;
-  width = image.width;
-  height = image.height;
-  img    = (double*) calloc(Nm,sizeof(double));
-  x      = (double*) calloc(Nm,sizeof(double));
-  y      = (double*) calloc(Nm,sizeof(double));
-  active = (int*) calloc(Nm,sizeof(int));
-  for(int i=0;i<Nm;i++){
-    img[i]    = image.img[i];
-    x[i]      = image.x[i];
-    y[i]      = image.y[i];
-    active[i] = image.active[i];
-  }
-}
-
 ImagePlane::~ImagePlane(){
   free(img);
   free(x);

@@ -10,13 +10,13 @@
 
 class ImagePlane;
 class BaseSourcePlane;
-class BaseLikelihoodModel;
+class StandardLikelihood;
+class PerturbationsLikelihood;
 class Pert;
 
 class StandardAlgebra {
 public:
-  StandardAlgebra(BaseLikelihoodModel* a);
-  StandardAlgebra(){};
+  StandardAlgebra(StandardLikelihood* a);
   ~StandardAlgebra(){};
 
   void setAlgebraInit(ImagePlane* mydata,BaseSourcePlane* mysource);
@@ -25,8 +25,9 @@ public:
   void getSourceErrors(int Sm,double* errors);
   void getMockData(ImagePlane* mockdata,BaseSourcePlane* source);
 
-  // this could be private, but I still want it inherited by any child class (like PerturbationsAlgebra)
-  BaseLikelihoodModel* likeModel;
+private:
+  StandardLikelihood* likeModel;
+
   Eigen::VectorXd d;
   Eigen::SparseMatrix<double> StCS;
   Eigen::SparseMatrix<double> C;
@@ -38,21 +39,18 @@ public:
 };
 
 
-class PerturbationsAlgebra : public StandardAlgebra {
+class PerturbationsAlgebra {
 public:
-  PerturbationsAlgebra(BaseLikelihoodModel* a);
+  PerturbationsAlgebra(PerturbationsLikelihood* a);
   ~PerturbationsAlgebra(){};
 
-  void setAlgebraInitPert(ImagePlane* mydata,Pert* mypert,double* res);
-  void setAlgebraRuntimePert(ImagePlane* image,BaseSourcePlane* source,Pert* mypert,BaseLikelihoodModel* smooth_like,double lambda);
-  void solvePert(ImagePlane* image,BaseSourcePlane* dpsi,BaseLikelihoodModel* smooth_like);
+  void setAlgebraInit(ImagePlane* mydata,Pert* mypert);
 
-  Eigen::VectorXd dd;
+private:
+  PerturbationsLikelihood* likeModel;
+
+  Eigen::SparseMatrix<double> B;
   Eigen::SparseMatrix<double> Dpsi;
-  Eigen::SparseMatrix<double> M_pert;
-  Eigen::SparseMatrix<double> Mt_pert;
-  Eigen::SparseMatrix<double> HtH_pert;
-  Eigen::SparseMatrix<double> A_pert;
 };
 
 

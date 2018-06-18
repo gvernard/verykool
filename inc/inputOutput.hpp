@@ -43,9 +43,9 @@ public:
   Initialization(){};
   ~Initialization(){};
   
-  static void initialize_program(std::string path,std::string run,Initialization*& init,BaseLikelihoodModel*& smooth_like,ImagePlane*& mydata,ImagePlane*& mymodel,ImagePlane*& myres,CollectionMassModels*& mycollection,BaseSourcePlane*& mysource,BaseLikelihoodModel*& pert_like,Pert*& pert_mass_model);
-  static void finalize_smooth(Initialization* init,BaseLikelihoodModel* smooth_like);
-  static void finalize_pert(Initialization* init,BaseLikelihoodModel* pert_like);
+  static void initialize_program(std::string path,std::string run,Initialization*& init,BaseLikelihoodModel*& smooth_like,ImagePlane*& mydata,CollectionMassModels*& mycollection,BaseSourcePlane*& mysource,BaseLikelihoodModel*& pert_like,Pert*& pert_mass_model);
+  static void finalize_smooth(Initialization* init,BaseLikelihoodModel* smooth_like,ImagePlane* mydata,CollectionMassModels* mycollection,BaseSourcePlane* mysource);
+  static void finalize_pert();
   static void outputGeneric(BaseLikelihoodModel* smooth_like,ImagePlane* image,BaseSourcePlane* source,std::string output);
 
 private:

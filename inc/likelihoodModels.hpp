@@ -5,7 +5,6 @@
 #include <vector>
 #include <fstream>
 #include <map>
-#include <iostream>
 
 #include "json/json.h"
 
@@ -41,9 +40,7 @@ public:
   virtual Json::Value getActiveNamesValues() = 0;
   virtual void initializeAlgebra() = 0;
   virtual void updateLikelihoodModel() = 0;
-  virtual double getLogLike()  = 0;
-  virtual void getModelImage() = 0;
-  virtual void getResiduals()  = 0;
+  virtual double getLogLike() = 0;
   virtual void outputLikelihoodModel(std::string output) = 0;
 };
 
@@ -55,13 +52,10 @@ public:
   std::vector< std::vector<Nlpar*> > lenses;
   std::vector<std::string> lens_names;
   ImagePlane* image;
-  ImagePlane* model;
-  ImagePlane* res;
   BaseSourcePlane* source;
   CollectionMassModels* collection;
 
-  StandardLikelihood(){};
-  StandardLikelihood(std::vector<Nlpar*> a,std::vector<Nlpar*> b,std::vector< std::vector<Nlpar*> > c,std::vector<std::string> d,ImagePlane* e,ImagePlane* f,ImagePlane* g,BaseSourcePlane* h,CollectionMassModels* k);
+  StandardLikelihood(std::vector<Nlpar*> a,std::vector<Nlpar*> b,std::vector< std::vector<Nlpar*> > c,std::vector<std::string> d,ImagePlane* e,BaseSourcePlane* f,CollectionMassModels* g);
   ~StandardLikelihood();
   
   std::vector<Nlpar*> getRegPars();
@@ -76,17 +70,16 @@ public:
   void initializeAlgebra();
   void updateLikelihoodModel();
   double getLogLike();
-  void getModelImage();
-  void getResiduals();
   void outputLikelihoodModel(std::string output);
 
+private:
   StandardAlgebra* algebra;
 };
 
 
 class SourceCovarianceKernel : public StandardLikelihood {
 public:
-  using StandardLikelihood::StandardLikelihood; // needed to copy the constructor from the parent class
+  using StandardLikelihood::StandardLikelihood;
 
   double getLogLike();
 };
@@ -94,44 +87,32 @@ public:
 
 class PerturbationsLikelihood : public BaseLikelihoodModel {
 public:
+  using BaseLikelihoodModel::initializeAlgebra;
   std::vector<Nlpar*> reg;
-  Pert* pert_mass_model;
   ImagePlane* image;
-  BaseSourcePlane* source;
-  CollectionMassModels* collection;
-  BaseLikelihoodModel* smooth_like;
+  Pert* pert_mass_model;
 
-  PerturbationsLikelihood(std::vector<Nlpar*> reg,ImagePlane* image,BaseSourcePlane* source,CollectionMassModels* collection,Pert* pert);
-  PerturbationsLikelihood(std::vector<Nlpar*> reg,ImagePlane* image,BaseSourcePlane* source,CollectionMassModels* collection,Pert* pert,BaseLikelihoodModel* likeModel);
+  PerturbationsLikelihood(ImagePlane* a,Pert* b);
   ~PerturbationsLikelihood();
-
-  void initializePert(BaseLikelihoodModel* smooth_like);
-  std::vector<Nlpar*> getRegPars();
 
   //virtual
   std::vector<std::string> getFullNames(){};
   std::vector<std::string> getActiveFullNames(){};
+  std::vector<double> getValues(){};
   std::vector<Nlpar*> getPhysicalPars(){};
   std::vector<Nlpar*> getMassModelPars(int i){};
-  std::vector<double> getValues(){};
   Json::Value getActiveNamesValues(){};
   void initializeAlgebra();
-  void updateLikelihoodModel();
-  double getLogLike();
-  void getModelImage(){};
-  void getResiduals(){};
-  void outputLikelihoodModel(std::string output);
+  void updateLikelihoodModel(){};
+  double getLogLike(){};
+  void outputLikelihoodModel(std::string output){};
 
+private:
   PerturbationsAlgebra* algebra;
 };
 
 
-class PerturbationsCovarianceKernel : public PerturbationsLikelihood {
-public:
-  using PerturbationsLikelihood::PerturbationsLikelihood; // needed to copy the constructor from the parent class
 
-  double getLogLike();
-};
 
 
 
@@ -145,7 +126,7 @@ public:
     return &dum;
   }
 
-  BaseLikelihoodModel* createLikelihoodModel(std::string path,std::string run,std::string like_model,ImagePlane* image,ImagePlane* model,ImagePlane* res,BaseSourcePlane* source,CollectionMassModels* collection,Pert* pert_mass_model){
+  BaseLikelihoodModel* createLikelihoodModel(std::string path,std::string run,std::string like_model,ImagePlane* image,BaseSourcePlane* source,CollectionMassModels* collection,Pert* pert_mass_model){
     Json::Value root;
     Json::Value::Members jmembers;
     
@@ -164,7 +145,7 @@ public:
 	lenses.push_back( nlparsFromJsonVector(root["lenses"][jmembers[i]]["nlpars"]) );
 	lens_names.push_back( jmembers[i] );
       }
-      return new StandardLikelihood(physical,reg,lenses,lens_names,image,model,res,source,collection);
+      return new StandardLikelihood(physical,reg,lenses,lens_names,image,source,collection);
 
     } else if( like_model == "source_covariance_kernel" ){
 
@@ -177,17 +158,11 @@ public:
 	lenses.push_back( nlparsFromJsonVector(root["lenses"][jmembers[i]]["nlpars"]) );
 	lens_names.push_back( jmembers[i] );
       }
-      return new SourceCovarianceKernel(physical,reg,lenses,lens_names,image,model,res,source,collection);
+      return new SourceCovarianceKernel(physical,reg,lenses,lens_names,image,source,collection);
 
     } else if( like_model == "perturbations_standard" ){
 
-      std::vector<Nlpar*> reg = nlparsFromJsonVector(root["perturbations"]["reg"]["nlpars"]);
-      return new PerturbationsLikelihood(reg,image,source,collection,pert_mass_model);
-
-    } else if( like_model == "perturbations_covariance_kernel" ){
-
-      std::vector<Nlpar*> reg = nlparsFromJsonVector(root["perturbations"]["reg"]["nlpars"]);
-      return new PerturbationsCovarianceKernel(reg,image,source,collection,pert_mass_model);
+      return new PerturbationsLikelihood(image,pert_mass_model);
 
     } else {
       return NULL;
@@ -198,6 +173,10 @@ private:
   FactoryLikelihoodModel(){};
   std::vector<Nlpar*> nlparsFromJsonVector(const Json::Value myjson);
 };
+
+
+
+
 
 
 #endif /* LIKELIHOOD_MODELS_HPP */

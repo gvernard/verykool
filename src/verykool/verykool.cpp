@@ -31,18 +31,16 @@ int main(int argc,char* argv[]){
   //=============== BEGIN:INITIALIZATION =======================
   // Initialize variables
   Initialization* init = 0;
-  ImagePlane* mydata  = 0;
-  ImagePlane* mymodel = 0;
-  ImagePlane* myres   = 0;
+  ImagePlane* mydata = 0;
   BaseSourcePlane* mysource = 0;
   CollectionMassModels* mycollection = 0;
   BaseLikelihoodModel* smooth_like = 0;
-  BaseLikelihoodModel* pert_like   = 0;
+  BaseLikelihoodModel* pert_like = 0;
   Pert* pert_mass_model = 0;
   BaseMinimizer* smooth_minimizer = 0;
-  BaseMinimizer* pert_minimizer   = 0;
+  BaseMinimizer* pert_minimizer = 0;
 
-  Initialization::initialize_program(argv[1],argv[2],init,smooth_like,mydata,mymodel,myres,mycollection,mysource,pert_like,pert_mass_model);
+  Initialization::initialize_program(argv[1],argv[2],init,smooth_like,mydata,mycollection,mysource,pert_like,pert_mass_model);
   //================= END:INITIALIZATION =======================
 
 
@@ -63,7 +61,7 @@ int main(int argc,char* argv[]){
 
   // Finalize output etc
   if( myrank == 0 ){
-    Initialization::finalize_smooth(init,smooth_like);
+    Initialization::finalize_smooth(init,smooth_like,mydata,mycollection,mysource);
     //myminimizer->output();
   }
 
@@ -77,13 +75,9 @@ int main(int argc,char* argv[]){
   if( init->perturbations.size() > 0 ){
     printf("%-25s","Starting perturbation minimization ");
     fflush(stdout);
-
-    PerturbationsLikelihood* specific_pointer = dynamic_cast<PerturbationsLikelihood*>(pert_like);
-    specific_pointer->initializePert(smooth_like);
-    pert_like->initializeAlgebra();
-
-    BaseMinimizer* pert_minimizer = FactoryMinimizer::getInstance()->createMinimizer(init->pert_minimizer,pert_like,init->output);
-    pert_minimizer->minimize(init->pert_minimizer,pert_like,init->output);
+    
+    //    BaseMinimizer* pert_minimizer = FactoryMinimizer::getInstance()->createMinimizer(init->pert_minimizer,pert_like,mydata,mysource,mycollection,init->output);
+    //    pert_minimizer->minimize(init->pert_minimizer,pert_like,mydata,mysource,mycollection,init->output);
 
     printf("%+7s\n","...done");
     std::cout << std::string(200,'=') << std::endl;
@@ -91,11 +85,11 @@ int main(int argc,char* argv[]){
 
     
     if( myrank == 0 ){
-      Initialization::finalize_pert(init,pert_like);
+      Initialization::finalize_pert();
       //myminimizer->output();
     }
     
-    delete(pert_minimizer);
+    //    delete(pert_minimizer);
   }
   //================= END:PERTURBATIONS =========================
 
@@ -105,8 +99,6 @@ int main(int argc,char* argv[]){
   // Cleanup pointers
   delete(init);
   delete(mydata);
-  delete(mymodel);
-  delete(myres);
   delete(mysource);
   delete(mycollection);
   delete(smooth_like);

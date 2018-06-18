@@ -34,8 +34,8 @@ public:
   double* src;                    // values of the pixels
   double* x;                      // pixel x-coordinates
   double* y;                      // pixel y-coordinates
-  double* s_dx;                   // source x-derivative
-  double* s_dy;                   // source y-derivative
+  double* s_dx;                   // source derivative in x
+  double* s_dy;                   // source derivative in y
   std::vector<double> bound_x;    // embedding polygon vertex x-coordinates
   std::vector<double> bound_y;    // embedding polygon vertex y-coordinates
   std::string reg;                // name of the regularization scheme
@@ -45,26 +45,28 @@ public:
   mytable L;
   mytable H;
   mytable Ds;
+  
 
   BaseSourcePlane(){};
+
   ~BaseSourcePlane(){
     free(src);
     free(x);
     free(y);
-    free(s_dx);
-    free(s_dy);
     if( this->reg == "covariance_kernel" ){
       delete this->kernel;
     }
   };
 
+
   //virtual members
   virtual void constructL(ImagePlane* image,CollectionMassModels* mycollection) = 0;
   virtual void constructH() = 0;
-  virtual void constructDs(ImagePlane* image,CollectionMassModels* collection) = 0;
   virtual mytable getDerivativeTable(ImagePlane* image,CollectionMassModels* mycollection) = 0;
   virtual void outputSource(const std::string path) = 0;
   virtual void outputSourceErrors(double* errors,const std::string path) = 0;
+  virtual void constructDs(ImagePlane* image,CollectionMassModels* collection) = 0;
+
 
   //non-virtual members
   void normalize();
@@ -77,15 +79,15 @@ public:
 
   //virtual members
   FixedSource(int source_i,int source_j,double size,std::string reg_scheme);
-  FixedSource(int source_i,int source_j,double width,double height,std::string reg_scheme);
+  FixedSource(int i,int j,double width,double height,std::string reg_scheme);
   FixedSource(const FixedSource& source);
-  ~FixedSource(){};
+  ~FixedSource();
   void constructL(ImagePlane* image,CollectionMassModels* mycollection);
   void constructH();
-  void constructDs(ImagePlane* image,CollectionMassModels* collection){};
   mytable getDerivativeTable(ImagePlane* image,CollectionMassModels* mycollection){};
   void outputSource(const std::string path);
   void outputSourceErrors(double* errors,const std::string path);
+  void constructDs(ImagePlane* image,CollectionMassModels* collection){};
 
   //non-virtual members
   void setGridSquare(std::map<std::string,std::string> pars);
@@ -93,11 +95,12 @@ public:
   void boundPolygon();
   bool pointInPolygon(double x,double y);
 
+private:
   double xmin;
   double xmax;
-  double width;
   double ymin;
   double ymax;
+  double width;
   double height;
 };
 
@@ -109,10 +112,10 @@ public:
   ~FloatingSource();
   void constructL(ImagePlane* image,CollectionMassModels* mycollection);
   void constructH();
-  void constructDs(ImagePlane* image,CollectionMassModels* collection){};
   mytable getDerivativeTable(ImagePlane* image,CollectionMassModels* mycollection){};
   void outputSource(const std::string path);
   void outputSourceErrors(double* errors,const std::string path);
+  void constructDs(ImagePlane* image,CollectionMassModels* collection){};
 
   //non-virtual members
   void setGrid(std::map<std::string,std::string> pars);
@@ -137,10 +140,10 @@ public:
   ~AdaptiveSource();
   void constructL(ImagePlane* image,CollectionMassModels* mycollection);
   void constructH();
-  void constructDs(ImagePlane* image,CollectionMassModels* collection);
   mytable getDerivativeTable(ImagePlane* image,CollectionMassModels* mycollection);
   void outputSource(const std::string path);
   void outputSourceErrors(double* errors,const std::string path);
+  void constructDs(ImagePlane* image,CollectionMassModels* collection);
 
   //non-virtual members
   void createAdaGrid(ImagePlane* image,CollectionMassModels* mycollection);

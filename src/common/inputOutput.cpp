@@ -17,13 +17,14 @@
 
 
 
-void Initialization::initialize_program(std::string path,std::string run,Initialization*& init,BaseLikelihoodModel*& smooth_like,ImagePlane*& mydata,ImagePlane*& mymodel,ImagePlane*& myres,CollectionMassModels*& mycollection,BaseSourcePlane*& mysource,BaseLikelihoodModel*& pert_like,Pert*& pert_mass_model){
+void Initialization::initialize_program(std::string path,std::string run,Initialization*& init,BaseLikelihoodModel*& smooth_like,ImagePlane*& mydata,CollectionMassModels*& mycollection,BaseSourcePlane*& mysource,BaseLikelihoodModel*& pert_like,Pert*& pert_mass_model){
   printf("%-50s","Starting initialization");
   fflush(stdout);
+  
 
 
 
-  // Instantiate init object --------------------------------------------------------------------------------------------------------------------------------------
+  // Instantiate init object ---------------------------------------------------------------------------------------------------------------------------------------
   init = new Initialization();
   init->parseInputJSON(path,run);
 
@@ -34,27 +35,20 @@ void Initialization::initialize_program(std::string path,std::string run,Initial
   mydata->readB(init->psfpath,stoi(init->psf["pix_x"]),stoi(init->psf["pix_y"]),stoi(init->psf["crop_x"]),stoi(init->psf["crop_y"]));
   mydata->readC(init->noise_flag,init->covpath);
   mydata->readS(init->maskpath);
-  myres   = new ImagePlane(*mydata);
-  mymodel = new ImagePlane(*mydata);
-
-
 
   // Initializing components: mass model collection
   mycollection = new CollectionMassModels();
-
-
 
   // Initializing components: source plane
   mysource = FactorySourcePlane::getInstance()->createSourcePlane(init->source);
 
 
-
-  // Initialize smooth likelihood model (requires the initialized components from above) --------------------------------------------------------------------------
-  smooth_like = FactoryLikelihoodModel::getInstance()->createLikelihoodModel(path,run,init->smooth_like,mydata,mymodel,myres,mysource,mycollection,pert_mass_model);
-
+  // Initialize smooth likelihood model (requires the initialized components from above) ----------------------------------------------------------------------------------------
+  smooth_like = FactoryLikelihoodModel::getInstance()->createLikelihoodModel(path,run,init->smooth_like,mydata,mysource,mycollection,pert_mass_model);
 
 
-  // Update/initialize mass model parameters ----------------------------------------------------------------------------------------------------------------------
+
+  // Update/initialize mass model parameters ------------------------------------------------------------------------------------------------------------------------------
   mycollection->setPhysicalPars(smooth_like->getPhysicalPars());
   mycollection->models.resize(init->mmodel.size());
   for(int k=0;k<mycollection->models.size();k++){
@@ -64,7 +58,7 @@ void Initialization::initialize_program(std::string path,std::string run,Initial
 
 
 
-  // Update/initialize source -------------------------------------------------------------------------------------------------------------------------------------
+  // Update/initialize source ---------------------------------------------------------------------------------------------------------------------------------------------
   //initialize here, but also in each iteration for an adaptive grid                                                  [<---iteration dependent for adaptive source]
   if( mysource->type == "adaptive" ){
     AdaptiveSource* ada = dynamic_cast<AdaptiveSource*>(mysource);
@@ -74,46 +68,38 @@ void Initialization::initialize_program(std::string path,std::string run,Initial
   if( init->source["reg"] == "covariance_kernel" ){
     SourceCovarianceKernel* mycovpars = dynamic_cast<SourceCovarianceKernel*>(smooth_like);
     std::vector<Nlpar*> covreg = mycovpars->getRegPars();
+
     mysource->kernel = FactoryCovKernel::getInstance()->createCovKernel(init->source["kernel"],covreg);
+
     for(int i=0;i<covreg.size();i++){
       if( covreg[i]->fix == 0 ){
 	mysource->sample_reg = true;
       }
     }
+
     mysource->constructH();
   }
 
 
 
-  // Initialize precomputed algebraic quantities for smooth model likelihood --------------------------------------------------------------------------------------
+  // Initialize precomputed algebraic quantities for smooth model likelihood ---------------------------------------------------------------------------------------
   //Precompute a number of algebraic quantities (table products etc)                                                                [<---algebra package dependent]
   smooth_like->initializeAlgebra();
 
 
 
-  // Initialize perturbations -------------------------------------------------------------------------------------------------------------------------------------
+  // Initialize perturbations --------------------------------------------------------------------------------------------------------------------------------------
   if( init->perturbations.size() > 0 ){
     pert_mass_model = new Pert(std::stoi(init->perturbations["pix_x"]),std::stoi(init->perturbations["pix_y"]),mydata->width,mydata->height);
-
-    if( init->perturbations["reg"] == "covariance_kernel" ){
-      PerturbationsCovarianceKernel* specific_pointer = dynamic_cast<PerturbationsCovarianceKernel*>(pert_like);
-      std::vector<Nlpar*> covreg = specific_pointer->getRegPars();
-      pert_mass_model->dpsi->kernel = FactoryCovKernel::getInstance()->createCovKernel(init->perturbations["kernel"],covreg);
-      for(int i=0;i<covreg.size();i++){
-	if( covreg[i]->fix == 0 ){
-	  pert_mass_model->dpsi->sample_reg = true;
-	}
-      }
-      pert_mass_model->dpsi->constructH();
-    }
-
     pert_mass_model->createAint(mydata);
-    pert_like = FactoryLikelihoodModel::getInstance()->createLikelihoodModel(path,run,init->pert_like,mydata,mymodel,myres,mysource,mycollection,pert_mass_model);
+    pert_like = FactoryLikelihoodModel::getInstance()->createLikelihoodModel(path,run,init->pert_like,mydata,mysource,mycollection,pert_mass_model);
+    pert_like->initializeAlgebra();
   }
 
 
 
-  // Initial output -----------------------------------------------------------------------------------------------------------------------------------------------
+
+  // Initial output ------------------------------------------------------------------------------------------------------------------------------------------------
   init->outputInitial(smooth_like);
 
 
@@ -157,10 +143,6 @@ void Initialization::parseInputJSON(std::string path,std::string run){
       this->pert_minimizer[jmembers[i]] = root["perturbations"]["minimizer"][jmembers[i]].asString();
     }
 
-    this->perturbations["reg"] = root["perturbations"]["reg"]["type"].asString();
-    if( this->perturbations["reg"] == "covariance_kernel" ){
-      this->perturbations["kernel"] = root["perturbations"]["reg"]["subtype"].asString();
-    }
   }
 
 
@@ -258,8 +240,8 @@ void Initialization::outputInitial(BaseLikelihoodModel* smooth_like){
 
 
 
-void Initialization::finalize_smooth(Initialization* init,BaseLikelihoodModel* smooth_like){
-  printf("%-25s\n","Starting output of smooth modelling");
+void Initialization::finalize_smooth(Initialization* init,BaseLikelihoodModel* smooth_like,ImagePlane* mydata,CollectionMassModels* mycollection,BaseSourcePlane* mysource){
+  printf("%-25s\n","Starting output");
   fflush(stdout);
   
   smooth_like->updateLikelihoodModel();
@@ -275,17 +257,7 @@ void Initialization::finalize_smooth(Initialization* init,BaseLikelihoodModel* s
 }
 
 
-void Initialization::finalize_pert(Initialization* init,BaseLikelihoodModel* pert_like){
-  printf("%-25s\n","Starting output of perturbations modelling");
-  fflush(stdout);
-  
-  pert_like->printActive();
-  pert_like->printTerms();
-  printf("\n");
-  pert_like->outputLikelihoodModel(init->output);
-  
-  printf("%+7s\n","...done");
-  std::cout << std::string(200,'=') << std::endl;
-  fflush(stdout);  
+void Initialization::finalize_pert(){
+
 }
 
