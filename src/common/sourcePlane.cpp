@@ -278,117 +278,100 @@ void FixedSource::constructH(){
     double dy = fabs(this->y[Sj] - this->y[0]);
     double ddx2 =  1.0/(dx*dx);
     double ddy2 =  1.0/(dy*dy);
-    double fac  = -2.0*(ddx2+ddy2);
-    double fac2 =  2.0*(ddy2-ddx2);
-    double fac3 =  4.0*(ddx2+ddy2);
-    //    std::cout << fac << " " << fac2 << " " << fac3 << std::endl;
 
     //First pixel of first image row:  forward 2nd derivative in X, forward 2nd derivative in Y, both of 2nd order accuracy
-
-
-    for(int j=0;j<Sj;j++){
-      tmp.push_back({  j,  j,           fac   });
-    }
-
-    /*
-    H->tri.push_back({  0,  0,         fac3   });
-    H->tri.push_back({  0,  1*Sj,  -5.*ddy2   });
-    H->tri.push_back({  0,  2*Sj,   4.*ddy2   });
-    H->tri.push_back({  0,  3*Sj,  -1.*ddy2   });
-    H->tri.push_back({  0,  1,     -5.*ddx2   });
-    H->tri.push_back({  0,  2,      4.*ddx2   });
-    H->tri.push_back({  0,  3,     -1.*ddx2   });
-
+    tmp.push_back({  0,    0,      ddx2 + ddy2   });
+    tmp.push_back({  0,    1,        -2.0*ddx2   });
+    tmp.push_back({  0,    2,             ddx2   });
+    tmp.push_back({  0,    1*Sj,     -2.0*ddy2   });
+    tmp.push_back({  0,    2*Sj,          ddy2   });
     //First row of image pixels: central 2nd derivative in X, forward 2nd derivative in Y, both of 2nd order accuracy
     for(int j=1;j<Sj-1;j++){
-      H->tri.push_back({  j,  j,           fac2   });
-      H->tri.push_back({  j,  1*Sj+j,  -5.*ddy2   });
-      H->tri.push_back({  j,  2*Sj+j,   4.*ddy2   });
-      H->tri.push_back({  j,  3*Sj+j,  -1.*ddy2   });
-      H->tri.push_back({  j,  j-1,      1.*ddx2   });
-      H->tri.push_back({  j,  j+1,      1.*ddx2   });
+	tmp.push_back({  j,    j,      -2.0*ddx2 + ddy2   });
+	tmp.push_back({  j,    j-1,                ddx2   });
+	tmp.push_back({  j,    j+1,                ddx2   });
+	tmp.push_back({  j,    1*Sj+j,        -2.0*ddy2   });
+	tmp.push_back({  j,    2*Sj+j,             ddy2   });
     }
-
     //Last pixel of first image row:  backward 2nd derivative in X, forward 2nd derivative in Y, both of 2nd order accuracy
-    H->tri.push_back({  Sj-1,  Sj-1,          fac3   });
-    H->tri.push_back({  Sj-1,  2*Sj-1,    -5.*ddy2   });
-    H->tri.push_back({  Sj-1,  3*Sj-1,     4.*ddy2   });
-    H->tri.push_back({  Sj-1,  4*Sj-1,    -1.*ddy2   });
-    H->tri.push_back({  Sj-1,  Sj-2,      -5.*ddx2   });
-    H->tri.push_back({  Sj-1,  Sj-3,       4.*ddx2   });
-    H->tri.push_back({  Sj-1,  Sj-4,      -1.*ddx2   });
-    */
+    tmp.push_back({  Sj-1,    Sj-1,       ddx2 + ddy2   });
+    tmp.push_back({  Sj-1,    Sj-2,         -2.0*ddx2   });
+    tmp.push_back({  Sj-1,    Sj-3,              ddx2   });
+    tmp.push_back({  Sj-1,    1*Sj+Sj-1,    -2.0*ddy2   });
+    tmp.push_back({  Sj-1,    2*Sj+Sj-1,         ddy2   });
 
     for(int i=1;i<Si-1;i++){
-
       //First pixel of each image row: forward 2nd derivative in X-direction, central 2nd derivative in Y, both of 2nd order accuracy
-      tmp.push_back({  i*Sj,  i*Sj,           fac   });
-
-      /*
-      H->tri.push_back({  i*Sj,  i*Sj,           fac2   });
-      H->tri.push_back({  i*Sj,  i*Sj+1,     -5.*ddx2   });
-      H->tri.push_back({  i*Sj,  i*Sj+2,      4.*ddx2   });
-      H->tri.push_back({  i*Sj,  i*Sj+3,     -1.*ddx2   });
-      H->tri.push_back({  i*Sj,  (i-1)*Sj,    1.*ddy2   });
-      H->tri.push_back({  i*Sj,  (i+1)*Sj,    1.*ddy2   });
-      */
+      tmp.push_back({  i*Sj,        i*Sj,   ddx2 - 2.0*ddy2   });
+      tmp.push_back({  i*Sj,      i*Sj+1,         -2.0*ddx2   });
+      tmp.push_back({  i*Sj,      i*Sj+2,              ddx2   });
+      tmp.push_back({  i*Sj,    (i-1)*Sj,              ddy2   });
+      tmp.push_back({  i*Sj,    (i+1)*Sj,              ddy2   });
       //central 2nd derivative of 2nd order accuracy in both X and Y directions
       for(int j=1;j<Sj-1;j++){
-	tmp.push_back({  i*Sj+j,        i*Sj+j,        fac   });
-	tmp.push_back({  i*Sj+j,      i*Sj+j-1,    1.*ddx2   });
-	tmp.push_back({  i*Sj+j,      i*Sj+j+1,    1.*ddx2   });
-	tmp.push_back({  i*Sj+j,    (i-1)*Sj+j,    1.*ddy2   });
-	tmp.push_back({  i*Sj+j,    (i+1)*Sj+j,    1.*ddy2   });
+	tmp.push_back({  i*Sj+j,        i*Sj+j,   -2.0*ddx2 - 2.0*ddy2   });
+	tmp.push_back({  i*Sj+j,      i*Sj+j-1,                   ddx2   });
+	tmp.push_back({  i*Sj+j,      i*Sj+j+1,                   ddx2   });
+	tmp.push_back({  i*Sj+j,    (i-1)*Sj+j,                   ddy2   });
+	tmp.push_back({  i*Sj+j,    (i+1)*Sj+j,                   ddy2   });
       }
-
       //Last pixel of each image row: backward 2nd derivative in X-direction, central 2nd derivative in Y, both of 2nd order accuracy
-      tmp.push_back({  (i+1)*Sj-1,  (i+1)*Sj-1,            fac   });
-      /*
-      H->tri.push_back({  (i+1)*Sj-1,  (i+1)*Sj-1,            fac2   });
-      H->tri.push_back({  (i+1)*Sj-1,  (i+1)*Sj-2,        -5.*ddx2   });
-      H->tri.push_back({  (i+1)*Sj-1,  (i+1)*Sj-3,         4.*ddx2   });
-      H->tri.push_back({  (i+1)*Sj-1,  (i+1)*Sj-4,        -1.*ddx2   });
-      H->tri.push_back({  (i+1)*Sj-1,  i*Sj-1,             1.*ddy2   });
-      H->tri.push_back({  (i+1)*Sj-1,  (i+2)*Sj-1,         1.*ddy2   });
-      */
-    }
-
-    for(int j=0;j<Sj;j++){
-      tmp.push_back({  (Si-1)*Sj+j,  (Si-1)*Sj+j,       fac   });
+      tmp.push_back({  i*Sj+Sj-1,        i*Sj+Sj-1,   ddx2 - 2.0*ddy2   });
+      tmp.push_back({  i*Sj+Sj-1,        i*Sj+Sj-2,         -2.0*ddx2   });
+      tmp.push_back({  i*Sj+Sj-1,        i*Sj+Sj-3,              ddx2   });
+      tmp.push_back({  i*Sj+Sj-1,    (i-1)*Sj+Sj-1,              ddy2   });
+      tmp.push_back({  i*Sj+Sj-1,    (i+1)*Sj+Sj-1,              ddy2   });
     }
 
     //First pixel of last image row:  forward 2nd derivative in X, backward 2nd derivative in Y, both of 2nd order accuracy
-    /*
-    H->tri.push_back({  (Si-1)*Sj,  (Si-1)*Sj,            fac3   });
-    H->tri.push_back({  (Si-1)*Sj,  (Si-2)*Sj,        -5.*ddy2   });
-    H->tri.push_back({  (Si-1)*Sj,  (Si-3)*Sj,         4.*ddy2   });
-    H->tri.push_back({  (Si-1)*Sj,  (Si-4)*Sj,        -1.*ddy2   });
-    H->tri.push_back({  (Si-1)*Sj,  (Si-1)*Sj+1,      -5.*ddx2   });
-    H->tri.push_back({  (Si-1)*Sj,  (Si-1)*Sj+2,       4.*ddx2   });
-    H->tri.push_back({  (Si-1)*Sj,  (Si-1)*Sj+3,      -1.*ddx2   });
-
+    tmp.push_back({  (Si-1)*Sj,     (Si-1)*Sj,   ddx2 + ddy2   });
+    tmp.push_back({  (Si-1)*Sj,   (Si-1)*Sj+1,     -2.0*ddx2   });
+    tmp.push_back({  (Si-1)*Sj,   (Si-1)*Sj+2,          ddx2   });
+    tmp.push_back({  (Si-1)*Sj,     (Si-2)*Sj,     -2.0*ddy2   });
+    tmp.push_back({  (Si-1)*Sj,     (Si-3)*Sj,          ddy2   });
     //Last row of image pixels:  central 2nd derivative in X, backward 2nd derivative in Y, both of 2nd order accuracy
     for(int j=1;j<Sj-1;j++){
-      H->tri.push_back({  (Si-1)*Sj+j,  (Si-1)*Sj+j,       fac2   });
-      H->tri.push_back({  (Si-1)*Sj+j,  (Si-2)*Sj+j,   -5.*ddy2   });
-      H->tri.push_back({  (Si-1)*Sj+j,  (Si-3)*Sj+j,    4.*ddy2   });
-      H->tri.push_back({  (Si-1)*Sj+j,  (Si-4)*Sj+j,   -1.*ddy2   });
-      H->tri.push_back({  (Si-1)*Sj+j,  (Si-1)*Sj+j-1,  1.*ddx2   });
-      H->tri.push_back({  (Si-1)*Sj+j,  (Si-1)*Sj+j+1,  1.*ddx2   });
+      tmp.push_back({  (Si-1)*Sj+j,     (Si-1)*Sj+j,   -2.0*ddx2 + ddy2   });
+      tmp.push_back({  (Si-1)*Sj+j,   (Si-1)*Sj+j-1,               ddx2   });
+      tmp.push_back({  (Si-1)*Sj+j,   (Si-1)*Sj+j+1,               ddx2   });
+      tmp.push_back({  (Si-1)*Sj+j,     (Si-2)*Sj+j,          -2.0*ddy2   });
+      tmp.push_back({  (Si-1)*Sj+j,     (Si-3)*Sj+j,               ddy2   });
     }
-
     //Last pixel of last image row:  backward 2nd derivative in X, backward 2nd derivative in Y, both of 2nd order accuracy
-    H->tri.push_back({  Si*Sj-1,  Si*Sj-1,            fac3   });
-    H->tri.push_back({  Si*Sj-1,  (Si-1)*Sj-1,    -5.*ddy2   });
-    H->tri.push_back({  Si*Sj-1,  (Si-2)*Sj-1,     4.*ddy2   });
-    H->tri.push_back({  Si*Sj-1,  (Si-3)*Sj-1,    -1.*ddy2   });
-    H->tri.push_back({  Si*Sj-1,  Si*Sj-2,        -5.*ddx2   });
-    H->tri.push_back({  Si*Sj-1,  Si*Sj-3,         4.*ddx2   });
-    H->tri.push_back({  Si*Sj-1,  Si*Sj-4,        -1.*ddx2   });
-    */
+    tmp.push_back({  (Si-1)*Sj+Sj-1,   (Si-1)*Sj+Sj-1,   ddx2 + ddy2   });
+    tmp.push_back({  (Si-1)*Sj+Sj-1,   (Si-1)*Sj+Sj-2,     -2.0*ddx2   });
+    tmp.push_back({  (Si-1)*Sj+Sj-1,   (Si-1)*Sj+Sj-3,          ddx2   });
+    tmp.push_back({  (Si-1)*Sj+Sj-1,   (Si-2)*Sj+Sj-1,     -2.0*ddy2   });
+    tmp.push_back({  (Si-1)*Sj+Sj-1,   (Si-3)*Sj+Sj-1,          ddy2   });
 
   } else if ( this->reg == "covariance_kernel" ){//-------------------> covariance matrix
-    std::cout << "ATTENTION: Need to implement covariance matrix for a fixed source" << std::endl;
+
+    int* nonZeroRow = (int*) calloc(this->Sm,sizeof(int));
+    double cov,r;
+    for(int i=0;i<this->Sm;i++){
+      for(int j=0;j<this->Sm;j++){
+	if( i != j ){
+	  r = hypot(this->x[j]-this->x[i],this->y[j]-this->y[i]);
+	  cov = this->kernel->getCovariance(r);
+	} else {
+	  cov = this->kernel->getCovarianceSelf();
+	}
+	if( cov != 0.0 ){
+	  tmp.push_back({i,j,cov});
+	  nonZeroRow[i]++;
+	}
+      }
+    }
+
+    int maxNonZero = nonZeroRow[0];
+    for(int i=1;i<this->Sm;i++){
+      if( nonZeroRow[i] > maxNonZero ){
+	maxNonZero = nonZeroRow[i];
+      }
+    }
+    free(nonZeroRow);
+    this->eigenSparseMemoryAllocForH = maxNonZero;
+
   }
 
 
@@ -1010,7 +993,6 @@ void AdaptiveSource::constructH(){
 
 
 
-
     for(int i=0;i<this->Sm;i++){
       
       xypoint p0 = {this->x[i],this->y[i]};
@@ -1132,9 +1114,6 @@ void AdaptiveSource::constructH(){
 
 
 
-
-
-
   } else if ( this->reg == "curvature" ){//-------------------> second order
 
     for(int i=0;i<this->Sm;i++){
@@ -1219,40 +1198,33 @@ void AdaptiveSource::constructH(){
       }
 
     }
-
     
   } else if ( this->reg == "covariance_kernel" ){//-------------------> covariance matrix
-    // will use a BaseCovKernel class, which will be member of the BaseSourcePlane class
 
     int* nonZeroRow = (int*) calloc(this->Sm,sizeof(int));
-
-    double cov;
+    double cov,r;
     for(int i=0;i<this->Sm;i++){
-      cov = this->kernel->getCovarianceSelf();
-      tmp.push_back({i,i,cov});
-      nonZeroRow[i]++;
       for(int j=0;j<this->Sm;j++){
 	if( i != j ){
-	  double r = hypot(this->x[j]-this->x[i],this->y[j]-this->y[i]);
-	  //	  if( r < this->kernel->rmax ){
-	    cov = this->kernel->getCovariance(r);
-	    tmp.push_back({i,j,cov});
-	    nonZeroRow[i]++;
-	    //	  }
+	  r = hypot(this->x[j]-this->x[i],this->y[j]-this->y[i]);
+	  cov = this->kernel->getCovariance(r);
+	} else {
+	  cov = this->kernel->getCovarianceSelf();
+	}
+	if( cov != 0.0 ){
+	  tmp.push_back({i,j,cov});
+	  nonZeroRow[i]++;
 	}
       }
     }
 
-
-    int maxNonZero = 0;
-    for(int i=0;i<this->Sm;i++){
+    int maxNonZero = nonZeroRow[0];
+    for(int i=1;i<this->Sm;i++){
       if( nonZeroRow[i] > maxNonZero ){
 	maxNonZero = nonZeroRow[i];
       }
     }
     free(nonZeroRow);
-
-    //    std::cout << std::endl << std::endl << maxNonZero << std::endl << std::endl;
     this->eigenSparseMemoryAllocForH = maxNonZero;
 
   }
