@@ -454,9 +454,6 @@ FloatingSource::FloatingSource(int i,int j,double size,double x0,double y0,std::
   this->boundPolygon();
 }
 
-//virtual
-FloatingSource::~FloatingSource(){}
-
 //non-virtual
 void FloatingSource::setGrid(std::map<std::string,std::string> pars){
   double size = stof(pars["size"]);

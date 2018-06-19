@@ -90,7 +90,7 @@ void Initialization::initialize_program(std::string path,std::string run,Initial
 
   // Initialize perturbations --------------------------------------------------------------------------------------------------------------------------------------
   if( init->perturbations.size() > 0 ){
-    pert_mass_model = new Pert(std::stoi(init->perturbations["pix_x"]),std::stoi(init->perturbations["pix_y"]),mydata->width,mydata->height);
+    pert_mass_model = new Pert(std::stoi(init->perturbations["pix_x"]),std::stoi(init->perturbations["pix_y"]),mydata->width,mydata->height,init->perturbations["reg"]);
     pert_mass_model->createAint(mydata);
     pert_like = FactoryLikelihoodModel::getInstance()->createLikelihoodModel(path,run,init->pert_like,mydata,mysource,mycollection,pert_mass_model);
     pert_like->initializeAlgebra();
@@ -143,6 +143,10 @@ void Initialization::parseInputJSON(std::string path,std::string run){
       this->pert_minimizer[jmembers[i]] = root["perturbations"]["minimizer"][jmembers[i]].asString();
     }
 
+    this->perturbations["reg"] = root["perturbations"]["reg"]["type"].asString();
+    if( this->perturbations["reg"] == "covariance_kernel" ){
+      this->perturbations["kernel"] = root["perturbations"]["reg"]["subtype"].asString();
+    }
   }
 
 

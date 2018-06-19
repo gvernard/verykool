@@ -346,7 +346,7 @@ void PerturbationsAlgebra::setAlgebraInit(ImagePlane* image,Pert* pertMassModel)
 
 
   
-  Eigen::SparseMatrix<double> Dpsi(2*image->Nm,pertMassModel->dpsi->Nm);
+  Eigen::SparseMatrix<double> Dpsi(2*image->Nm,pertMassModel->dpsi->Sm);
   Dpsi = (AA * TT);
 
   this->B    = BB;

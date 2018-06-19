@@ -53,6 +53,8 @@ public:
     free(src);
     free(x);
     free(y);
+    free(s_dx);
+    free(s_dy);
     if( this->reg == "covariance_kernel" ){
       delete this->kernel;
     }
@@ -81,7 +83,6 @@ public:
   FixedSource(int source_i,int source_j,double size,std::string reg_scheme);
   FixedSource(int i,int j,double width,double height,std::string reg_scheme);
   FixedSource(const FixedSource& source);
-  ~FixedSource();
   void createInterpolationWeights(ImagePlane* image);
   void constructH();
   void constructDs(ImagePlane* image,CollectionMassModels* collection){};
@@ -94,7 +95,6 @@ public:
   void boundPolygon();
   bool pointInPolygon(double x,double y);
 
-private:
   double xmin;
   double xmax;
   double ymin;
@@ -108,7 +108,6 @@ public:
 
   //virtual members
   FloatingSource(int source_i,int source_j,double size,double x0,double y0,std::string reg_scheme);
-  ~FloatingSource();
   void createInterpolationWeights(ImagePlane* image);
   void constructH();
   void constructDs(ImagePlane* image,CollectionMassModels* collection){};
@@ -120,7 +119,6 @@ public:
   void boundPolygon();
   bool pointInPolygon(double x,double y);
 
-private:
   double x0;
   double y0;
   double xmin;

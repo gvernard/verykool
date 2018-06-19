@@ -9,6 +9,7 @@
 
 #include "nonLinearPars.hpp"
 #include "imagePlane.hpp"
+#include "sourcePlane.hpp"
 #include "tableDefinition.hpp"
 
 
@@ -47,15 +48,15 @@ public:
 
 class Pert: public BaseMassModel{
 public:
-  ImagePlane* dpsi;
+  FixedSource* dpsi;
   double* dpsi_dx;
   double* dpsi_dy;
   mytable Aint;
   mytable Bdev;
 
-  Pert(int Ni,int Nj,double width,double height);
-  Pert(std::string filename,int Ni,int Nj,double width,double height);
-  Pert(ImagePlane* new_dpsi);
+  Pert(int Ni,int Nj,double width,double height,std::string reg);
+  Pert(std::string filename,int Ni,int Nj,double width,double height,std::string reg);
+  Pert(FixedSource* new_dpsi);
   ~Pert(){
     delete(dpsi);
     free(dpsi_dx);
@@ -94,7 +95,7 @@ public:
 
   BaseMassModel* createMassModel(const std::string &modelname,std::map<std::string,std::string> pars){
     if( modelname == "pert" ){
-      return new Pert(pars["filename"],std::stoi(pars["Ni"]),std::stoi(pars["Nj"]),std::stof(pars["width"]),std::stof(pars["height"]));
+      return new Pert(pars["filename"],std::stoi(pars["Ni"]),std::stoi(pars["Nj"]),std::stof(pars["width"]),std::stof(pars["height"]),pars["reg"]);
     } else {
       return NULL;
     }
