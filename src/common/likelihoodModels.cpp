@@ -71,6 +71,7 @@ StandardLikelihood::StandardLikelihood(std::vector<Nlpar*> a,std::vector<Nlpar*>
   image = e;
   source = f;
   collection = g;
+  this->algebra = new StandardAlgebra(this);
 
   for(int i=0;i<this->physical.size();i++){
     if( this->physical[i]->getActive() ){
@@ -91,8 +92,6 @@ StandardLikelihood::StandardLikelihood(std::vector<Nlpar*> a,std::vector<Nlpar*>
       }
     }
   }
-
-  this->algebra = new StandardAlgebra(this);
 
   terms["chi2"]    = 0.0;
   terms["reg"]     = 0.0;
@@ -253,6 +252,7 @@ Json::Value StandardLikelihood::getActiveNamesValues(){
 
 
 void StandardLikelihood::initializeAlgebra(){
+  this->source->constructH();
   this->algebra->setAlgebraInit(this->image,this->source);
 }
 
@@ -260,7 +260,9 @@ void StandardLikelihood::initializeAlgebra(){
 
 void StandardLikelihood::updateLikelihoodModel(){
   for(int i=0;i<this->collection->models.size();i++){
-    this->collection->models[i]->setMassPars(this->lenses[i]);
+    if( this->collection->models[i]->type != "pert" ){
+      this->collection->models[i]->setMassPars(this->lenses[i]);
+    }
   }
   this->collection->setPhysicalPars(this->physical);
 
@@ -412,15 +414,19 @@ double SourceCovarianceKernel::getLogLike(){
 
 //Derived class from BaseLikelihoodModel: PerturbationsLikelihood
 //===============================================================================================================
-void PerturbationsLikelihood::initializeAlgebra(){
-  this->algebra->setAlgebraInit(this->image,this->pert_mass_model);
-}
-
-
-PerturbationsLikelihood::PerturbationsLikelihood(ImagePlane* a,Pert* b){
+PerturbationsLikelihood::PerturbationsLikelihood(std::vector<Nlpar*> reg,ImagePlane* a,BaseSourcePlane* b,CollectionMassModels* c,Pert* d){
+  this->reg = reg;
   this->image = a;
-  this->pert_mass_model = b;
+  this->source = b;
+  this->collection = c;
+  this->pert_mass_model = d;
   this->algebra = new PerturbationsAlgebra(this);
+
+  for(int i=0;i<this->reg.size();i++){
+    if( this->reg[i]->getActive() ){
+      active.push_back( this->reg[i] );
+    }
+  }
 
   terms["A"] = 0.0;
   terms["B"] = 0.0;
@@ -431,6 +437,50 @@ PerturbationsLikelihood::~PerturbationsLikelihood(){
   delete(algebra);
 }
 
+//non-virtual
+void PerturbationsLikelihood::initializePert(BaseLikelihoodModel* smooth_like){
+  // Add pointer to smooth likelihood model
+  this->smooth_like = smooth_like;
+
+  // Add additive perturbations to the mass collection
+  Pert* additive_pert = new Pert(*this->pert_mass_model);
+  for(int i=0;i<this->pert_mass_model->dpsi->Sm;i++){
+    additive_pert->dpsi->src[i] = 0.0;
+  }
+  StandardLikelihood* specific_pointer = dynamic_cast<StandardLikelihood*>(this->smooth_like);
+  specific_pointer->collection->models.push_back(additive_pert);
+  
+  this->initializeAlgebra();
+}
+
+//virtual
+void PerturbationsLikelihood::initializeAlgebra(){
+  this->algebra->setAlgebraInit(this->image,this->pert_mass_model);
+}
+
+//virtual
+void PerturbationsLikelihood::updateLikelihoodModel(){
+  this->smooth_like->updateLikelihoodModel();
+
+  this->source->constructDs(this->image);
+  if( this->pert_mass_model->dpsi->sample_reg ){
+    // update regularization parameters
+    this->pert_mass_model->dpsi->constructH();
+  }
+
+
+  this->algebra->setAlgebraRuntime(this->image,this->source,this->pert_mass_model,this->smooth_like,Nlpar::getValueByName("lambda",this->reg));
+  //  this->algebra->setAlgebraRuntime(,Nlpar::getValueByName("lambda",this->reg));
+  //  this->algebra->solvePert();
+
+  // Update perturbations in collection
+}
+
+//virtual
+double PerturbationsLikelihood::getLogLike(){
+  double like = 0.0;
+  return like;
+}
 
 
 

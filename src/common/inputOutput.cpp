@@ -244,8 +244,8 @@ void Initialization::outputInitial(BaseLikelihoodModel* smooth_like){
 
 
 
-void Initialization::finalize_smooth(Initialization* init,BaseLikelihoodModel* smooth_like,ImagePlane* mydata,CollectionMassModels* mycollection,BaseSourcePlane* mysource){
-  printf("%-25s\n","Starting output");
+void Initialization::finalize_smooth(Initialization* init,BaseLikelihoodModel* smooth_like){
+  printf("%-25s\n","Starting output smooth");
   fflush(stdout);
   
   smooth_like->updateLikelihoodModel();
@@ -261,7 +261,19 @@ void Initialization::finalize_smooth(Initialization* init,BaseLikelihoodModel* s
 }
 
 
-void Initialization::finalize_pert(){
-
+void Initialization::finalize_pert(Initialization* init,BaseLikelihoodModel* pert_like){
+  printf("%-25s\n","Starting output perturbations");
+  fflush(stdout);
+  
+  pert_like->updateLikelihoodModel();
+  pert_like->getLogLike();
+  pert_like->printActive();
+  pert_like->printTerms();
+  printf("\n");
+  pert_like->outputLikelihoodModel(init->output);
+  
+  printf("%+7s\n","...done");
+  std::cout << std::string(200,'=') << std::endl;
+  fflush(stdout);
 }
 

@@ -330,31 +330,124 @@ PerturbationsAlgebra::PerturbationsAlgebra(PerturbationsLikelihood* a){
   this->likeModel = a;
 }
 
-void PerturbationsAlgebra::setAlgebraInit(ImagePlane* image,Pert* pertMassModel){
+void PerturbationsAlgebra::setAlgebraInit(ImagePlane* image,Pert* pert_mass_model){
 
-  Eigen::SparseMatrix<double> BB(image->B.Ti,image->B.Tj);
-  BB.reserve(Eigen::VectorXi::Constant(image->B.Ti,900));//overestimating the number of entries per row of the blurring matrix BB (900 for a 30x30 psf)
-  for(int i=0;i<image->B.tri.size();i++){  BB.insert(image->B.tri[i].j,image->B.tri[i].i) = image->B.tri[i].v;  }//for column-major (swap the i and j indices of tri struct)
+  Eigen::SparseMatrix<double> AA(pert_mass_model->Aint.Ti,pert_mass_model->Aint.Tj);
+  AA.reserve(Eigen::VectorXi::Constant(pert_mass_model->Aint.Ti,4));//setting the non-zero coefficients per row of the interpolation matrix (4 for bi-linear interpolation scheme, etc)
+  for(int i=0;i<pert_mass_model->Aint.tri.size();i++){  AA.insert(pert_mass_model->Aint.tri[i].i,pert_mass_model->Aint.tri[i].j) = pert_mass_model->Aint.tri[i].v;  }
   
-  Eigen::SparseMatrix<double> AA(pertMassModel->Aint.Ti,pertMassModel->Aint.Tj);
-  AA.reserve(Eigen::VectorXi::Constant(pertMassModel->Aint.Ti,4));//setting the non-zero coefficients per row of the interpolation matrix (4 for bi-linear interpolation scheme, etc)
-  for(int i=0;i<pertMassModel->Aint.tri.size();i++){  AA.insert(pertMassModel->Aint.tri[i].i,pertMassModel->Aint.tri[i].j) = pertMassModel->Aint.tri[i].v;  }
-  
-  Eigen::SparseMatrix<double> TT(pertMassModel->Bdev.Ti,pertMassModel->Bdev.Tj);
-  TT.reserve(Eigen::VectorXi::Constant(pertMassModel->Bdev.Ti,2));//setting the non-zero coefficients per row of the derivative matrix (2 for first order gradient, etc)
-  for(int i=0;i<pertMassModel->Bdev.tri.size();i++){  TT.insert(pertMassModel->Bdev.tri[i].i,pertMassModel->Bdev.tri[i].j) = pertMassModel->Bdev.tri[i].v;  }
+  Eigen::SparseMatrix<double> TT(pert_mass_model->Bdev.Ti,pert_mass_model->Bdev.Tj);
+  TT.reserve(Eigen::VectorXi::Constant(pert_mass_model->Bdev.Ti,2));//setting the non-zero coefficients per row of the derivative matrix (2 for first order gradient, etc)
+  for(int i=0;i<pert_mass_model->Bdev.tri.size();i++){  TT.insert(pert_mass_model->Bdev.tri[i].i,pert_mass_model->Bdev.tri[i].j) = pert_mass_model->Bdev.tri[i].v;  }
+
+  Eigen::SparseMatrix<double> HH(pert_mass_model->dpsi->Sm,pert_mass_model->dpsi->Sm);
+  HH.reserve(Eigen::VectorXi::Constant(pert_mass_model->dpsi->Sm,pert_mass_model->dpsi->eigenSparseMemoryAllocForH));//overestimating the number of non-zero coefficients per HH row (different number for 1st,2nd order derivative etc)
+  for(int i=0;i<pert_mass_model->dpsi->H.tri.size();i++){  HH.insert(pert_mass_model->dpsi->H.tri[i].i,pert_mass_model->dpsi->H.tri[i].j) = pert_mass_model->dpsi->H.tri[i].v;  }
 
 
+  // Calculate HtH
+  Eigen::SparseMatrix<double> HtH(pert_mass_model->dpsi->Sm,pert_mass_model->dpsi->Sm);
+  if( pert_mass_model->dpsi->reg == "covariance_kernel" ){
+    // calculate the inverse of the source covariance matrix stored in H, and store it in HtH
+    Eigen::Matrix<double,Eigen::Dynamic,Eigen::Dynamic> inv(pert_mass_model->dpsi->Sm,pert_mass_model->dpsi->Sm);
+    Eigen::SimplicialLDLT<Eigen::SparseMatrix<double> > solver;
+    solver.compute(HH);
+    Eigen::VectorXd idc(HH.cols()),c(HH.cols());
+    for(int i=0;i<pert_mass_model->dpsi->Sm;i++){
+      for(int j=0;j<idc.size();j++){
+	idc[j] = 0;
+      }
+      idc[i] = 1;
+      //this needs to be done in two steps, otherwise it does not work when using LU
+      c = solver.solve(idc);
+      inv.col(i) = c;
+    }
+    HtH = inv.sparseView();
+    
+    inv.resize(0,0);
+  } else {
+    // calculate the product HtH of a derivative based H matrix
+    Eigen::SparseMatrix<double> HHt(pert_mass_model->dpsi->Sm,pert_mass_model->dpsi->Sm);
+    HHt = HH.transpose();
+    HtH = (HHt * HH);    
+    HHt.resize(0,0);
+  }
   
-  Eigen::SparseMatrix<double> Dpsi(2*image->Nm,pertMassModel->dpsi->Sm);
+  Eigen::SparseMatrix<double> Dpsi(2*image->Nm,pert_mass_model->dpsi->Sm);
   Dpsi = (AA * TT);
 
-  this->B    = BB;
-  this->Dpsi = Dpsi;
-  
 
-  BB.resize(0,0);
+  this->Dpsi = Dpsi;
+  this->HtH_pert = HtH;
+
+  HtH.resize(0,0);
   AA.resize(0,0);
   TT.resize(0,0);
 }
+
+void PerturbationsAlgebra::setAlgebraRuntime(ImagePlane* image,BaseSourcePlane* source,Pert* pert_mass_model,BaseLikelihoodModel* smooth_like,double lambda){
+  Eigen::SparseMatrix<double> Ds(source->Ds.Ti,source->Ds.Tj);
+  Ds.reserve(Eigen::VectorXi::Constant(source->Ds.Tj,4));//setting the non-zero coefficients per row of the lensing matrix (4 for bi-linear interpolation scheme, etc)
+  for(int i=0;i<source->Ds.tri.size();i++){  Ds.insert(source->Ds.tri[i].i,source->Ds.tri[i].j) = source->Ds.tri[i].v;  }
+
+  Eigen::SparseMatrix<double> M_pert(image->Nm,pert_mass_model->dpsi->Sm);
+  Eigen::SparseMatrix<double> Mt_pert(pert_mass_model->dpsi->Sm,image->Nm);
+  StandardLikelihood* specific_pointer = dynamic_cast<StandardLikelihood*>(smooth_like);
+
+  M_pert        = -specific_pointer->algebra->B * Ds * this->Dpsi;
+  Mt_pert       = M_pert.transpose();
+  this->M_pert  = M_pert;
+  this->Mt_pert = Mt_pert;
+
+
+  //I need also to calculate HtH, and detHtH for an adaptive source
+  if( pert_mass_model->dpsi->sample_reg ){
+    Eigen::SparseMatrix<double> HH(pert_mass_model->dpsi->Sm,pert_mass_model->dpsi->Sm);
+    HH.reserve(Eigen::VectorXi::Constant(pert_mass_model->dpsi->Sm,pert_mass_model->dpsi->eigenSparseMemoryAllocForH));//overestimating the number of non-zero coefficients per HH row (different number for 1st,2nd order derivative etc)
+    for(int i=0;i<pert_mass_model->dpsi->H.tri.size();i++){  HH.insert(pert_mass_model->dpsi->H.tri[i].i,pert_mass_model->dpsi->H.tri[i].j) = pert_mass_model->dpsi->H.tri[i].v;  }
+    Eigen::SparseMatrix<double> HtH(pert_mass_model->dpsi->Sm,pert_mass_model->dpsi->Sm);
+
+    // calculate the inverse of the source covariance matrix stored in H, and store it in HtH
+    Eigen::Matrix<double,Eigen::Dynamic,Eigen::Dynamic> inv(pert_mass_model->dpsi->Sm,pert_mass_model->dpsi->Sm);
+    Eigen::SimplicialLDLT<Eigen::SparseMatrix<double> > solver;
+    solver.compute(HH);
+    Eigen::VectorXd idc(HH.cols()),c(HH.cols());
+    for(int i=0;i<pert_mass_model->dpsi->Sm;i++){
+      for(int j=0;j<idc.size();j++){
+	idc[j] = 0;
+      }
+      idc[i] = 1;
+      //this needs to be done in two steps, otherwise it does not work when using LU
+      c = solver.solve(idc);
+      inv.col(i) = c;
+    }
+    HtH = inv.sparseView();
+      
+    this->HtH_pert = HtH;
+    
+    inv.resize(0,0);
+    HH.resize(0,0);
+    HtH.resize(0,0);
+  }
+
+
+  Eigen::SparseMatrix<double> A_pert(pert_mass_model->dpsi->Sm,pert_mass_model->dpsi->Sm);
+  if( pert_mass_model->dpsi->reg == "covariance_kernel" ){
+    A_pert = this->Mt_pert*specific_pointer->algebra->C*this->M_pert + this->HtH_pert;
+  } else {
+    A_pert = this->Mt_pert*specific_pointer->algebra->C*this->M_pert + lambda*this->HtH_pert;
+  }
+  this->A_pert = A_pert;
+  
+
+  Ds.resize(0,0);
+  M_pert.resize(0,0);
+  Mt_pert.resize(0,0);
+  A_pert.resize(0,0);
+}
+
+void PerturbationsAlgebra::solvePert(){
+
+}
+
 

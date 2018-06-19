@@ -10,6 +10,7 @@
 
 class ImagePlane;
 class BaseSourcePlane;
+class BaseLikelihoodModel;
 class StandardLikelihood;
 class PerturbationsLikelihood;
 class Pert;
@@ -25,9 +26,8 @@ public:
   void getSourceErrors(int Sm,double* errors);
   void getMockData(ImagePlane* mockdata,BaseSourcePlane* source);
 
-private:
-  StandardLikelihood* likeModel;
 
+  StandardLikelihood* likeModel;
   Eigen::VectorXd d;
   Eigen::SparseMatrix<double> StCS;
   Eigen::SparseMatrix<double> C;
@@ -45,12 +45,16 @@ public:
   ~PerturbationsAlgebra(){};
 
   void setAlgebraInit(ImagePlane* mydata,Pert* mypert);
+  void setAlgebraRuntime(ImagePlane* image,BaseSourcePlane* source,Pert* pert_mass_model,BaseLikelihoodModel* smooth_like,double lambda);
+  void solvePert();
 
-private:
+
   PerturbationsLikelihood* likeModel;
-
-  Eigen::SparseMatrix<double> B;
   Eigen::SparseMatrix<double> Dpsi;
+  Eigen::SparseMatrix<double> HtH_pert;
+  Eigen::SparseMatrix<double> M_pert;
+  Eigen::SparseMatrix<double> Mt_pert;
+  Eigen::SparseMatrix<double> A_pert;
 };
 
 

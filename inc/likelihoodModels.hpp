@@ -72,7 +72,6 @@ public:
   double getLogLike();
   void outputLikelihoodModel(std::string output);
 
-private:
   StandardAlgebra* algebra;
 };
 
@@ -87,12 +86,14 @@ public:
 
 class PerturbationsLikelihood : public BaseLikelihoodModel {
 public:
-  using BaseLikelihoodModel::initializeAlgebra;
   std::vector<Nlpar*> reg;
   ImagePlane* image;
+  BaseSourcePlane* source;
+  CollectionMassModels* collection;
+  BaseLikelihoodModel* smooth_like;
   Pert* pert_mass_model;
 
-  PerturbationsLikelihood(ImagePlane* a,Pert* b);
+  PerturbationsLikelihood(std::vector<Nlpar*> reg,ImagePlane* a,BaseSourcePlane* b,CollectionMassModels* c,Pert* d);
   ~PerturbationsLikelihood();
 
   //virtual
@@ -103,11 +104,13 @@ public:
   std::vector<Nlpar*> getMassModelPars(int i){};
   Json::Value getActiveNamesValues(){};
   void initializeAlgebra();
-  void updateLikelihoodModel(){};
-  double getLogLike(){};
+  void updateLikelihoodModel();
+  double getLogLike();
   void outputLikelihoodModel(std::string output){};
 
-private:
+  //non-virtual
+  void initializePert(BaseLikelihoodModel* smooth_like);
+
   PerturbationsAlgebra* algebra;
 };
 
@@ -162,7 +165,8 @@ public:
 
     } else if( like_model == "perturbations_standard" ){
 
-      return new PerturbationsLikelihood(image,pert_mass_model);
+      std::vector<Nlpar*> reg = nlparsFromJsonVector(root["perturbations"]["reg"]["nlpars"]);
+      return new PerturbationsLikelihood(reg,image,source,collection,pert_mass_model);
 
     } else {
       return NULL;

@@ -21,6 +21,7 @@ extern "C"{
 class BaseMassModel{
 public:
   int n;
+  std::string type;
   std::map<std::string,double> mpars;
 
   BaseMassModel(){};

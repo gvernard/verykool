@@ -65,7 +65,7 @@ public:
   virtual void constructH() = 0;
   virtual void outputSource(const std::string path) = 0;
   virtual void outputSourceErrors(double* errors,const std::string path) = 0;
-  virtual void constructDs(ImagePlane* image,CollectionMassModels* collection) = 0;
+  virtual void constructDs(ImagePlane* image) = 0;
   virtual void createInterpolationWeights(ImagePlane* image) = 0;
 
 
@@ -85,7 +85,7 @@ public:
   FixedSource(const FixedSource& source);
   void createInterpolationWeights(ImagePlane* image);
   void constructH();
-  void constructDs(ImagePlane* image,CollectionMassModels* collection){};
+  void constructDs(ImagePlane* image){};
   void outputSource(const std::string path);
   void outputSourceErrors(double* errors,const std::string path);
 
@@ -110,7 +110,7 @@ public:
   FloatingSource(int source_i,int source_j,double size,double x0,double y0,std::string reg_scheme);
   void createInterpolationWeights(ImagePlane* image);
   void constructH();
-  void constructDs(ImagePlane* image,CollectionMassModels* collection){};
+  void constructDs(ImagePlane* image){};
   void outputSource(const std::string path);
   void outputSourceErrors(double* errors,const std::string path);
 
@@ -136,7 +136,7 @@ public:
   ~AdaptiveSource();
   void createInterpolationWeights(ImagePlane* image);
   void constructH();
-  void constructDs(ImagePlane* image,CollectionMassModels* collection);
+  void constructDs(ImagePlane* image);
   void outputSource(const std::string path);
   void outputSourceErrors(double* errors,const std::string path);
 

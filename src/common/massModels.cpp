@@ -31,6 +31,7 @@ void BaseMassModel::printMassPars(){
 //===============================================================================================================
 Sie::Sie(std::vector<Nlpar*> nlpars){
   this->n = 5;
+  this->type = "sie";
   setMassPars(nlpars);
 }
 
@@ -77,6 +78,7 @@ void Sie::defl(double xin,double yin,double& xout,double& yout){
 //===============================================================================================================
 Spemd::Spemd(std::vector<Nlpar*> nlpars){
   this->n = 7;
+  this->type = "spemd";
   setMassPars(nlpars);
 }
 
@@ -110,6 +112,7 @@ void Spemd::defl(double xin,double yin,double& xout,double& yout){
 //Derived class from BaseMassModel: Pert (perturbations on a grid)
 //===============================================================================================================
 Pert::Pert(int a,int b,double c,double d,std::string reg){
+  this->type = "pert";
   this->dpsi = new FixedSource(a,b,c,d,reg);
 
   this->dpsi_dx = (double*) calloc(this->dpsi->Sm,sizeof(double));
@@ -125,6 +128,7 @@ Pert::Pert(int a,int b,double c,double d,std::string reg){
 }
 
 Pert::Pert(std::string filepath,int a,int b,double c,double d,std::string reg){
+  this->type = "pert";
   this->dpsi = new FixedSource(a,b,c,d,reg);
   
   ImagePlane* image = new ImagePlane(filepath,a,b,c,d);
@@ -147,6 +151,7 @@ Pert::Pert(std::string filepath,int a,int b,double c,double d,std::string reg){
 }
 
 Pert::Pert(FixedSource* new_dpsi){
+  this->type = "pert";
   // make a deep copy of the ImagePlane object
 
   this->dpsi_dx = (double*) calloc(this->dpsi->Sm,sizeof(double));

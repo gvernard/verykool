@@ -1238,7 +1238,7 @@ void AdaptiveSource::constructH(){
 }
 
 //virtual
-void AdaptiveSource::constructDs(ImagePlane* image,CollectionMassModels* collection){
+void AdaptiveSource::constructDs(ImagePlane* image){
 
   // Calculate the derivative at every source grid point
   double* dev_x_val   = (double*) malloc(2*sizeof(double));
