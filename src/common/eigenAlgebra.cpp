@@ -330,7 +330,8 @@ PerturbationsAlgebra::PerturbationsAlgebra(PerturbationsLikelihood* a){
   this->likeModel = a;
 }
 
-void PerturbationsAlgebra::setAlgebraInit(ImagePlane* image,Pert* pert_mass_model){
+void PerturbationsAlgebra::setAlgebraInit(ImagePlane* image,Pert* pert_mass_model,double* res){
+  Eigen::Map<Eigen::VectorXd> dd(res,image->Nm);
 
   Eigen::SparseMatrix<double> AA(pert_mass_model->Aint.Ti,pert_mass_model->Aint.Tj);
   AA.reserve(Eigen::VectorXi::Constant(pert_mass_model->Aint.Ti,4));//setting the non-zero coefficients per row of the interpolation matrix (4 for bi-linear interpolation scheme, etc)
@@ -376,8 +377,8 @@ void PerturbationsAlgebra::setAlgebraInit(ImagePlane* image,Pert* pert_mass_mode
   Eigen::SparseMatrix<double> Dpsi(2*image->Nm,pert_mass_model->dpsi->Sm);
   Dpsi = (AA * TT);
 
-
-  this->Dpsi = Dpsi;
+  this->dd       = dd;
+  this->Dpsi     = Dpsi;
   this->HtH_pert = HtH;
 
   HtH.resize(0,0);
@@ -446,8 +447,35 @@ void PerturbationsAlgebra::setAlgebraRuntime(ImagePlane* image,BaseSourcePlane* 
   A_pert.resize(0,0);
 }
 
-void PerturbationsAlgebra::solvePert(){
+void PerturbationsAlgebra::solvePert(ImagePlane* image,Pert* pert_mass_model,BaseLikelihoodModel* smooth_like){
+  int Sm = pert_mass_model->dpsi->Sm;
 
+  Eigen::SparseMatrix<double> A(Sm,Sm);
+  A = this->A_pert;
+  Eigen::Matrix<double,Eigen::Dynamic,Eigen::Dynamic> inv(Sm,Sm);
+  
+  //Get the inverse
+  Eigen::SimplicialLDLT<Eigen::SparseMatrix<double> > solver;
+  solver.compute(A);
+  Eigen::VectorXd idc(A.cols()),c(A.cols());
+  for(int i=0;i<Sm;i++){
+    for(int j=0;j<idc.size();j++){
+      idc[j] = 0;
+    }
+    idc[i] = 1;
+    //this needs to be done in two steps, otherwise it does not work when using LU
+    c = solver.solve(idc);
+    inv.col(i) = c;
+  }
+
+  //Get the Most Probable solution for the source
+  Eigen::VectorXd dpsi(Sm);
+  StandardLikelihood* specific_pointer = dynamic_cast<StandardLikelihood*>(smooth_like);
+  dpsi = inv*(this->Mt_pert*specific_pointer->algebra->C*this->dd);
+  Eigen::Map<Eigen::VectorXd>(pert_mass_model->dpsi->src,dpsi.size()) = dpsi;
+
+  inv.resize(0,0);
+  A.resize(0,0);
 }
 
 

@@ -44,12 +44,13 @@ public:
   PerturbationsAlgebra(PerturbationsLikelihood* a);
   ~PerturbationsAlgebra(){};
 
-  void setAlgebraInit(ImagePlane* mydata,Pert* mypert);
+  void setAlgebraInit(ImagePlane* mydata,Pert* mypert,double* res);
   void setAlgebraRuntime(ImagePlane* image,BaseSourcePlane* source,Pert* pert_mass_model,BaseLikelihoodModel* smooth_like,double lambda);
-  void solvePert();
+  void solvePert(ImagePlane* image,Pert* pert_mass_model,BaseLikelihoodModel* smooth_like);
 
 
   PerturbationsLikelihood* likeModel;
+  Eigen::VectorXd dd;
   Eigen::SparseMatrix<double> Dpsi;
   Eigen::SparseMatrix<double> HtH_pert;
   Eigen::SparseMatrix<double> M_pert;

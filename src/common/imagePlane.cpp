@@ -108,6 +108,26 @@ ImagePlane::ImagePlane(int i,double w,double h){
   cells  = (SourceCell**) calloc(Nm,sizeof(SourceCell*));
 }
 
+ImagePlane::ImagePlane(const ImagePlane& image){
+  Ni = image.Ni;
+  Nj = image.Nj;
+  Nm = image.Nm;
+  width = image.width;
+  height = image.height;
+  img    = (double*) calloc(Nm,sizeof(double));
+  x      = (double*) calloc(Nm,sizeof(double));
+  y      = (double*) calloc(Nm,sizeof(double));
+  defl_x = (double*) calloc(Nm,sizeof(double));
+  defl_y = (double*) calloc(Nm,sizeof(double));
+  active = (int*) calloc(Nm,sizeof(int));
+  cells  = (SourceCell**) calloc(Nm,sizeof(SourceCell*));
+  for(int i=0;i<Nm;i++){
+    img[i] = image.img[i];
+    x[i] = image.x[i];
+    y[i] = image.y[i];
+  }
+}
+
 ImagePlane::~ImagePlane(){
   free(img);
   free(x);

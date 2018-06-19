@@ -15,6 +15,7 @@
 
 //Abstract class: BaseLikelihoodModel
 //===============================================================================================================
+//non-virtual
 std::vector<double> BaseLikelihoodModel::getActiveValues(){
   std::vector<double> values;
   for(int i=0;i<this->active.size();i++){
@@ -23,6 +24,7 @@ std::vector<double> BaseLikelihoodModel::getActiveValues(){
   return values;
 }
 
+//non-virtual
 std::vector<std::string> BaseLikelihoodModel::getActiveNames(){
   std::vector<std::string> names;
   for(int i=0;i<this->active.size();i++){
@@ -31,12 +33,14 @@ std::vector<std::string> BaseLikelihoodModel::getActiveNames(){
   return names;
 }
 
+//non-virtual
 void BaseLikelihoodModel::updateActive(std::vector<double> values){
   for(int i=0;i<this->active.size();i++){
     this->active[i]->val = values[i];
   }
 }
 
+//non-virtual
 void BaseLikelihoodModel::printActive(){
   for(int i=0;i<this->active.size();i++){
     printf(" %12s",(this->active[i]->nam).c_str());
@@ -48,6 +52,7 @@ void BaseLikelihoodModel::printActive(){
   printf("\n");
 }
 
+//non-virtual
 void BaseLikelihoodModel::printTerms(){
   for(std::map<std::string,double>::iterator it=this->terms.begin();it!=this->terms.end();it++){
     printf(" %16s",(it->first).c_str());
@@ -58,7 +63,6 @@ void BaseLikelihoodModel::printTerms(){
   }
   printf("\n");
 }
-
 
 
 //Derived class from BaseLikelihoodModel: StandardLikelihood
@@ -72,6 +76,9 @@ StandardLikelihood::StandardLikelihood(std::vector<Nlpar*> a,std::vector<Nlpar*>
   source = f;
   collection = g;
   this->algebra = new StandardAlgebra(this);
+
+  model = new ImagePlane(*this->image);
+  res = new ImagePlane(*this->image);
 
   for(int i=0;i<this->physical.size();i++){
     if( this->physical[i]->getActive() ){
@@ -118,23 +125,40 @@ StandardLikelihood::~StandardLikelihood(){
   }
 
   delete(algebra);
+  delete(model);
+  delete(res);
 }
 
 
-
+//non-virtual
 std::vector<Nlpar*> StandardLikelihood::getRegPars(){
   return this->reg;
 }
 
-//    virtual members
+//non-virtual
+void StandardLikelihood::getModel(){
+  this->algebra->getMockData(this->model,this->source);
+}
+
+//non-virtual
+void StandardLikelihood::getResidual(){
+  for(int i=0;i<this->image->Nm;i++){
+    this->res->img[i] = this->image->img[i] - this->model->img[i];
+  }
+}
+
+
+//virtual
 std::vector<Nlpar*> StandardLikelihood::getPhysicalPars(){
   return this->physical;
 }
 
+//virtual
 std::vector<Nlpar*> StandardLikelihood::getMassModelPars(int i){
   return this->lenses[i];
 }
 
+//virtual
 std::vector<std::string> StandardLikelihood::getFullNames(){
   std::vector<std::string> full_names;
 
@@ -155,6 +179,7 @@ std::vector<std::string> StandardLikelihood::getFullNames(){
   return full_names; 
 }
 
+//virtual
 std::vector<std::string> StandardLikelihood::getActiveFullNames(){
   std::vector<std::string> full_names;
 
@@ -181,6 +206,7 @@ std::vector<std::string> StandardLikelihood::getActiveFullNames(){
   return full_names; 
 }
 
+//virtual
 std::vector<double> StandardLikelihood::getValues(){
   std::vector<double> values;
 
@@ -201,6 +227,7 @@ std::vector<double> StandardLikelihood::getValues(){
   return values;
 }
 
+//virtual
 Json::Value StandardLikelihood::getActiveNamesValues(){
   Json::Value all;
 
@@ -251,13 +278,14 @@ Json::Value StandardLikelihood::getActiveNamesValues(){
 }
 
 
+
+//virtual
 void StandardLikelihood::initializeAlgebra(){
   this->source->constructH();
   this->algebra->setAlgebraInit(this->image,this->source);
 }
 
-
-
+//virtual
 void StandardLikelihood::updateLikelihoodModel(){
   for(int i=0;i<this->collection->models.size();i++){
     if( this->collection->models[i]->type != "pert" ){
@@ -288,6 +316,7 @@ void StandardLikelihood::updateLikelihoodModel(){
   this->algebra->solveLinearSparseS(this->image,this->source);
 }
 
+//virtual
 double StandardLikelihood::getLogLike(){
   double pi  = 3.14159265358979323846;
 
@@ -299,7 +328,7 @@ double StandardLikelihood::getLogLike(){
   return val;
 }
 
-
+//virtual
 void StandardLikelihood::outputLikelihoodModel(std::string output){
   // Output reconstructed source
   this->source->outputSource(output);
@@ -311,20 +340,12 @@ void StandardLikelihood::outputLikelihoodModel(std::string output){
   free(errors);
 
   // Create mock data (lensed MAP source)
-  ImagePlane mock_data(this->image->Nj,this->image->Ni,this->image->width,this->image->height);
-  this->algebra->getMockData(&mock_data,this->source);
-  
-  // Output image of the model (model)
-  mock_data.writeImage(output + "vkl_image.fits");
-  
+  this->getModel();
+  this->model->writeImage(output + "vkl_image.fits");
+
   // Output residual image (diference between mydata and mock_data)
-  ImagePlane residual(this->image->Nj,this->image->Ni,this->image->width,this->image->height);
-  for(int i=0;i<this->image->Ni;i++){
-    for(int j=0;j<this->image->Nj;j++){
-      residual.img[i*this->image->Nj+j] = this->image->img[i*this->image->Nj+j] - mock_data.img[i*this->image->Nj+j];
-    }
-  }
-  residual.writeImage(output + "vkl_residual.fits");
+  this->getResidual();
+  this->res->writeImage(output + "vkl_residual.fits");
   
 
 
@@ -400,6 +421,7 @@ void StandardLikelihood::outputLikelihoodModel(std::string output){
 //
 //}
 
+//virtual
 double SourceCovarianceKernel::getLogLike(){
   double pi  = 3.14159265358979323846;
 
@@ -450,12 +472,17 @@ void PerturbationsLikelihood::initializePert(BaseLikelihoodModel* smooth_like){
   StandardLikelihood* specific_pointer = dynamic_cast<StandardLikelihood*>(this->smooth_like);
   specific_pointer->collection->models.push_back(additive_pert);
   
+  // Get residuals of the smooth model
+  specific_pointer->getModel();
+  specific_pointer->getResidual();  
+
   this->initializeAlgebra();
 }
 
 //virtual
 void PerturbationsLikelihood::initializeAlgebra(){
-  this->algebra->setAlgebraInit(this->image,this->pert_mass_model);
+  StandardLikelihood* specific_pointer = dynamic_cast<StandardLikelihood*>(this->smooth_like);
+  this->algebra->setAlgebraInit(this->image,this->pert_mass_model,specific_pointer->res->img);
 }
 
 //virtual
@@ -464,16 +491,19 @@ void PerturbationsLikelihood::updateLikelihoodModel(){
 
   this->source->constructDs(this->image);
   if( this->pert_mass_model->dpsi->sample_reg ){
-    // update regularization parameters
+    this->pert_mass_model->dpsi->kernel->setParameters(this->reg);
     this->pert_mass_model->dpsi->constructH();
   }
 
 
   this->algebra->setAlgebraRuntime(this->image,this->source,this->pert_mass_model,this->smooth_like,Nlpar::getValueByName("lambda",this->reg));
-  //  this->algebra->setAlgebraRuntime(,Nlpar::getValueByName("lambda",this->reg));
-  //  this->algebra->solvePert();
+  this->algebra->solvePert(this->image,this->pert_mass_model,this->smooth_like);
 
-  // Update perturbations in collection
+  // Update perturbations in mass model collection
+  Pert* specific_pointer = dynamic_cast<Pert*>(this->collection->models.back());
+  for(int i=0;i<this->pert_mass_model->dpsi->Sm;i++){
+    specific_pointer->dpsi->src[i] += this->pert_mass_model->dpsi->src[i];
+  }
 }
 
 //virtual
@@ -482,6 +512,31 @@ double PerturbationsLikelihood::getLogLike(){
   return like;
 }
 
+//virtual
+void PerturbationsLikelihood::outputLikelihoodModel(std::string output){
+  // Output reconstructed source
+  this->source->outputSource(output + "pert_");
+  
+  StandardLikelihood* like_pointer = dynamic_cast<StandardLikelihood*>(this->smooth_like);
+
+  // Output errors of reconstructed source
+  double* errors = (double*) calloc(this->source->Sm,sizeof(double));
+  like_pointer->algebra->getSourceErrors(this->source->Sm,errors);
+  this->source->outputSourceErrors(errors,output + "pert_");
+  free(errors);
+  
+  // Create mock data (lensed MAP source)
+  like_pointer->getModel();
+  like_pointer->model->writeImage(output + "pert_vkl_image.fits");
+  
+  // Output residual image (diference between mydata and mock_data)
+  like_pointer->getResidual();
+  like_pointer->res->writeImage(output + "pert_vkl_residual.fits");
+
+  // Output perturbations
+  Pert* pert_pointer = dynamic_cast<Pert*>(this->collection->models.back());
+  pert_pointer->dpsi->outputSource(output + "perturbations_");
+}
 
 
 

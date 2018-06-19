@@ -23,7 +23,7 @@ public:
   double* defl_x;            //deflected x coordinates
   double* defl_y;            //deflected y coordinates
   int* active;               //active image pixels used in the construction of the adaptive grid
-  SourceCell** cells;         //for each image pixel, the corresponding source pixels and interpolation weights
+  SourceCell** cells;        //for each image pixel, the corresponding source pixels and interpolation weights
   mytable B;
   mytable C;
   mytable S;
@@ -32,6 +32,7 @@ public:
   ImagePlane(const std::string filepath,int i,int j,double w,double h);  //used to read images
   ImagePlane(int i,int j,double w,double h);                             //used to create images
   ImagePlane(int i,double w,double h);                                   //used to create masked images
+  ImagePlane(const ImagePlane& image);
   ~ImagePlane();
 
   void writeImage(const std::string filename);

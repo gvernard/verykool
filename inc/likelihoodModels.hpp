@@ -54,12 +54,18 @@ public:
   ImagePlane* image;
   BaseSourcePlane* source;
   CollectionMassModels* collection;
+  StandardAlgebra* algebra;
+  ImagePlane* model;
+  ImagePlane* res;
 
   StandardLikelihood(std::vector<Nlpar*> a,std::vector<Nlpar*> b,std::vector< std::vector<Nlpar*> > c,std::vector<std::string> d,ImagePlane* e,BaseSourcePlane* f,CollectionMassModels* g);
   ~StandardLikelihood();
-  
-  std::vector<Nlpar*> getRegPars();
 
+  //non-virtual
+  std::vector<Nlpar*> getRegPars();
+  void getModel();
+  void getResidual();
+  
   //virtual
   std::vector<std::string> getFullNames();
   std::vector<std::string> getActiveFullNames();
@@ -71,8 +77,6 @@ public:
   void updateLikelihoodModel();
   double getLogLike();
   void outputLikelihoodModel(std::string output);
-
-  StandardAlgebra* algebra;
 };
 
 
@@ -92,9 +96,13 @@ public:
   CollectionMassModels* collection;
   BaseLikelihoodModel* smooth_like;
   Pert* pert_mass_model;
+  PerturbationsAlgebra* algebra;
 
   PerturbationsLikelihood(std::vector<Nlpar*> reg,ImagePlane* a,BaseSourcePlane* b,CollectionMassModels* c,Pert* d);
   ~PerturbationsLikelihood();
+
+  //non-virtual
+  void initializePert(BaseLikelihoodModel* smooth_like);
 
   //virtual
   std::vector<std::string> getFullNames(){};
@@ -106,12 +114,7 @@ public:
   void initializeAlgebra();
   void updateLikelihoodModel();
   double getLogLike();
-  void outputLikelihoodModel(std::string output){};
-
-  //non-virtual
-  void initializePert(BaseLikelihoodModel* smooth_like);
-
-  PerturbationsAlgebra* algebra;
+  void outputLikelihoodModel(std::string output);
 };
 
 
