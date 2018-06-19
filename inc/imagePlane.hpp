@@ -23,6 +23,7 @@ public:
   double* defl_x;            //deflected x coordinates
   double* defl_y;            //deflected y coordinates
   int* active;               //active image pixels used in the construction of the adaptive grid
+  SourceCell** cells;         //for each image pixel, the corresponding source pixels and interpolation weights
   mytable B;
   mytable C;
   mytable S;

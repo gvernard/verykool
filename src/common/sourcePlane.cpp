@@ -35,6 +35,25 @@ void BaseSourcePlane::normalize(){
     this->src[j] /= sum;
   }
 }
+
+//virtual
+void BaseSourcePlane::constructL(ImagePlane* image){
+  this->L.Ti = image->Nm;
+  this->L.Tj = this->Sm;
+  std::vector<mytriplet> tmp;//need to make sure that the L triplet vector is a new one
+
+  for(int i=0;i<image->Nm;i++){
+    //    std::cout << i << " " << image->cells[i]->size << std::endl;
+    for(int j=0;j<image->cells[i]->size;j++){
+      //      std::cout << j << " " << image->cells[i]->ind[j] << " " << image->cells[i]->wei[j] << std::endl;
+      tmp.push_back({    i,    image->cells[i]->ind[j],    image->cells[i]->wei[j] });
+    }
+  }
+  
+  this->L.tri.swap(tmp);
+}
+
+
 //===============================================================================================================
 
 
@@ -183,35 +202,20 @@ bool FixedSource::pointInPolygon(double x,double y){
 }
 
 //virtual
-void FixedSource::constructL(ImagePlane* image,CollectionMassModels* mycollection){
-  int Nm = image->Nm;
-  int Si = this->Si;
-  int Sj = this->Sj;
-  this->L.Ti = Nm;
-  this->L.Tj = Si*Sj;
-
-  long excluded = 0;
-  long included = 0;
-  double xp     = 0;
-  double yp     = 0;
-  double dx     = (this->xmax - this->xmin)/(Si);
-  double dy     = (this->ymax - this->ymin)/(Sj);
-  double norm   = 1./(dx*dy);
+void FixedSource::createInterpolationWeights(ImagePlane* image){
+  double xp,yp;
+  double dx     = (this->xmax - this->xmin)/(this->Si);
+  double dy     = (this->ymax - this->ymin)/(this->Sj);
+  double norm   = 1.0/(dx*dy);
   int ic        = 0;
   int jc        = 0;
   double g1=0,g2=0,g3=0,g4=0;
-  std::vector<mytriplet> tmp;//need to make sure that the L triplet vector is a new one
 
-
-  for(int i=0;i<Nm;i++){
-
-    mycollection->all_defl(image->x[i],image->y[i],xp,yp);
+  for(int i=0;i<image->Nm;i++){
+    xp = image->defl_x[i];
+    yp = image->defl_y[i];
     
     if( this->pointInPolygon(xp,yp) ){
-      included++;
-      
-      //	this->interpolateSource(i,j,xdefl,ydefl,&L);
-      
       //Indices corresponding to the top left pixel
       jc = (int) floor((xp - this->xmin)/dx);
       ic = (int) floor((yp - this->ymin)/dy);
@@ -224,20 +228,26 @@ void FixedSource::constructL(ImagePlane* image,CollectionMassModels* mycollectio
       g3 = (yp - this->ymin) - ic*dy;
       g4 = (xp - this->xmin) - jc*dx;
       
-      tmp.push_back({i, (Si-2-ic)*Sj   + (jc),       g1*g2*norm});
-      tmp.push_back({i, (Si-2-ic)*Sj   + (jc)+1,     g1*g4*norm});
-      tmp.push_back({i, (Si-2-ic+1)*Sj + (jc),       g3*g2*norm});
-      tmp.push_back({i, (Si-2-ic+1)*Sj + (jc)+1,     g3*g4*norm});
+      delete(image->cells[i]);
+      SourceCell* cell = new SourceCell(4);
+      cell->ind[0] = (this->Si-2-ic)*this->Sj + jc;
+      cell->ind[1] = (this->Si-2-ic)*this->Sj + jc+1;
+      cell->ind[2] = (this->Si-2-ic+1)*this->Sj + jc;
+      cell->ind[3] = (this->Si-2-ic+1)*this->Sj + jc+1;
+      cell->wei[0] = g1*g2*norm;
+      cell->wei[1] = g1*g4*norm;
+      cell->wei[2] = g3*g2*norm;
+      cell->wei[3] = g3*g4*norm;
+      image->cells[i] = cell;
     } else {
-      excluded++;
-    } 
+      delete(image->cells[i]);
+      SourceCell* cell = new SourceCell(1);
+      cell->ind[0] = 0;
+      cell->wei[0] = 0.0;
+      image->cells[i] = cell;
+    }
 
   }
-
-  this->L.tri.swap(tmp);
-  
-  //  std::cout << excluded << " image pixels lie outside the source grid." << std::endl;
-  //  std::cout << included << " image pixels lie inside the source grid." << std::endl;
 }
 
 
@@ -287,62 +297,62 @@ void FixedSource::constructH(){
     tmp.push_back({  0,    2*Sj,          ddy2   });
     //First row of image pixels: central 2nd derivative in X, forward 2nd derivative in Y, both of 2nd order accuracy
     for(int j=1;j<Sj-1;j++){
-	tmp.push_back({  j,    j,      -2.0*ddx2 + ddy2   });
 	tmp.push_back({  j,    j-1,                ddx2   });
+	tmp.push_back({  j,    j,      -2.0*ddx2 + ddy2   });
 	tmp.push_back({  j,    j+1,                ddx2   });
 	tmp.push_back({  j,    1*Sj+j,        -2.0*ddy2   });
 	tmp.push_back({  j,    2*Sj+j,             ddy2   });
     }
     //Last pixel of first image row:  backward 2nd derivative in X, forward 2nd derivative in Y, both of 2nd order accuracy
-    tmp.push_back({  Sj-1,    Sj-1,       ddx2 + ddy2   });
-    tmp.push_back({  Sj-1,    Sj-2,         -2.0*ddx2   });
     tmp.push_back({  Sj-1,    Sj-3,              ddx2   });
+    tmp.push_back({  Sj-1,    Sj-2,         -2.0*ddx2   });
+    tmp.push_back({  Sj-1,    Sj-1,       ddx2 + ddy2   });
     tmp.push_back({  Sj-1,    1*Sj+Sj-1,    -2.0*ddy2   });
     tmp.push_back({  Sj-1,    2*Sj+Sj-1,         ddy2   });
 
     for(int i=1;i<Si-1;i++){
       //First pixel of each image row: forward 2nd derivative in X-direction, central 2nd derivative in Y, both of 2nd order accuracy
+      tmp.push_back({  i*Sj,    (i-1)*Sj,              ddy2   });
       tmp.push_back({  i*Sj,        i*Sj,   ddx2 - 2.0*ddy2   });
       tmp.push_back({  i*Sj,      i*Sj+1,         -2.0*ddx2   });
       tmp.push_back({  i*Sj,      i*Sj+2,              ddx2   });
-      tmp.push_back({  i*Sj,    (i-1)*Sj,              ddy2   });
       tmp.push_back({  i*Sj,    (i+1)*Sj,              ddy2   });
       //central 2nd derivative of 2nd order accuracy in both X and Y directions
       for(int j=1;j<Sj-1;j++){
-	tmp.push_back({  i*Sj+j,        i*Sj+j,   -2.0*ddx2 - 2.0*ddy2   });
-	tmp.push_back({  i*Sj+j,      i*Sj+j-1,                   ddx2   });
-	tmp.push_back({  i*Sj+j,      i*Sj+j+1,                   ddx2   });
 	tmp.push_back({  i*Sj+j,    (i-1)*Sj+j,                   ddy2   });
+	tmp.push_back({  i*Sj+j,      i*Sj+j-1,                   ddx2   });
+	tmp.push_back({  i*Sj+j,        i*Sj+j,   -2.0*ddx2 - 2.0*ddy2   });
+	tmp.push_back({  i*Sj+j,      i*Sj+j+1,                   ddx2   });
 	tmp.push_back({  i*Sj+j,    (i+1)*Sj+j,                   ddy2   });
       }
       //Last pixel of each image row: backward 2nd derivative in X-direction, central 2nd derivative in Y, both of 2nd order accuracy
-      tmp.push_back({  i*Sj+Sj-1,        i*Sj+Sj-1,   ddx2 - 2.0*ddy2   });
-      tmp.push_back({  i*Sj+Sj-1,        i*Sj+Sj-2,         -2.0*ddx2   });
-      tmp.push_back({  i*Sj+Sj-1,        i*Sj+Sj-3,              ddx2   });
       tmp.push_back({  i*Sj+Sj-1,    (i-1)*Sj+Sj-1,              ddy2   });
+      tmp.push_back({  i*Sj+Sj-1,        i*Sj+Sj-3,              ddx2   });
+      tmp.push_back({  i*Sj+Sj-1,        i*Sj+Sj-2,         -2.0*ddx2   });
+      tmp.push_back({  i*Sj+Sj-1,        i*Sj+Sj-1,   ddx2 - 2.0*ddy2   });
       tmp.push_back({  i*Sj+Sj-1,    (i+1)*Sj+Sj-1,              ddy2   });
     }
 
     //First pixel of last image row:  forward 2nd derivative in X, backward 2nd derivative in Y, both of 2nd order accuracy
+    tmp.push_back({  (Si-1)*Sj,     (Si-3)*Sj,          ddy2   });
+    tmp.push_back({  (Si-1)*Sj,     (Si-2)*Sj,     -2.0*ddy2   });
     tmp.push_back({  (Si-1)*Sj,     (Si-1)*Sj,   ddx2 + ddy2   });
     tmp.push_back({  (Si-1)*Sj,   (Si-1)*Sj+1,     -2.0*ddx2   });
     tmp.push_back({  (Si-1)*Sj,   (Si-1)*Sj+2,          ddx2   });
-    tmp.push_back({  (Si-1)*Sj,     (Si-2)*Sj,     -2.0*ddy2   });
-    tmp.push_back({  (Si-1)*Sj,     (Si-3)*Sj,          ddy2   });
     //Last row of image pixels:  central 2nd derivative in X, backward 2nd derivative in Y, both of 2nd order accuracy
     for(int j=1;j<Sj-1;j++){
-      tmp.push_back({  (Si-1)*Sj+j,     (Si-1)*Sj+j,   -2.0*ddx2 + ddy2   });
-      tmp.push_back({  (Si-1)*Sj+j,   (Si-1)*Sj+j-1,               ddx2   });
-      tmp.push_back({  (Si-1)*Sj+j,   (Si-1)*Sj+j+1,               ddx2   });
-      tmp.push_back({  (Si-1)*Sj+j,     (Si-2)*Sj+j,          -2.0*ddy2   });
       tmp.push_back({  (Si-1)*Sj+j,     (Si-3)*Sj+j,               ddy2   });
+      tmp.push_back({  (Si-1)*Sj+j,     (Si-2)*Sj+j,          -2.0*ddy2   });
+      tmp.push_back({  (Si-1)*Sj+j,   (Si-1)*Sj+j-1,               ddx2   });
+      tmp.push_back({  (Si-1)*Sj+j,     (Si-1)*Sj+j,   -2.0*ddx2 + ddy2   });
+      tmp.push_back({  (Si-1)*Sj+j,   (Si-1)*Sj+j+1,               ddx2   });
     }
     //Last pixel of last image row:  backward 2nd derivative in X, backward 2nd derivative in Y, both of 2nd order accuracy
-    tmp.push_back({  (Si-1)*Sj+Sj-1,   (Si-1)*Sj+Sj-1,   ddx2 + ddy2   });
-    tmp.push_back({  (Si-1)*Sj+Sj-1,   (Si-1)*Sj+Sj-2,     -2.0*ddx2   });
-    tmp.push_back({  (Si-1)*Sj+Sj-1,   (Si-1)*Sj+Sj-3,          ddx2   });
-    tmp.push_back({  (Si-1)*Sj+Sj-1,   (Si-2)*Sj+Sj-1,     -2.0*ddy2   });
     tmp.push_back({  (Si-1)*Sj+Sj-1,   (Si-3)*Sj+Sj-1,          ddy2   });
+    tmp.push_back({  (Si-1)*Sj+Sj-1,   (Si-2)*Sj+Sj-1,     -2.0*ddy2   });
+    tmp.push_back({  (Si-1)*Sj+Sj-1,   (Si-1)*Sj+Sj-3,          ddx2   });
+    tmp.push_back({  (Si-1)*Sj+Sj-1,   (Si-1)*Sj+Sj-2,     -2.0*ddx2   });
+    tmp.push_back({  (Si-1)*Sj+Sj-1,   (Si-1)*Sj+Sj-1,   ddx2 + ddy2   });
 
   } else if ( this->reg == "covariance_kernel" ){//-------------------> covariance matrix
 
@@ -492,62 +502,52 @@ bool FloatingSource::pointInPolygon(double x,double y){
 }
 
 //virtual
-void FloatingSource::constructL(ImagePlane* image,CollectionMassModels* mycollection){
-  int Ni = image->Ni;
-  int Nj = image->Nj;
-  int Si = this->Si;
-  int Sj = this->Sj;
-  this->L.Ti = Ni*Nj;
-  this->L.Tj = Si*Sj;
-
-  long excluded = 0;
-  long included = 0;
-  double xp     = 0;
-  double yp     = 0;
-  double dx     = (this->xmax - this->xmin)/(Si);
-  double dy     = (this->ymax - this->ymin)/(Sj);
-  double norm   = 1./(dx*dy);
+void FloatingSource::createInterpolationWeights(ImagePlane* image){
+  double xp,yp;
+  double dx     = (this->xmax - this->xmin)/(this->Si);
+  double dy     = (this->ymax - this->ymin)/(this->Sj);
+  double norm   = 1.0/(dx*dy);
   int ic        = 0;
   int jc        = 0;
   double g1=0,g2=0,g3=0,g4=0;
-  std::vector<mytriplet> tmp;//need to make sure that the L triplet vector is a new one
 
-  for(int i=0;i<Ni;i++){
-    for(int j=0;j<Nj;j++){
-
-      mycollection->all_defl(image->x[i*Nj+j],image->y[i*Nj+j],xp,yp);
-
-      if( this->pointInPolygon(xp,yp) ){
-	included++;
-
-	//	this->interpolateSource(i,j,xdefl,ydefl,&L);
-
-	//Indices corresponding to the top left pixel
-	jc = (int) floor((xp - this->xmin)/dx);
-	ic = (int) floor((yp - this->ymin)/dy);
-	
-	//Now interpolate between neighbouring pixels and add entries to L matrix.
-	//The interpolation function could return an array of column indices in the row of the L matrix, and the corresponding weights.
-	//The following is for bi-linear interpolation:
-	g1 = (ic+1)*dy - (yp - this->ymin);
-	g2 = (jc+1)*dx - (xp - this->xmin);
-	g3 = (yp - this->ymin) - ic*dy;
-	g4 = (xp - this->xmin) - jc*dx;
-	
-	tmp.push_back({i*Nj+j, (Si-2-ic)*Sj   + (jc),       g1*g2*norm});
-	tmp.push_back({i*Nj+j, (Si-2-ic)*Sj   + (jc)+1,     g1*g4*norm});
-	tmp.push_back({i*Nj+j, (Si-2-ic+1)*Sj + (jc),       g3*g2*norm});
-	tmp.push_back({i*Nj+j, (Si-2-ic+1)*Sj + (jc)+1,     g3*g4*norm});
-      } else {
-	excluded++;
-      } 
+  for(int i=0;i<image->Nm;i++){
+    xp = image->defl_x[i];
+    yp = image->defl_y[i];
+    
+    if( this->pointInPolygon(xp,yp) ){
+      //Indices corresponding to the top left pixel
+      jc = (int) floor((xp - this->xmin)/dx);
+      ic = (int) floor((yp - this->ymin)/dy);
+      
+      //Now interpolate between neighbouring pixels and add entries to L matrix.
+      //The interpolation function could return an array of column indices in the row of the L matrix, and the corresponding weights.
+      //The following is for bi-linear interpolation:
+      g1 = (ic+1)*dy - (yp - this->ymin);
+      g2 = (jc+1)*dx - (xp - this->xmin);
+      g3 = (yp - this->ymin) - ic*dy;
+      g4 = (xp - this->xmin) - jc*dx;
+      
+      delete(image->cells[i]);
+      SourceCell* cell = new SourceCell(4);
+      cell->ind[0] = (this->Si-2-ic)*this->Sj + jc;
+      cell->ind[1] = (this->Si-2-ic)*this->Sj + jc+1;
+      cell->ind[2] = (this->Si-2-ic+1)*this->Sj + jc;
+      cell->ind[3] = (this->Si-2-ic+1)*this->Sj + jc+1;
+      cell->wei[0] = g1*g2*norm;
+      cell->wei[1] = g1*g4*norm;
+      cell->wei[2] = g3*g2*norm;
+      cell->wei[3] = g3*g4*norm;
+      image->cells[i] = cell;
+    } else {
+      delete(image->cells[i]);
+      SourceCell* cell = new SourceCell(1);
+      cell->ind[0] = 0;
+      cell->wei[0] = 0.0;
+      image->cells[i] = cell;
     }
+
   }
-
-  this->L.tri.swap(tmp);
-
-  //  std::cout << excluded << " image pixels lie outside the source grid." << std::endl;
-  //  std::cout << included << " image pixels lie inside the source grid." << std::endl;
 }
 
 //virtual
@@ -692,8 +692,8 @@ AdaptiveSource::AdaptiveSource(std::string m,int a,int b,std::string reg_scheme)
   type    = "adaptive";
   mode    = m;
   spacing = b;
-  Sm      = a;// + 8;
-  Si      = a;// + 8;
+  Sm      = a + 4;
+  Si      = a + 4;
   Sj      = 0;
   H.Ti    = Sm;
   H.Tj    = Sm;
@@ -723,78 +723,6 @@ AdaptiveSource::~AdaptiveSource(){
   std::vector<a_triangle> ().swap(triangles);
 }
 
-//virtual
-void AdaptiveSource::constructL(ImagePlane* image,CollectionMassModels* mycollection){
-  this->L.Ti = image->Nm;
-  this->L.Tj = this->Sm;
-
-  double xp,yp;
-  double wa,wb,wc;
-  double ybc,xac,xcb,yac,xxc,yyc,den;
-  int ja,jb,jc;
-  a_triangle triangle;
-  std::vector<mytriplet> tmp;//need to make sure that the L triplet vector is a new one
-
-  int included = 0;
-  int excluded = 0;
-
-  //  FILE* fh = fopen("rays.dat","w");
-
-  for(int i=0;i<image->Nm;i++){
-
-    if( image->active[i] == 1 ){
-
-      mycollection->all_defl(image->x[i],image->y[i],xp,yp);
-      //    fprintf(fh,"%12.4f %12.4f\n",xp,yp);
-      
-      int flag = 0;
-      for(int j=0;j<this->n_triangles;j++){
-	triangle = this->triangles[j];
-	
-	ybc = this->y[triangle.b] - this->y[triangle.c];//(yb-yc)
-	xac = this->x[triangle.a] - this->x[triangle.c];//(xa-xc)
-	xcb = this->x[triangle.c] - this->x[triangle.b];//(xc-xb)
-	yac = this->y[triangle.a] - this->y[triangle.c];//(ya-yc)
-	xxc = xp                  - this->x[triangle.c];//(x -xc)
-	yyc = yp                  - this->y[triangle.c];//(y -yc)
-	den = ybc*xac + xcb*yac;
-	
-	wa = ( ybc*xxc+xcb*yyc)/den;
-	wb = (-yac*xxc+xac*yyc)/den;
-	wc = 1. - wa - wb;
-	
-	if( 0.0 <= wa && wa <= 1.0 && 0.0 <= wb && wb <= 1.0 && 0.0 <= wc && wc <= 1.0 ){
-	  tmp.push_back({i,   triangle.a,   wa});
-	  tmp.push_back({i,   triangle.b,   wb});
-	  tmp.push_back({i,   triangle.c,   wc});
-
-	  flag = 1;
-	  break;
-	}
-      }
-      
-      if( flag == 0 ){
-	excluded++;
-      } else {
-	included++;
-      }
-      
-    }
-  }
-
-  for(int i=0;i<this->used.size();i++){
-    tmp.push_back({this->used[i],   i,   1.});
-  }
-
-
-  //fclose(fh);
-
-  //std::cout << included << " " << excluded << std::endl;
-  //std::cout << tmp.size() << std::endl;
-  
-  this->L.tri.swap(tmp);
-}
-
 //non-virtual
 void AdaptiveSource::createAdaGrid(ImagePlane* image,CollectionMassModels* mycollection){
   if( this->mode == "random" ){
@@ -813,33 +741,49 @@ void AdaptiveSource::createAdaGrid(ImagePlane* image,CollectionMassModels* mycol
     }
 
     for(int i=0;i<image->Nm;i++){
-      image->active[i] = 1;
+      image->active[i] = -1;
     }
 
   } else if( this->mode == "image" ){
 
     for(int i=0;i<image->Nm;i++){
-      image->active[i] = 1;
+      image->active[i] = -1;
     }
 
-    std::vector<int> used;
-    double xtmp,ytmp;
     int i0    = (int) floor( (this->spacing-1)/2. );
     int j0    = (int) floor( (this->spacing-1)/2. );
     int count = 0;//must go up to Sm
     for(int i=i0;i<image->Ni;i=i+this->spacing){
       for(int j=j0;j<image->Nj;j=j+this->spacing){
-	xtmp = image->x[i*image->Nj+j];
-	ytmp = image->y[i*image->Nj+j];
-	image->active[i*image->Nj+j] = 0;
-	used.push_back(i*image->Nj+j);
-	mycollection->all_defl(xtmp,ytmp,this->x[count],this->y[count]);
+	this->x[count] = image->defl_x[i*image->Nj+j];
+	this->y[count] = image->defl_y[i*image->Nj+j];
+	image->active[i*image->Nj+j] = count;
 	count++;
       }
     }
 
-    this->used.swap(used);
-    //    std::cout << "The number of pixels in the adaptive source is " << count << " and it must be " << this->Sm << std::endl;
+
+    if( this->spacing != 1 ){
+      // Adding an outer rectange to the image plane to make sure all image pixels are enclosed within
+      std::vector<xypoint> outer_frame(4);
+      double dx = image->width/image->Nj;
+      double dy = image->height/image->Ni;
+      double fac = 2.0;
+
+      outer_frame[0].x = image->x[0]                       - fac*dx;
+      outer_frame[0].y = image->y[0]                       + fac*dy;
+      outer_frame[1].x = image->x[image->Nj-1]             + fac*dx;
+      outer_frame[1].y = image->y[0]                       + fac*dy;
+      outer_frame[2].x = image->x[0]                       - fac*dx;
+      outer_frame[2].y = image->y[(image->Ni-1)*image->Nj] - fac*dy;
+      outer_frame[3].x = image->x[image->Nj-1]             + fac*dx;
+      outer_frame[3].y = image->y[(image->Ni-1)*image->Nj] - fac*dy;
+
+      for(int i=0;i<outer_frame.size();i++){
+	mycollection->all_defl(outer_frame[i].x,outer_frame[i].y,this->x[count+i],this->y[count+i]);
+      }
+    }
+
 
   } else if( this->mode == "grid" ){
 
@@ -898,10 +842,11 @@ void AdaptiveSource::createAdaGrid(ImagePlane* image,CollectionMassModels* mycol
     //    fclose(fh);
 
     for(int i=0;i<image->Nm;i++){
-      image->active[i] = 1;
+      image->active[i] = -1;
     }
 
   }
+
 
 }
 
@@ -974,8 +919,70 @@ void AdaptiveSource::createDelaunay(){
     this->opposite_edges_per_vertex[ fvi->info() ] = opposite_indices;
   }
 
+}
+
+//non-virtual
+void AdaptiveSource::createInterpolationWeights(ImagePlane* image){
+  double wa,wb,wc;
+  double ybc,xac,xcb,yac,xxc,yyc,den;
+  a_triangle triangle;
+  int flag = 1;
+  
+  for(int i=0;i<image->Nm;i++){
+    if( image->active[i] == -1 ){
+
+      flag = 0;
+      for(int j=0;j<this->n_triangles;j++){
+	triangle = this->triangles[j];
+	
+	ybc = this->y[triangle.b] - this->y[triangle.c];//(yb-yc)
+	xac = this->x[triangle.a] - this->x[triangle.c];//(xa-xc)
+	xcb = this->x[triangle.c] - this->x[triangle.b];//(xc-xb)
+	yac = this->y[triangle.a] - this->y[triangle.c];//(ya-yc)
+	xxc = image->defl_x[i]    - this->x[triangle.c];//(x -xc)
+	yyc = image->defl_y[i]    - this->y[triangle.c];//(y -yc)
+	den = ybc*xac + xcb*yac;
+	
+	wa = ( ybc*xxc+xcb*yyc)/den;
+	wb = (-yac*xxc+xac*yyc)/den;
+	wc = 1.0 - wa - wb;
+	
+	if( 0.0 <= wa && wa <= 1.0 && 0.0 <= wb && wb <= 1.0 && 0.0 <= wc && wc <= 1.0 ){
+	  flag = 1;
+	  delete(image->cells[i]);
+	  SourceCell* cell = new SourceCell(3);
+	  cell->ind[0] = triangle.a;
+	  cell->ind[1] = triangle.b;
+	  cell->ind[2] = triangle.c;
+	  cell->wei[0] = wa;
+	  cell->wei[1] = wb;
+	  cell->wei[2] = wc;
+	  image->cells[i] = cell;
+	  break;
+	}
+      }
+      
+      if( flag == 0 ){
+	delete(image->cells[i]);
+	SourceCell* cell = new SourceCell(1);
+	cell->ind[0] = 0;
+	cell->wei[0] = 0.0;
+	image->cells[i] = cell;
+      }
+
+    } else {
+
+      delete(image->cells[i]);
+      SourceCell* cell = new SourceCell(1);
+      cell->ind[0] = image->active[i];
+      cell->wei[0] = 1.0;
+      image->cells[i] = cell;
+
+    }
+  }
 
 }
+
 
 
 //virtual
@@ -1323,103 +1330,22 @@ void AdaptiveSource::constructDs(ImagePlane* image,CollectionMassModels* collect
 
   // Deflect the image grid, find the triangle that each ray belongs to, and interpolate between the derivatives of the vertices
   // or get the derivative of the vertex if the ray is part of the adaptive grid.
-  double xp,yp;
-  double wa,wb,wc;
-  double ybc,xac,xcb,yac,xxc,yyc,den;
-  double vx,vy,vz,ux,uy,uz;
-  double dx,dy;
-  a_triangle triangle;
-
   this->Ds.Ti = image->Nm;
   this->Ds.Tj = 2*image->Nm;
   std::vector<mytriplet> tmp;
 
   for(int i=0;i<image->Nm;i++){
-    collection->all_defl(image->x[i],image->y[i],xp,yp);
-    
-    for(int j=0;j<this->n_triangles;j++){
-      triangle = this->triangles[j];
-      
-      ybc = this->y[triangle.b] - this->y[triangle.c];//(yb-yc)
-      xac = this->x[triangle.a] - this->x[triangle.c];//(xa-xc)
-      xcb = this->x[triangle.c] - this->x[triangle.b];//(xc-xb)
-      yac = this->y[triangle.a] - this->y[triangle.c];//(ya-yc)
-      xxc = xp                  - this->x[triangle.c];//(x -xc)
-      yyc = yp                  - this->y[triangle.c];//(y -yc)
-      den = ybc*xac + xcb*yac;
-      
-      wa = ( ybc*xxc+xcb*yyc)/den;
-      wb = (-yac*xxc+xac*yyc)/den;
-      wc = 1.0 - wa - wb;
-      
-      if( 0.0 <= wa && wa <= 1.0 && 0.0 <= wb && wb <= 1.0 && 0.0 <= wc && wc <= 1.0 ){
-	double dev_x = wa*this->s_dx[triangle.a] + wb*this->s_dx[triangle.b] + wc*this->s_dx[triangle.c];
-	double dev_y = wa*this->s_dy[triangle.a] + wb*this->s_dy[triangle.b] + wc*this->s_dy[triangle.c];
-	
-	tmp.push_back({i,2*i,dev_x});
-	tmp.push_back({i,2*i+1,dev_y});
-	break;
-      }
+    double dev_x = 0.0;
+    double dev_y = 0.0;
+    for(int j=0;j<image->cells[i]->size;j++){
+      dev_x += image->cells[i]->wei[j]*this->s_dx[image->cells[i]->ind[j]];
+      dev_y += image->cells[i]->wei[j]*this->s_dy[image->cells[i]->ind[j]];
     }
+    tmp.push_back({i,2*i,dev_x});
+    tmp.push_back({i,2*i+1,dev_y});
   }
 
   this->Ds.tri.swap(tmp);
-}
-
-
-
-//virtual
-mytable AdaptiveSource::getDerivativeTable(ImagePlane* plane,CollectionMassModels* mycollection){
-  double xp,yp;
-  double wa,wb,wc;
-  double ybc,xac,xcb,yac,xxc,yyc,den;
-  double vx,vy,vz,ux,uy,uz;
-  double dx,dy;
-  a_triangle triangle;
-
-  mytable table;
-  table.Ti  = plane->Nm;
-  table.Tj  = 2*plane->Nm;
-
-
-  for(int i=0;i<plane->Nm;i++){
-    mycollection->all_defl(plane->x[i],plane->y[i],xp,yp);
-    
-    for(int j=0;j<this->n_triangles;j++){
-      triangle = this->triangles[j];
-      
-      ybc = this->y[triangle.b] - this->y[triangle.c];//(yb-yc)
-      xac = this->x[triangle.a] - this->x[triangle.c];//(xa-xc)
-      xcb = this->x[triangle.c] - this->x[triangle.b];//(xc-xb)
-      yac = this->y[triangle.a] - this->y[triangle.c];//(ya-yc)
-      xxc = xp                  - this->x[triangle.c];//(x -xc)
-      yyc = yp                  - this->y[triangle.c];//(y -yc)
-      den = ybc*xac + xcb*yac;
-      
-      wa = ( ybc*xxc+xcb*yyc)/den;
-      wb = (-yac*xxc+xac*yyc)/den;
-      wc = 1.0 - wa - wb;
-      
-      if( 0.0 <= wa && wa <= 1.0 && 0.0 <= wb && wb <= 1.0 && 0.0 <= wc && wc <= 1.0 ){
-	vx = this->x[triangle.b] - this->x[triangle.c];
-	vy = this->y[triangle.b] - this->y[triangle.c];
-	vz = this->src[triangle.b] - this->src[triangle.c];
-
-	ux = this->x[triangle.a] - this->x[triangle.c];
-	uy = this->y[triangle.a] - this->y[triangle.c];
-	uz = this->src[triangle.a] - this->src[triangle.c];
-
-	dx = vy*uz - vz*uy;
-	dy = vz*ux - vx*uz;
-
-	table.tri.push_back({i,2*i,dx});
-	table.tri.push_back({i,2*i+1,dy});
-	break;
-      }
-    }
-  }
-
-  return table;
 }
 
 

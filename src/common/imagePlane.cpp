@@ -36,6 +36,7 @@ ImagePlane::ImagePlane(const std::string filepath,int j,int i,double w,double h)
   defl_x = (double*) calloc(Nm,sizeof(double));
   defl_y = (double*) calloc(Nm,sizeof(double));
   active = (int*) calloc(Nm,sizeof(int));
+  cells  = (SourceCell**) calloc(Nm,sizeof(SourceCell*));
   
   int i0    = floor(Ni/2);
   int j0    = floor(Nj/2);
@@ -70,6 +71,7 @@ ImagePlane::ImagePlane(int j,int i,double w,double h){
   defl_x = (double*) calloc(Nm,sizeof(double));
   defl_y = (double*) calloc(Nm,sizeof(double));
   active = (int*) calloc(Nm,sizeof(int));
+  cells  = (SourceCell**) calloc(Nm,sizeof(SourceCell*));
 
   int i0    = floor(i/2);
   int j0    = floor(j/2);
@@ -103,6 +105,7 @@ ImagePlane::ImagePlane(int i,double w,double h){
   defl_x = (double*) calloc(Nm,sizeof(double));
   defl_y = (double*) calloc(Nm,sizeof(double));
   active = (int*) calloc(Nm,sizeof(int));
+  cells  = (SourceCell**) calloc(Nm,sizeof(SourceCell*));
 }
 
 ImagePlane::~ImagePlane(){
@@ -112,6 +115,7 @@ ImagePlane::~ImagePlane(){
   free(defl_x);
   free(defl_y);
   free(active);
+  free(cells);
 }
 
 

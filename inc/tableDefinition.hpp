@@ -13,4 +13,23 @@ struct mytable {
   std::vector<mytriplet> tri;
 };
 
+class SourceCell {
+public:
+  int size;
+  int* ind;
+  double* wei;
+
+  SourceCell(int size){
+    this->size = size;
+    this->ind  = (int*) malloc(size*sizeof(int));
+    this->wei  = (double*) malloc(size*sizeof(double));
+  }
+  ~SourceCell(){
+    free(ind);
+    free(wei);
+  }
+
+};
+
+
 #endif /* TABLE_DEFINITION_HPP */

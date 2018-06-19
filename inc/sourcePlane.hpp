@@ -60,16 +60,16 @@ public:
 
 
   //virtual members
-  virtual void constructL(ImagePlane* image,CollectionMassModels* mycollection) = 0;
   virtual void constructH() = 0;
-  virtual mytable getDerivativeTable(ImagePlane* image,CollectionMassModels* mycollection) = 0;
   virtual void outputSource(const std::string path) = 0;
   virtual void outputSourceErrors(double* errors,const std::string path) = 0;
   virtual void constructDs(ImagePlane* image,CollectionMassModels* collection) = 0;
+  virtual void createInterpolationWeights(ImagePlane* image) = 0;
 
 
   //non-virtual members
   void normalize();
+  void constructL(ImagePlane* image);
   void setSourceCovariance(std::vector<Nlpar> reg_pars){};
 };
 
@@ -82,12 +82,11 @@ public:
   FixedSource(int i,int j,double width,double height,std::string reg_scheme);
   FixedSource(const FixedSource& source);
   ~FixedSource();
-  void constructL(ImagePlane* image,CollectionMassModels* mycollection);
+  void createInterpolationWeights(ImagePlane* image);
   void constructH();
-  mytable getDerivativeTable(ImagePlane* image,CollectionMassModels* mycollection){};
+  void constructDs(ImagePlane* image,CollectionMassModels* collection){};
   void outputSource(const std::string path);
   void outputSourceErrors(double* errors,const std::string path);
-  void constructDs(ImagePlane* image,CollectionMassModels* collection){};
 
   //non-virtual members
   void setGridSquare(std::map<std::string,std::string> pars);
@@ -110,12 +109,11 @@ public:
   //virtual members
   FloatingSource(int source_i,int source_j,double size,double x0,double y0,std::string reg_scheme);
   ~FloatingSource();
-  void constructL(ImagePlane* image,CollectionMassModels* mycollection);
+  void createInterpolationWeights(ImagePlane* image);
   void constructH();
-  mytable getDerivativeTable(ImagePlane* image,CollectionMassModels* mycollection){};
+  void constructDs(ImagePlane* image,CollectionMassModels* collection){};
   void outputSource(const std::string path);
   void outputSourceErrors(double* errors,const std::string path);
-  void constructDs(ImagePlane* image,CollectionMassModels* collection){};
 
   //non-virtual members
   void setGrid(std::map<std::string,std::string> pars);
@@ -138,12 +136,11 @@ public:
   AdaptiveSource(int Sm,std::string reg_scheme);
   AdaptiveSource(std::string mode,int Sm,int spacing,std::string reg_scheme);
   ~AdaptiveSource();
-  void constructL(ImagePlane* image,CollectionMassModels* mycollection);
+  void createInterpolationWeights(ImagePlane* image);
   void constructH();
-  mytable getDerivativeTable(ImagePlane* image,CollectionMassModels* mycollection);
+  void constructDs(ImagePlane* image,CollectionMassModels* collection);
   void outputSource(const std::string path);
   void outputSourceErrors(double* errors,const std::string path);
-  void constructDs(ImagePlane* image,CollectionMassModels* collection);
 
   //non-virtual members
   void createAdaGrid(ImagePlane* image,CollectionMassModels* mycollection);
@@ -169,7 +166,6 @@ private:
   xypoint intersection_point_x(xypoint p0,xypoint p1,xypoint p2);
   xypoint intersection_point_y(xypoint p0,xypoint p1,xypoint p2);
 
-  std::vector<int> used;
   std::string mode;
   int spacing;
   int n_triangles;

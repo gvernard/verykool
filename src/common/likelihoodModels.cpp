@@ -268,6 +268,8 @@ void StandardLikelihood::updateLikelihoodModel(){
     this->source->kernel->setParameters(this->reg);
   }
 
+  this->collection->all_defl(this->image);
+
   if( this->source->type == "adaptive" ){
     AdaptiveSource* ada = dynamic_cast<AdaptiveSource*>(this->source);
     ada->createAdaGrid(this->image,this->collection);
@@ -278,7 +280,8 @@ void StandardLikelihood::updateLikelihoodModel(){
     this->source->constructH();
   }
 
-  this->source->constructL(this->image,this->collection);
+  this->source->createInterpolationWeights(this->image);
+  this->source->constructL(this->image);
   this->algebra->setAlgebraRuntime(this->image,this->source,Nlpar::getValueByName("lambda",this->reg));
   this->algebra->solveLinearSparseS(this->image,this->source);
 }
