@@ -284,18 +284,18 @@ void FixedSource::constructH(){
     this->eigenSparseMemoryAllocForH = 8;
     int Si = this->Si;
     int Sj = this->Sj;
-    double dx = fabs(this->x[1]  - this->x[0]);
-    double dy = fabs(this->y[Sj] - this->y[0]);
+    double dx = this->width/Sj;
+    double dy = this->height/Si;
     double ddx2 =  1.0/(dx*dx);
     double ddy2 =  1.0/(dy*dy);
 
-    //First pixel of first image row:  forward 2nd derivative in X, forward 2nd derivative in Y, both of 2nd order accuracy
+    //First pixel of first image row:  forward 2nd derivative in X, forward 2nd derivative in Y
     tmp.push_back({  0,    0,      ddx2 + ddy2   });
     tmp.push_back({  0,    1,        -2.0*ddx2   });
     tmp.push_back({  0,    2,             ddx2   });
     tmp.push_back({  0,    1*Sj,     -2.0*ddy2   });
     tmp.push_back({  0,    2*Sj,          ddy2   });
-    //First row of image pixels: central 2nd derivative in X, forward 2nd derivative in Y, both of 2nd order accuracy
+    //First row of image pixels: central 2nd derivative in X, forward 2nd derivative in Y
     for(int j=1;j<Sj-1;j++){
 	tmp.push_back({  j,    j-1,                ddx2   });
 	tmp.push_back({  j,    j,      -2.0*ddx2 + ddy2   });
@@ -303,7 +303,7 @@ void FixedSource::constructH(){
 	tmp.push_back({  j,    1*Sj+j,        -2.0*ddy2   });
 	tmp.push_back({  j,    2*Sj+j,             ddy2   });
     }
-    //Last pixel of first image row:  backward 2nd derivative in X, forward 2nd derivative in Y, both of 2nd order accuracy
+    //Last pixel of first image row:  backward 2nd derivative in X, forward 2nd derivative in Y
     tmp.push_back({  Sj-1,    Sj-3,              ddx2   });
     tmp.push_back({  Sj-1,    Sj-2,         -2.0*ddx2   });
     tmp.push_back({  Sj-1,    Sj-1,       ddx2 + ddy2   });
@@ -311,13 +311,13 @@ void FixedSource::constructH(){
     tmp.push_back({  Sj-1,    2*Sj+Sj-1,         ddy2   });
 
     for(int i=1;i<Si-1;i++){
-      //First pixel of each image row: forward 2nd derivative in X-direction, central 2nd derivative in Y, both of 2nd order accuracy
+      //First pixel of each image row: forward 2nd derivative in X-direction, central 2nd derivative in Y
       tmp.push_back({  i*Sj,    (i-1)*Sj,              ddy2   });
       tmp.push_back({  i*Sj,        i*Sj,   ddx2 - 2.0*ddy2   });
       tmp.push_back({  i*Sj,      i*Sj+1,         -2.0*ddx2   });
       tmp.push_back({  i*Sj,      i*Sj+2,              ddx2   });
       tmp.push_back({  i*Sj,    (i+1)*Sj,              ddy2   });
-      //central 2nd derivative of 2nd order accuracy in both X and Y directions
+      //central 2nd derivative in both X and Y directions
       for(int j=1;j<Sj-1;j++){
 	tmp.push_back({  i*Sj+j,    (i-1)*Sj+j,                   ddy2   });
 	tmp.push_back({  i*Sj+j,      i*Sj+j-1,                   ddx2   });
@@ -325,7 +325,7 @@ void FixedSource::constructH(){
 	tmp.push_back({  i*Sj+j,      i*Sj+j+1,                   ddx2   });
 	tmp.push_back({  i*Sj+j,    (i+1)*Sj+j,                   ddy2   });
       }
-      //Last pixel of each image row: backward 2nd derivative in X-direction, central 2nd derivative in Y, both of 2nd order accuracy
+      //Last pixel of each image row: backward 2nd derivative in X-direction, central 2nd derivative in Y
       tmp.push_back({  i*Sj+Sj-1,    (i-1)*Sj+Sj-1,              ddy2   });
       tmp.push_back({  i*Sj+Sj-1,        i*Sj+Sj-3,              ddx2   });
       tmp.push_back({  i*Sj+Sj-1,        i*Sj+Sj-2,         -2.0*ddx2   });
@@ -333,13 +333,13 @@ void FixedSource::constructH(){
       tmp.push_back({  i*Sj+Sj-1,    (i+1)*Sj+Sj-1,              ddy2   });
     }
 
-    //First pixel of last image row:  forward 2nd derivative in X, backward 2nd derivative in Y, both of 2nd order accuracy
+    //First pixel of last image row:  forward 2nd derivative in X, backward 2nd derivative in Y
     tmp.push_back({  (Si-1)*Sj,     (Si-3)*Sj,          ddy2   });
     tmp.push_back({  (Si-1)*Sj,     (Si-2)*Sj,     -2.0*ddy2   });
     tmp.push_back({  (Si-1)*Sj,     (Si-1)*Sj,   ddx2 + ddy2   });
     tmp.push_back({  (Si-1)*Sj,   (Si-1)*Sj+1,     -2.0*ddx2   });
     tmp.push_back({  (Si-1)*Sj,   (Si-1)*Sj+2,          ddx2   });
-    //Last row of image pixels:  central 2nd derivative in X, backward 2nd derivative in Y, both of 2nd order accuracy
+    //Last row of image pixels:  central 2nd derivative in X, backward 2nd derivative in Y
     for(int j=1;j<Sj-1;j++){
       tmp.push_back({  (Si-1)*Sj+j,     (Si-3)*Sj+j,               ddy2   });
       tmp.push_back({  (Si-1)*Sj+j,     (Si-2)*Sj+j,          -2.0*ddy2   });
@@ -347,7 +347,7 @@ void FixedSource::constructH(){
       tmp.push_back({  (Si-1)*Sj+j,     (Si-1)*Sj+j,   -2.0*ddx2 + ddy2   });
       tmp.push_back({  (Si-1)*Sj+j,   (Si-1)*Sj+j+1,               ddx2   });
     }
-    //Last pixel of last image row:  backward 2nd derivative in X, backward 2nd derivative in Y, both of 2nd order accuracy
+    //Last pixel of last image row:  backward 2nd derivative in X, backward 2nd derivative in Y
     tmp.push_back({  (Si-1)*Sj+Sj-1,   (Si-3)*Sj+Sj-1,          ddy2   });
     tmp.push_back({  (Si-1)*Sj+Sj-1,   (Si-2)*Sj+Sj-1,     -2.0*ddy2   });
     tmp.push_back({  (Si-1)*Sj+Sj-1,   (Si-1)*Sj+Sj-3,          ddx2   });
@@ -653,7 +653,6 @@ void FloatingSource::outputSourceErrors(double* errors,const std::string path){}
 //Derived class from BaseSourcePlane: AdaptiveSource
 //===============================================================================================================
 
-//virtual
 AdaptiveSource::AdaptiveSource(int a,std::string reg_scheme){
   type    = "adaptive";
   mode    = "random";
@@ -684,13 +683,12 @@ AdaptiveSource::AdaptiveSource(int a,std::string reg_scheme){
   }
 }
 
-//virtual
 AdaptiveSource::AdaptiveSource(std::string m,int a,int b,std::string reg_scheme){
   type    = "adaptive";
   mode    = m;
   spacing = b;
-  Sm      = a + 4;
-  Si      = a + 4;
+  Sm      = a;// + 4;
+  Si      = a;// + 4;
   Sj      = 0;
   H.Ti    = Sm;
   H.Tj    = Sm;
@@ -715,7 +713,6 @@ AdaptiveSource::AdaptiveSource(std::string m,int a,int b,std::string reg_scheme)
   }
 }
 
-//virtual
 AdaptiveSource::~AdaptiveSource(){
   std::vector<a_triangle> ().swap(triangles);
 }
@@ -747,8 +744,8 @@ void AdaptiveSource::createAdaGrid(ImagePlane* image,CollectionMassModels* mycol
       image->active[i] = -1;
     }
 
-    int i0    = (int) floor( (this->spacing-1)/2. );
-    int j0    = (int) floor( (this->spacing-1)/2. );
+    int i0    = (int) floor( (this->spacing-1)/2.0 );
+    int j0    = (int) floor( (this->spacing-1)/2.0 );
     int count = 0;//must go up to Sm
     for(int i=i0;i<image->Ni;i=i+this->spacing){
       for(int j=j0;j<image->Nj;j=j+this->spacing){
@@ -758,29 +755,6 @@ void AdaptiveSource::createAdaGrid(ImagePlane* image,CollectionMassModels* mycol
 	count++;
       }
     }
-
-
-    if( this->spacing != 1 ){
-      // Adding an outer rectange to the image plane to make sure all image pixels are enclosed within
-      std::vector<xypoint> outer_frame(4);
-      double dx = image->width/image->Nj;
-      double dy = image->height/image->Ni;
-      double fac = 2.0;
-
-      outer_frame[0].x = image->x[0]                       - fac*dx;
-      outer_frame[0].y = image->y[0]                       + fac*dy;
-      outer_frame[1].x = image->x[image->Nj-1]             + fac*dx;
-      outer_frame[1].y = image->y[0]                       + fac*dy;
-      outer_frame[2].x = image->x[0]                       - fac*dx;
-      outer_frame[2].y = image->y[(image->Ni-1)*image->Nj] - fac*dy;
-      outer_frame[3].x = image->x[image->Nj-1]             + fac*dx;
-      outer_frame[3].y = image->y[(image->Ni-1)*image->Nj] - fac*dy;
-
-      for(int i=0;i<outer_frame.size();i++){
-	mycollection->all_defl(outer_frame[i].x,outer_frame[i].y,this->x[count+i],this->y[count+i]);
-      }
-    }
-
 
   } else if( this->mode == "grid" ){
 
@@ -858,7 +832,7 @@ void AdaptiveSource::createDelaunay(){
 
   std::vector< std::pair<Point,int> > points;
   for(int i=0;i<this->Sm;i++){
-    points.push_back( std::make_pair(Point(x[i],y[i]),i) );
+    points.push_back( std::make_pair(Point(this->x[i],this->y[i]),i) );
   }
 
   Delaunay triangulation;

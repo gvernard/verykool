@@ -44,13 +44,12 @@ public:
   ~Initialization(){};
   
   static void initialize_program(std::string path,std::string run,Initialization*& init,BaseLikelihoodModel*& smooth_like,ImagePlane*& mydata,CollectionMassModels*& mycollection,BaseSourcePlane*& mysource,BaseLikelihoodModel*& pert_like,Pert*& pert_mass_model);
-  static void finalize_smooth(Initialization* init,BaseLikelihoodModel* smooth_like);
-  static void finalize_pert(Initialization* init,BaseLikelihoodModel* pert_like);
+  static void finalize_smooth(std::string output,BaseLikelihoodModel* smooth_like);
+  static void finalize_pert(std::string output,BaseLikelihoodModel* pert_like);
   static void outputGeneric(BaseLikelihoodModel* smooth_like,ImagePlane* image,BaseSourcePlane* source,std::string output);
 
 private:
   void parseInputJSON(std::string path,std::string filename);
-  void outputInitial(BaseLikelihoodModel* smooth_like);
 };
 
 #endif /* SUPPORT_FUNCS_HPP */

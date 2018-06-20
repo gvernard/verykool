@@ -41,6 +41,7 @@ public:
   virtual void initializeAlgebra() = 0;
   virtual void updateLikelihoodModel() = 0;
   virtual double getLogLike() = 0;
+  virtual void initialOutputLikelihoodModel(std::string output) = 0;
   virtual void outputLikelihoodModel(std::string output) = 0;
 };
 
@@ -76,6 +77,7 @@ public:
   void initializeAlgebra();
   void updateLikelihoodModel();
   double getLogLike();
+  void initialOutputLikelihoodModel(std::string output);
   void outputLikelihoodModel(std::string output);
 };
 
@@ -114,6 +116,7 @@ public:
   void initializeAlgebra();
   void updateLikelihoodModel();
   double getLogLike();
+  void initialOutputLikelihoodModel(std::string output);
   void outputLikelihoodModel(std::string output);
 };
 

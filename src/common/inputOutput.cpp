@@ -59,6 +59,7 @@ void Initialization::initialize_program(std::string path,std::string run,Initial
     std::vector<Nlpar*> lens = smooth_like->getMassModelPars(k);
     mycollection->models[k] = FactoryMassModel::getInstance()->createMassModel(init->mmodel[k],lens);
   }
+  mycollection->all_defl(mydata); // I need to deflect the image plane once I know the mass model parameters. Needed to create the adaptive grid.
 
 
 
@@ -78,8 +79,8 @@ void Initialization::initialize_program(std::string path,std::string run,Initial
 	mysource->sample_reg = true;
       }
     }
-    mysource->constructH();
   }
+  mysource->constructH();
 
 
 
@@ -92,14 +93,8 @@ void Initialization::initialize_program(std::string path,std::string run,Initial
   // Initialize perturbations --------------------------------------------------------------------------------------------------------------------------------------
   if( init->perturbations.size() > 0 ){
     pert_mass_model = new Pert(std::stoi(init->perturbations["pix_x"]),std::stoi(init->perturbations["pix_y"]),mydata->width,mydata->height,init->perturbations["reg"]);
-    pert_mass_model->createAint(mydata);
     pert_like = FactoryLikelihoodModel::getInstance()->createLikelihoodModel(path,run,init->pert_like,mydata,mysource,mycollection,pert_mass_model);
   }
-
-
-
-  // Initial output ------------------------------------------------------------------------------------------------------------------------------------------------
-  init->outputInitial(smooth_like);
 
 
 
@@ -214,36 +209,9 @@ void Initialization::parseInputJSON(std::string path,std::string run){
   }
 }
 
-void Initialization::outputInitial(BaseLikelihoodModel* smooth_like){
-
-  // File with the parameter names
-  std::ofstream f_names(this->output+"plt_corner.paramnames",std::ofstream::out);
-  std::vector<std::string> active_full_names = smooth_like->getActiveFullNames();
-  for(int i=0;i<active_full_names.size();i++){
-    f_names << active_full_names[i];
-    f_names << " ";
-    f_names << active_full_names[i];
-    f_names << std::endl;
-  }
-  f_names.close();
-
-  // File with the parameter ranges
-  std::ofstream f_ranges(this->output+"plt_corner.ranges",std::ofstream::out);
-  for(int i=0;i<smooth_like->active.size();i++){
-    f_ranges << active_full_names[i];
-    f_ranges << " ";
-    f_ranges << smooth_like->active[i]->min;
-    f_ranges << " ";
-    f_ranges << smooth_like->active[i]->max;
-    f_ranges << std::endl;
-  }
-  f_ranges.close();
-
-}
 
 
-
-void Initialization::finalize_smooth(Initialization* init,BaseLikelihoodModel* smooth_like){
+void Initialization::finalize_smooth(std::string output,BaseLikelihoodModel* smooth_like){
   printf("%-25s\n","Starting output smooth");
   fflush(stdout);
   
@@ -252,7 +220,7 @@ void Initialization::finalize_smooth(Initialization* init,BaseLikelihoodModel* s
   smooth_like->printActive();
   smooth_like->printTerms();
   printf("\n");
-  smooth_like->outputLikelihoodModel(init->output);
+  smooth_like->outputLikelihoodModel(output);
   
   printf("%+7s\n","...done");
   std::cout << std::string(200,'=') << std::endl;
@@ -260,7 +228,7 @@ void Initialization::finalize_smooth(Initialization* init,BaseLikelihoodModel* s
 }
 
 
-void Initialization::finalize_pert(Initialization* init,BaseLikelihoodModel* pert_like){
+void Initialization::finalize_pert(std::string output,BaseLikelihoodModel* pert_like){
   printf("%-25s\n","Starting output perturbations");
   fflush(stdout);
   
@@ -269,7 +237,7 @@ void Initialization::finalize_pert(Initialization* init,BaseLikelihoodModel* per
   pert_like->printActive();
   pert_like->printTerms();
   printf("\n");
-  pert_like->outputLikelihoodModel(init->output);
+  pert_like->outputLikelihoodModel(output);
   
   printf("%+7s\n","...done");
   std::cout << std::string(200,'=') << std::endl;

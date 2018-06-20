@@ -281,7 +281,6 @@ Json::Value StandardLikelihood::getActiveNamesValues(){
 
 //virtual
 void StandardLikelihood::initializeAlgebra(){
-  this->source->constructH();
   this->algebra->setAlgebraInit(this->image,this->source);
 }
 
@@ -293,7 +292,6 @@ void StandardLikelihood::updateLikelihoodModel(){
     }
   }
   this->collection->setPhysicalPars(this->physical);
-
   if( this->source->sample_reg ){
     this->source->kernel->setParameters(this->reg);
   }
@@ -305,13 +303,12 @@ void StandardLikelihood::updateLikelihoodModel(){
     ada->createAdaGrid(this->image,this->collection);
     ada->createDelaunay();
   }
-
+  this->source->createInterpolationWeights(this->image);
+  this->source->constructL(this->image);
   if( this->source->sample_reg || this->source->type == "adaptive" ){
     this->source->constructH();
   }
 
-  this->source->createInterpolationWeights(this->image);
-  this->source->constructL(this->image);
   this->algebra->setAlgebraRuntime(this->image,this->source,Nlpar::getValueByName("lambda",this->reg));
   this->algebra->solveLinearSparseS(this->image,this->source);
 }
@@ -327,6 +324,34 @@ double StandardLikelihood::getLogLike(){
 
   return val;
 }
+
+//virtual
+void StandardLikelihood::initialOutputLikelihoodModel(std::string output){
+  // File with the parameter names
+  std::ofstream f_names(output+"plt_corner.paramnames",std::ofstream::out);
+  std::vector<std::string> active_full_names = this->getActiveFullNames();
+  for(int i=0;i<active_full_names.size();i++){
+    f_names << active_full_names[i];
+    f_names << " ";
+    f_names << active_full_names[i];
+    f_names << std::endl;
+  }
+  f_names.close();
+
+  // File with the parameter ranges
+  std::ofstream f_ranges(output+"plt_corner.ranges",std::ofstream::out);
+  for(int i=0;i<this->active.size();i++){
+    f_ranges << active_full_names[i];
+    f_ranges << " ";
+    f_ranges << this->active[i]->min;
+    f_ranges << " ";
+    f_ranges << this->active[i]->max;
+    f_ranges << std::endl;
+  }
+  f_ranges.close();
+}
+
+
 
 //virtual
 void StandardLikelihood::outputLikelihoodModel(std::string output){
@@ -464,15 +489,20 @@ void PerturbationsLikelihood::initializePert(BaseLikelihoodModel* smooth_like){
   // Add pointer to smooth likelihood model
   this->smooth_like = smooth_like;
 
+  // Initialize Pert
+  this->pert_mass_model->createAint(this->image);
+  this->pert_mass_model->dpsi->constructH();
+
   // Add additive perturbations to the mass collection
   Pert* additive_pert = new Pert(*this->pert_mass_model);
   for(int i=0;i<this->pert_mass_model->dpsi->Sm;i++){
     additive_pert->dpsi->src[i] = 0.0;
   }
-  StandardLikelihood* specific_pointer = dynamic_cast<StandardLikelihood*>(this->smooth_like);
-  specific_pointer->collection->models.push_back(additive_pert);
+  additive_pert->updateDpsi(additive_pert->dpsi->src);
+  this->collection->models.push_back(additive_pert);
   
   // Get residuals of the smooth model
+  StandardLikelihood* specific_pointer = dynamic_cast<StandardLikelihood*>(this->smooth_like);
   specific_pointer->getModel();
   specific_pointer->getResidual();  
 
@@ -513,6 +543,10 @@ double PerturbationsLikelihood::getLogLike(){
 }
 
 //virtual
+void PerturbationsLikelihood::initialOutputLikelihoodModel(std::string output){
+}
+
+//virtual
 void PerturbationsLikelihood::outputLikelihoodModel(std::string output){
   // Output reconstructed source
   this->source->outputSource(output + "pert_");
@@ -536,6 +570,9 @@ void PerturbationsLikelihood::outputLikelihoodModel(std::string output){
   // Output perturbations
   Pert* pert_pointer = dynamic_cast<Pert*>(this->collection->models.back());
   pert_pointer->dpsi->outputSource(output + "perturbations_");
+
+  // Ouput latest corrections
+  pert_mass_model->dpsi->outputSource(output + "perturbations0_");
 }
 
 

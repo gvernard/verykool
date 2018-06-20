@@ -131,12 +131,6 @@ Pert::Pert(std::string filepath,int a,int b,double c,double d,std::string reg){
   this->type = "pert";
   this->dpsi = new FixedSource(a,b,c,d,reg);
   
-  ImagePlane* image = new ImagePlane(filepath,a,b,c,d);
-  for(int i=0;i<image->Nm;i++){
-    this->dpsi->src[i] = image->img[i];
-  }
-  delete(image);
-
   this->dpsi_dx = (double*) calloc(this->dpsi->Sm,sizeof(double));
   this->dpsi_dy = (double*) calloc(this->dpsi->Sm,sizeof(double));
 
@@ -146,13 +140,16 @@ Pert::Pert(std::string filepath,int a,int b,double c,double d,std::string reg){
   this->di = this->dpsi->height/(this->dpsi->Si);
   this->dj = this->dpsi->width/(this->dpsi->Sj);
 
-  updateDpsi(this->dpsi->src);
+  ImagePlane* image = new ImagePlane(filepath,a,b,c,d);
+  updateDpsi(image->img);
+  delete(image);
+
   createBdev();
 }
 
 Pert::Pert(FixedSource* new_dpsi){
   this->type = "pert";
-  // make a deep copy of the ImagePlane object
+  this->dpsi = new FixedSource(*new_dpsi);
 
   this->dpsi_dx = (double*) calloc(this->dpsi->Sm,sizeof(double));
   this->dpsi_dy = (double*) calloc(this->dpsi->Sm,sizeof(double));
