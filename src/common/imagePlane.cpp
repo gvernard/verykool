@@ -334,9 +334,29 @@ void ImagePlane::readB(const std::string filepath,int i,int j,int ci,int cj){
     int Pj     = j;
     int Ncropx = ci;
     int Ncropy = cj;
-    double* blur = (double*) calloc(Ncropx*Ncropy,sizeof(double));
+
+    if( Pi%2 == 0 ){
+      if( ci%2 != 0 ){
+	std::cout << std::endl << std::endl << "PROBLEM!!! PSF AND CROPPED PSF DIMENSIONS MUST BE BOTH EVEN" << std::endl << std::endl;
+      }
+    } else {
+      if( ci%2 == 0 ){
+	std::cout << std::endl << std::endl << "PROBLEM!!! PSF AND CROPPED PSF DIMENSIONS MUST BE BOTH ODD" << std::endl << std::endl;
+      }
+    }
+    if( Pj%2 == 0 ){
+      if( cj%2 != 0 ){
+	std::cout << std::endl << std::endl << "PROBLEM!!! PSF AND CROPPED PSF DIMENSIONS MUST BE BOTH EVEN" << std::endl << std::endl;
+      }
+    } else {
+      if( cj%2 == 0 ){
+	std::cout << std::endl << std::endl << "PROBLEM!!! PSF AND CROPPED PSF DIMENSIONS MUST BE BOTH ODD" << std::endl << std::endl;
+      }
+    }
 
 
+
+    // Read PSF from file
     std::unique_ptr<CCfits::FITS> pInfile(new CCfits::FITS(filepath,CCfits::Read,true));
     CCfits::PHDU& image = pInfile->pHDU();
     image.readAllKeys();
@@ -352,155 +372,147 @@ void ImagePlane::readB(const std::string filepath,int i,int j,int ci,int cj){
     }
 
 
-    int loffx,roffx,toffy,boffy;
 
-    loffx = floor(Ncropx/2.);
-    if( Ncropx % 2 == 0 ){
-      roffx = floor(Ncropx/2.);
-    } else {
-      roffx = floor(Ncropx/2.) + 1;
-    }
-    toffy = floor(Ncropy/2.);
-    if( Ncropy % 2 == 0 ){
-      boffy = floor(Ncropy/2.);
-    } else {
-      boffy = floor(Ncropy/2.) + 1;
+    // Report on the peak location of the PSF
+    double vmax = contents[0];
+    double imax = 0;
+    for(int i=1;i<Pj*Pi;i++){
+      if( contents[i] > vmax ){
+	vmax = contents[i];
+	imax = i;
+      }
     }
 
+    if( Pi%2 == 0 && Pj%2 == 0 ){
+      int Pi2 = Pi/2;
+      int Pj2 = Pj/2;
+      int indices[] = {(Pi2-1)*Pj+Pj2-1,(Pi2-1)*Pj+Pj2,Pi2*Pj+Pj2-1,Pi2*Pj+Pj2};
+      int loc[]     = {0,0,0,0};
+      bool flag     =  true;
+      for(int i=0;i<4;i++){
+	if( indices[i] == imax ){
+	  loc[i] = 1;
+	  flag = false;
+	}
+      }
+      if( flag ){
+	std::cout << "Particular form of the PSF: it is even-even but the peak lies outside the four central pixels" << std::endl;
+      } else {
+	std::cout << std::endl << "PSF is even-even with the peak located at: " << std::endl;
+	printf("%2d%2d\n%2d%2d\n",loc[0],loc[1],loc[2],loc[3]);
+      }
+    } else if( Pi%2 != 0 && Pj%2 != 0 ){
+      int Pi2 = (Pi-1)/2;
+      int Pj2 = (Pj-1)/2;
+      int centre = Pi2*Pj + Pj2;
+      if( centre != imax ){
+	std::cout << "Particular form of the PSF: it is odd-odd but the peak is not the central pixel" << std::endl;	
+      }
+    } else {
+      std::cout << "Particular form of the PSF: it it neither even-even nor odd-odd" << std::endl;
+    }
 
 
-    int offset = (floor(Pi/2.)-toffy)*Pi + (floor(Pj/2.)-loffx);
+
+
+    // Set cropped PSF and normalize
+    double* blur = (double*) calloc(Ncropx*Ncropy,sizeof(double));
+    int offset_y = (Pi - Ncropy)/2;
+    int offset_x = (Pj - Ncropx)/2;
+    int offset_tot = (offset_y)*Pj + offset_x;
+    double sum = 0.0;
     for(int i=0;i<Ncropy;i++){
       for (int j=0;j<Ncropx;j++){
-	blur[i*Ncropx+j] = contents[offset+i*Pi+j];
+	blur[i*Ncropx+j] = contents[offset_tot+i*Pj+j];
+	sum += blur[i*Ncropx+j];
       }
     }
-
-    /*
-    for(int i=0;i<Ncropy;i++){
-      for(int j=0;j<Ncropx;j++){
-	std::cout << blur[i*Ncropx+j] << " ";
-      }
-      std::cout << std::endl;
-    }
-    */
-
-
-
-
-
-
-    for(int i=0;i<toffy;i++){
-
-      for(int j=0;j<loffx;j++){
-
- 	for(int ii=-i;ii<boffy;ii++){
-	  for(int jj=-j;jj<roffx;jj++){
-	    this->B.tri.push_back({i*this->Nj+j,     (i+ii)*this->Nj+(j+jj),     blur[(toffy+ii)*Ncropx+(loffx+jj)]});
-	  }
-	}
-
-      }
-
-      for(int j=loffx;j<this->Nj-roffx;j++){
-
- 	for(int ii=-i;ii<boffy;ii++){
-	  for(int jj=-loffx;jj<roffx;jj++){
-	    this->B.tri.push_back({  i*this->Nj+j,   (i+ii)*this->Nj+(j+jj),     blur[(toffy+ii)*Ncropx+(loffx+jj)]});//row-major
-	  }
-	}
-
-     }
-
-      for(int j=this->Nj-roffx;j<this->Nj;j++){
-
- 	for(int ii=-i;ii<boffy;ii++){
-	  for(int jj=-loffx;jj<this->Nj-j;jj++){
-	    this->B.tri.push_back({i*this->Nj+j,     (i+ii)*this->Nj+(j+jj),     blur[(toffy+ii)*Ncropx+(loffx+jj)]});
-	  }
-	}
-
-      }
-
-    }
+    double fac = 1.0/sum;
+    for(int i=0;i<Ncropx*Ncropy;i++){
+      blur[i] *= fac;
+    }    
     
 
 
-    
-    for(int i=toffy;i<this->Ni-boffy;i++){
 
-      for(int j=0;j<loffx;j++){
-
-	for(int ii=-toffy;ii<boffy;ii++){
-	  for(int jj=-j;jj<roffx;jj++){
-	    this->B.tri.push_back({i*this->Nj+j,     (i+ii)*this->Nj+(j+jj),     blur[(toffy+ii)*Ncropx+(loffx+jj)]});
-	  }
-	}
-
-      }
-
-      for(int j=loffx;j<this->Nj-roffx;j++){
-	
-	//Here I assume that the order of the row (i) and column (j) indices is such to create a row-major sparse matrix
-	for(int ii=-toffy;ii<boffy;ii++){
-	  for(int jj=-loffx;jj<roffx;jj++){
-	    this->B.tri.push_back({  i*this->Nj+j,   (i+ii)*this->Nj+(j+jj),     blur[(toffy+ii)*Ncropx+(loffx+jj)]});//row-major
-	  }
-	}
-	
-      }
-
-      for(int j=this->Nj-roffx;j<this->Nj;j++){
-
-	for(int ii=-toffy;ii<boffy;ii++){
-	  for(int jj=-loffx;jj<this->Nj-j;jj++){
-	    this->B.tri.push_back({i*this->Nj+j,     (i+ii)*this->Nj+(j+jj),     blur[(toffy+ii)*Ncropx+(loffx+jj)]});
-	  }
-	}
-
-      }
-
+    // Set quad-kernel and odd/even functions
+    int Nquadx,Nquady;
+    void (ImagePlane::*xfunc)(int,int,int,int,int&,int&,int&);
+    void (ImagePlane::*yfunc)(int,int,int,int,int&,int&,int&);
+    if( Ncropx%2 == 0){
+      Nquadx = Ncropx/2;
+      xfunc = &ImagePlane::setCroppedLimitsEven;
+    } else {
+      Nquadx = ceil(Ncropx/2.0);
+      xfunc = &ImagePlane::setCroppedLimitsOdd;
+    }
+    if( Ncropy%2 == 0){
+      Nquady = Ncropy/2;
+      yfunc = &ImagePlane::setCroppedLimitsEven;
+    } else {
+      Nquady = ceil(Ncropy/2.0);
+      yfunc = &ImagePlane::setCroppedLimitsOdd;
     }
 
+    // Create the blurring matrix
+    int Nleft,Nright,Ntop,Nbottom,crop_offsetx,crop_offsety,crop_offset;
+    int ic,jc;
+    double val;
+    for(int i=0;i<this->Ni;i++){
+      for(int j=0;j<this->Nj;j++){
 
+	(this->*(xfunc))(j,Ncropx,this->Nj,Nquadx,Nleft,Nright,crop_offsetx);
+	(this->*(yfunc))(i,Ncropy,this->Ni,Nquady,Ntop,Nbottom,crop_offsety);
+	crop_offset = crop_offsety*Ncropx + crop_offsetx;
 
-
-    for(int i=this->Ni-boffy;i<this->Ni;i++){
-
-      for(int j=0;j<loffx;j++){
-   
-	for(int ii=-toffy;ii<this->Ni-i;ii++){
-	  for(int jj=-j;jj<loffx;jj++){
-	    this->B.tri.push_back({i*this->Nj+j,     (i+ii)*this->Nj+(j+jj),     blur[(toffy+ii)*Ncropx+(loffx+jj)]});
-	  }
-	}
-
-      }
-
-      for(int j=loffx;j<this->Nj-roffx;j++){
+	for(int ii=i-Ntop;ii<i+Nbottom;ii++){
+	  ic = ii - i + Ntop;
+	  for(int jj=j-Nleft;jj<j+Nright;jj++){
+	    jc = jj - j + Nleft;
   
-	for(int ii=-toffy;ii<this->Ni-i;ii++){
-	  for(int jj=-loffx;jj<roffx;jj++){
-	    this->B.tri.push_back({  i*this->Nj+j,   (i+ii)*this->Nj+(j+jj),     blur[(toffy+ii)*Ncropx+(loffx+jj)]});//row-major
+	    val = blur[crop_offset + ic*Ncropx + jc];
+
+	    this->B.tri.push_back({i*this->Nj+j,     ii*this->Nj+jj,     val });
 	  }
 	}
 
       }
-
-      for(int j=this->Nj-roffx;j<this->Nj;j++){
-  
-	for(int ii=-toffy;ii<this->Ni-i;ii++){
-	  for(int jj=-loffx;jj<this->Nj-j;jj++){
-	    this->B.tri.push_back({i*this->Nj+j,     (i+ii)*this->Nj+(j+jj),     blur[(toffy+ii)*Ncropx+(loffx+jj)]});
-	  }
-	}
-
-      }
-
     }
 
     free(blur);
-    
+
   }
 }
   
+void ImagePlane::setCroppedLimitsEven(int k,int Ncrop,int Nimg,int Nquad,int &Npre,int &Npost,int& offset){
+  if( k < Nquad ){
+    Npre   = k;
+    Npost  = Nquad;
+    offset = Nquad - k;
+  } else if( k > (Nimg - Nquad - 1) ){
+    Npre   = Nquad;
+    Npost  = Nimg - k;
+    offset = 0;
+  } else {
+    Npre   = Nquad;
+    Npost  = Nquad;
+    offset = 0;
+  }
+}
+
+void ImagePlane::setCroppedLimitsOdd(int k,int Ncrop,int Nimg,int Nquad,int &Npre,int &Npost,int& offset){
+  if( k < (Nquad - 1) ){
+    Npre   = k;
+    Npost  = Nquad;
+    offset = Nquad - 1 - k;
+  } else if( k > (Nimg - Nquad - 1) ){
+    Npre   = Nquad - 1;
+    Npost  = Nimg - k;
+    offset = 0;
+  } else {
+    Npre   = Nquad-1;
+    Npost  = Nquad;
+    offset = 0;
+  }
+}
+

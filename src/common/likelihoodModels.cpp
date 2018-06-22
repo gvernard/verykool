@@ -495,10 +495,10 @@ void PerturbationsLikelihood::initializePert(BaseLikelihoodModel* smooth_like){
 
   // Add additive perturbations to the mass collection
   Pert* additive_pert = new Pert(*this->pert_mass_model);
-  for(int i=0;i<this->pert_mass_model->dpsi->Sm;i++){
-    additive_pert->dpsi->src[i] = 0.0;
-  }
-  additive_pert->updateDpsi(additive_pert->dpsi->src);
+  double* zeros = (double*) calloc(this->pert_mass_model->dpsi->Sm,sizeof(double));
+  additive_pert->replaceDpsi(zeros);
+  free(zeros);
+  additive_pert->updatePert();
   this->collection->models.push_back(additive_pert);
   
   // Get residuals of the smooth model
@@ -525,15 +525,13 @@ void PerturbationsLikelihood::updateLikelihoodModel(){
     this->pert_mass_model->dpsi->constructH();
   }
 
-
   this->algebra->setAlgebraRuntime(this->image,this->source,this->pert_mass_model,this->smooth_like,Nlpar::getValueByName("lambda",this->reg));
   this->algebra->solvePert(this->image,this->pert_mass_model,this->smooth_like);
 
   // Update perturbations in mass model collection
-  Pert* specific_pointer = dynamic_cast<Pert*>(this->collection->models.back());
-  for(int i=0;i<this->pert_mass_model->dpsi->Sm;i++){
-    specific_pointer->dpsi->src[i] += this->pert_mass_model->dpsi->src[i];
-  }
+  Pert* pert_pointer = dynamic_cast<Pert*>(this->collection->models.back());
+  pert_pointer->addDpsi(this->pert_mass_model->dpsi->src);
+  pert_pointer->updatePert();
 }
 
 //virtual
@@ -550,8 +548,10 @@ void PerturbationsLikelihood::initialOutputLikelihoodModel(std::string output){
 void PerturbationsLikelihood::outputLikelihoodModel(std::string output){
   // Output reconstructed source
   this->source->outputSource(output + "pert_");
-  
+
+  // Update smooth model to include the latest potential corrections
   StandardLikelihood* like_pointer = dynamic_cast<StandardLikelihood*>(this->smooth_like);
+  like_pointer->updateLikelihoodModel();
 
   // Output errors of reconstructed source
   double* errors = (double*) calloc(this->source->Sm,sizeof(double));
@@ -572,7 +572,7 @@ void PerturbationsLikelihood::outputLikelihoodModel(std::string output){
   pert_pointer->dpsi->outputSource(output + "perturbations_");
 
   // Ouput latest corrections
-  pert_mass_model->dpsi->outputSource(output + "perturbations0_");
+  //  pert_mass_model->dpsi->outputSource(output + "perturbations0_");
 }
 
 

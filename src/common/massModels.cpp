@@ -141,9 +141,10 @@ Pert::Pert(std::string filepath,int a,int b,double c,double d,std::string reg){
   this->dj = this->dpsi->width/(this->dpsi->Sj);
 
   ImagePlane* image = new ImagePlane(filepath,a,b,c,d);
-  updateDpsi(image->img);
+  replaceDpsi(image->img);
   delete(image);
 
+  updatePert();
   createBdev();
 }
 
@@ -160,17 +161,25 @@ Pert::Pert(FixedSource* new_dpsi){
   this->di = this->dpsi->height/(this->dpsi->Si);
   this->dj = this->dpsi->width/(this->dpsi->Sj);
 
-  updateDpsi(this->dpsi->src);
+  updatePert();
   createBdev();
 }
 
-void Pert::updateDpsi(double* new_dpsi){
-  int Si = this->dpsi->Si;
-  int Sj = this->dpsi->Sj;
-
+void Pert::replaceDpsi(double* new_dpsi){
   for(int i=0;i<this->dpsi->Sm;i++){
     this->dpsi->src[i] = new_dpsi[i];
-  }  
+  }
+}
+
+void Pert::addDpsi(double* corrections){
+  for(int i=0;i<this->dpsi->Sm;i++){
+    this->dpsi->src[i] += corrections[i];
+  }
+}
+
+void Pert::updatePert(){
+  int Si = this->dpsi->Si;
+  int Sj = this->dpsi->Sj;
 
   // Calculate derivatives:
   // first row
@@ -210,7 +219,7 @@ void Pert::updateDpsi(double* new_dpsi){
 void Pert::createBdev(){
   // This function creates the table of finite difference coefficients for the x and y derivatives of dpsi.
   // The result is a Ndpsi x Ndpsi sparse matrix.
-  // The coefficients are the same as in function Pert::updateDpsi
+  // The coefficients are the same as in function Pert::updatePert
   int Sj = this->dpsi->Sj;
   int Si = this->dpsi->Si;
 

@@ -47,6 +47,10 @@ $(OBJ_DIR)/min_multinest.o: $(VERYKOOL_SRC)/min_multinest.cpp
 	$(MPICC) $(COMMON_FLAGS) $(VERYKOOL_FLAGS) -I inc -c -o $@ $<
 $(OBJ_DIR)/min_simplex.o: $(VERYKOOL_SRC)/min_simplex.cpp
 	$(GPP) $(COMMON_FLAGS) $(VERYKOOL_FLAGS) -I inc -c -o $@ $<
+$(OBJ_DIR)/min_test.o: $(VERYKOOL_SRC)/min_test.cpp
+	$(GPP) $(COMMON_FLAGS) $(VERYKOOL_FLAGS) -I inc -c -o $@ $<
+$(OBJ_DIR)/min_iterator.o: $(VERYKOOL_SRC)/min_iterator.cpp
+	$(GPP) $(COMMON_FLAGS) $(VERYKOOL_FLAGS) -I inc -c -o $@ $<
 $(OBJ_DIR)/verykool.o: $(VERYKOOL_SRC)/verykool.cpp
 	$(MPICC) $(COMMON_FLAGS) $(VERYKOOL_FLAGS) -I inc -c -o $@ $<
 
@@ -77,10 +81,10 @@ cosmosis: common $(OBJ_DIR)/min_cosmosis.o
 
 
 #verykool: common $(OBJ_DIR)/verykool.o $(OBJ_DIR)/min_multinest.o $(OBJ_DIR)/min_simplex.o $(VERYKOOL_SRC)/minimizers.hpp
-verykool: common $(OBJ_DIR)/verykool.o $(OBJ_DIR)/min_multinest.o $(VERYKOOL_SRC)/minimizers.hpp
+verykool: common $(OBJ_DIR)/verykool.o $(OBJ_DIR)/min_multinest.o $(OBJ_DIR)/min_test.o $(OBJ_DIR)/min_iterator.o $(VERYKOOL_SRC)/minimizers.hpp
 	@echo ""
 #	$(MPICC) $(VERYKOOL_FLAGS) -I inc -o $(BIN_DIR)/$@ $(COMMON_OBJ) $(OBJ_DIR)/verykool.o $(OBJ_DIR)/min_multinest.o $(OBJ_DIR)/min_simplex.o $(COMMON_LIBS) $(VERYKOOL_LIBS)
-	$(MPICC) $(VERYKOOL_FLAGS) -I inc -o $(BIN_DIR)/$@ $(COMMON_OBJ) $(OBJ_DIR)/verykool.o $(OBJ_DIR)/min_multinest.o $(COMMON_LIBS) $(VERYKOOL_LIBS)
+	$(MPICC) $(VERYKOOL_FLAGS) -I inc -o $(BIN_DIR)/$@ $(COMMON_OBJ) $(OBJ_DIR)/verykool.o $(OBJ_DIR)/min_multinest.o $(OBJ_DIR)/min_test.o $(OBJ_DIR)/min_iterator.o $(COMMON_LIBS) $(VERYKOOL_LIBS)
 	@echo ""
 
 

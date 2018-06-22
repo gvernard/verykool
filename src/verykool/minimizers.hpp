@@ -35,12 +35,12 @@ public:
   Nothing(){};
   ~Nothing(){};
   
-  void minimize(std::map<std::string,std::string> minimizer,BaseLikelihoodModel* mypars,const std::string output){};
+  void minimize(std::map<std::string,std::string> minimizer,BaseLikelihoodModel* mypars,const std::string output);
   void output(){};
 };
 
 
-// MultiNest class and related stuff
+// MultiNest class
 //================================================================================================================================================
 struct extras{
   BaseLikelihoodModel* pars;
@@ -57,9 +57,24 @@ public:
   MultiNest(){};
   ~MultiNest(){};
   
-  void minimize(std::map<std::string,std::string> minimizer,BaseLikelihoodModel* pars,const std::string output);
+  void minimize(std::map<std::string,std::string> opt,BaseLikelihoodModel* pars,const std::string output);
   void output();
 };
+
+
+
+// Iterator class
+//================================================================================================================================================
+class Iterator: public BaseMinimizer {
+public:
+  Iterator(){};
+  ~Iterator(){};
+  
+  void minimize(std::map<std::string,std::string> opt,BaseLikelihoodModel* mypars,const std::string output);
+  void output(){};
+};
+
+
 
 
 
@@ -136,6 +151,10 @@ public:
       //      printf("%-25s","using Simplex");
       //      fflush(stdout);
       //      return new mySimplex(image,source,collection,nlpars,matrices,pcomp);
+    } else if( minimizer["type"] == "iterator" ){
+      printf("%-25s","using Iterator");
+      fflush(stdout);
+      return new Iterator();      
     } else {
       return NULL;
     }

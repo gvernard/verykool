@@ -64,7 +64,9 @@ public:
     free(dpsi_dy);
   }
   void defl(double xin,double yin,double& xout,double& yout);
-  void updateDpsi(double* new_dpsi);
+  void replaceDpsi(double* new_dpsi);
+  void addDpsi(double* corrections);
+  void updatePert();
   void createAint(ImagePlane* data);
   void createBdev();
 

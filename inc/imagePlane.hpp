@@ -43,6 +43,10 @@ public:
   void readS(const std::string filepath);
   //  void setMaskedC(mytable* Cout,mytable* S,mytable* C);
   void maskData(std::map<int,int> lookup,ImagePlane* masked);
+
+private:
+  void setCroppedLimitsEven(int k,int Ncrop,int Nimg,int Nquad,int &Npre,int &Npost,int& offset);
+  void setCroppedLimitsOdd(int k,int Ncrop,int Nimg,int Nquad,int &Npre,int &Npost,int& offset);
 };
 
 #endif /* IMAGE_PLANE_HPP */
