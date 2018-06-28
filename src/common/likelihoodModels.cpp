@@ -490,7 +490,8 @@ void PerturbationsLikelihood::initializePert(BaseLikelihoodModel* smooth_like){
   this->smooth_like = smooth_like;
 
   // Initialize Pert
-  this->pert_mass_model->createAint(this->image);
+  //  this->pert_mass_model->createAint(this->image);
+  this->pert_mass_model->createCrosses(this->image);
   this->pert_mass_model->dpsi->constructH();
 
   // Add additive perturbations to the mass collection
@@ -504,7 +505,7 @@ void PerturbationsLikelihood::initializePert(BaseLikelihoodModel* smooth_like){
   // Get residuals of the smooth model
   StandardLikelihood* specific_pointer = dynamic_cast<StandardLikelihood*>(this->smooth_like);
   specific_pointer->getModel();
-  specific_pointer->getResidual();  
+  specific_pointer->getResidual();
 
   this->initializeAlgebra();
 }
@@ -517,6 +518,8 @@ void PerturbationsLikelihood::initializeAlgebra(){
 
 //virtual
 void PerturbationsLikelihood::updateLikelihoodModel(){
+  // Update regularization parameters in the smooth and perturbation likelihood models
+
   this->smooth_like->updateLikelihoodModel();
 
   this->source->constructDs(this->image);

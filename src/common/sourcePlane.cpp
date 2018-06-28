@@ -43,9 +43,7 @@ void BaseSourcePlane::constructL(ImagePlane* image){
   std::vector<mytriplet> tmp;//need to make sure that the L triplet vector is a new one
 
   for(int i=0;i<image->Nm;i++){
-    //    std::cout << i << " " << image->cells[i]->size << std::endl;
     for(int j=0;j<image->cells[i]->size;j++){
-      //      std::cout << j << " " << image->cells[i]->ind[j] << " " << image->cells[i]->wei[j] << std::endl;
       tmp.push_back({    i,    image->cells[i]->ind[j],    image->cells[i]->wei[j] });
     }
   }
@@ -75,10 +73,7 @@ FixedSource::FixedSource(int i,int j,double size,std::string reg_scheme){
   s_dx = (double*) calloc(Sm,sizeof(double));
   s_dy = (double*) calloc(Sm,sizeof(double));
 
-  std::map<std::string,std::string> pars;
-  pars["size"] = std::to_string(size);
-
-  this->setGridSquare(pars);
+  this->setGridRect(size/2.0,size/2.0);
   this->boundPolygon();
 
   reg = reg_scheme;
@@ -114,6 +109,25 @@ FixedSource::FixedSource(int i,int j,double width,double height,std::string reg_
   this->boundPolygon();
 }
 
+FixedSource::FixedSource(int i,int j,double xmin,double xmax,double ymin,double ymax,std::string reg_scheme){
+  type = "fixed";
+  reg  = reg_scheme;
+  Si   = i;
+  Sj   = j;
+  Sm   = Si*Sj;
+  H.Ti = Sm;
+  H.Tj = Sm;
+
+  src  = (double*) calloc(Sm,sizeof(double));
+  x    = (double*) calloc(Sm,sizeof(double));
+  y    = (double*) calloc(Sm,sizeof(double));
+  s_dx = (double*) calloc(Sm,sizeof(double));
+  s_dy = (double*) calloc(Sm,sizeof(double));
+
+  this->setGridRect(xmin,xmax,ymin,ymax);
+  this->boundPolygon();
+}
+
 FixedSource::FixedSource(const FixedSource& source){
   type = "fixed";
   reg = source.reg;
@@ -137,31 +151,6 @@ FixedSource::FixedSource(const FixedSource& source){
 }
 
 //non-virtual
-void FixedSource::setGridSquare(std::map<std::string,std::string> pars){
-  double size = stof(pars["size"]);
-
-  this->xmax =  size;
-  this->xmin = -size;
-  this->ymax =  size;
-  this->ymin = -size;
-  this->width  = xmax - xmin;
-  this->height = ymax - ymin;
-
-  double dx = (this->xmax - this->xmin)/this->Sj;
-  double dy = (this->ymax - this->ymin)/this->Si;
-
-  this->xmax -= dx;
-  this->ymax -= dy;
-
-  for(int j=0;j<this->Sj;j++){
-    for(int i=0;i<this->Si;i++){
-      this->x[j*this->Si+i] = this->xmin + i*dx;
-      this->y[j*this->Si+i] = this->ymin + (this->Sj-1-j)*dy;//reflect y-axis
-    }
-  }
-}
-
-//non-virtual
 void FixedSource::setGridRect(double width,double height){
   // set xmin,xmax,ymin,ymax,width,height, andx and y grids
   this->xmax =  width/2.0;
@@ -171,15 +160,35 @@ void FixedSource::setGridRect(double width,double height){
   this->width  = width;
   this->height = height;
 
-  double dx = this->width/this->Sj;
-  double dy = this->height/this->Si;
+  int i0    = floor(Si/2);
+  int j0    = floor(Sj/2);
+  double di = height/(Sj);
+  double dj = width/(Si);
 
-  this->xmax -= dx;
-  this->ymax -= dy;
-  for(int j=0;j<this->Sj;j++){
-    for(int i=0;i<this->Si;i++){
-      this->x[j*this->Si+i] = this->xmin + i*dx;
-      this->y[j*this->Si+i] = this->ymin + (this->Sj-1-j)*dy;//reflect y-axis
+  for(int i=0;i<Si;i++){
+    for(int j=0;j<Sj;j++){
+      x[i*Sj+j]   =  (j-j0)*di;
+      y[i*Sj+j]   = -(i-i0)*dj; // reflect y-axis
+    }
+  }
+}
+
+//non-virtual
+void FixedSource::setGridRect(double xmin,double xmax,double ymin,double ymax){
+  this->xmin = xmin;
+  this->xmax = xmax;
+  this->ymin = ymin;
+  this->ymax = ymax;
+  this->width  = this->xmax - this->xmin;
+  this->height = this->ymax - this->ymin;
+
+  double dj = width/(Sj-1);
+  double di = height/(Si-1);
+  
+  for(int i=0;i<Si;i++){
+    for(int j=0;j<Sj;j++){
+      x[i*Sj+j] = this->xmin + j*dj;
+      y[i*Sj+j] = this->ymax - i*di; // reflect y-axis
     }
   }
 }
@@ -1225,13 +1234,12 @@ void AdaptiveSource::constructDs(ImagePlane* image){
     std::vector<int> indices = this->opposite_edges_per_vertex[i];
       
     if( indices.size() == 0 ){
-
+      
       //we are on a convex-hull point that has zero source derivative
       this->s_dx[i] = 0.0;
       this->s_dy[i] = 0.0;
 
     } else {
-	
       double ymin,ymax,xmin,xmax;
       int i_x = 0;
       int i_y = 0;

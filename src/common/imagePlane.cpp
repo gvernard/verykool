@@ -10,7 +10,7 @@
 
 //ImagePlane class implementation
 //============================================================================================
-ImagePlane::ImagePlane(const std::string filepath,int j,int i,double w,double h){
+ImagePlane::ImagePlane(const std::string filepath,int i,int j,double h,double w){
   Ni     = i;
   Nj     = j;
   Nm     = Ni*Nj;
@@ -30,29 +30,35 @@ ImagePlane::ImagePlane(const std::string filepath,int j,int i,double w,double h)
   std::valarray<float> contents(image.axis(0)*image.axis(1));
   this->readFits(filepath,contents);
 
-  img    = (double*) calloc(Nm,sizeof(double));
-  x      = (double*) calloc(Nm,sizeof(double));
-  y      = (double*) calloc(Nm,sizeof(double));
-  defl_x = (double*) calloc(Nm,sizeof(double));
-  defl_y = (double*) calloc(Nm,sizeof(double));
-  active = (int*) calloc(Nm,sizeof(int));
-  cells  = (SourceCell**) calloc(Nm,sizeof(SourceCell*));
-  
+  img     = (double*) calloc(Nm,sizeof(double));
+  x       = (double*) calloc(Nm,sizeof(double));
+  y       = (double*) calloc(Nm,sizeof(double));
+  defl_x  = (double*) calloc(Nm,sizeof(double));
+  defl_y  = (double*) calloc(Nm,sizeof(double));
+  active  = (int*) calloc(Nm,sizeof(int));
+  cells   = (SourceCell**) calloc(Nm,sizeof(SourceCell*));
+  crosses = (Cross**) malloc(Nm*sizeof(Cross*));
+
   int i0    = floor(Ni/2);
   int j0    = floor(Nj/2);
-  double di = width/(Ni);
-  double dj = height/(Nj);
+  double di = height/(Ni);
+  double dj = width/(Nj);
 
-  for(int ii=0;ii<Ni;ii++){
-    for(int jj=0;jj<Nj;jj++){
-      x[ii*Nj+jj]   =  (jj-j0)*di;
-      y[ii*Nj+jj]   = -(ii-i0)*dj;//reflect y-axis
-      img[ii*Nj+jj] = contents[ii*Nj+jj];
+  xmin = -j0*dj;
+  xmax = (this->Nj-1-j0)*dj;
+  ymin = -i0*di;
+  ymax = (this->Ni-1-i0)*di;
+
+  for(int i=0;i<Ni;i++){
+    for(int j=0;j<Nj;j++){
+      x[i*Nj+j]   =  (j-j0)*dj;
+      y[i*Nj+j]   = -(i-i0)*di;//reflect y-axis
+      img[i*Nj+j] = contents[i*Nj+j];
     }
   }
 }
 
-ImagePlane::ImagePlane(int j,int i,double w,double h){
+ImagePlane::ImagePlane(int i,int j,double h,double w){
   Ni     = i;
   Nj     = j;
   Nm     = Ni*Nj;
@@ -65,23 +71,29 @@ ImagePlane::ImagePlane(int j,int i,double w,double h){
   B.Ti = Nm;
   B.Tj = Nm;
 
-  img    = (double*) calloc(Nm,sizeof(double));
-  x      = (double*) calloc(Nm,sizeof(double));
-  y      = (double*) calloc(Nm,sizeof(double));
-  defl_x = (double*) calloc(Nm,sizeof(double));
-  defl_y = (double*) calloc(Nm,sizeof(double));
-  active = (int*) calloc(Nm,sizeof(int));
-  cells  = (SourceCell**) calloc(Nm,sizeof(SourceCell*));
+  img     = (double*) calloc(Nm,sizeof(double));
+  x       = (double*) calloc(Nm,sizeof(double));
+  y       = (double*) calloc(Nm,sizeof(double));
+  defl_x  = (double*) calloc(Nm,sizeof(double));
+  defl_y  = (double*) calloc(Nm,sizeof(double));
+  active  = (int*) calloc(Nm,sizeof(int));
+  cells   = (SourceCell**) calloc(Nm,sizeof(SourceCell*));
+  crosses = (Cross**) malloc(Nm*sizeof(Cross*));
 
-  int i0    = floor(i/2);
-  int j0    = floor(j/2);
-  double di = width/(i);
-  double dj = height/(j);
+  int i0    = floor(Ni/2);
+  int j0    = floor(Nj/2);
+  double di = height/(Ni);
+  double dj = width/(Nj);
 
-  for(int ii=0;ii<Ni;ii++){
-    for(int jj=0;jj<Nj;jj++){
-      x[ii*Nj+jj] =  (jj-j0)*dj;
-      y[ii*Nj+jj] = -(ii-i0)*di;//reflect y-axis
+  xmin = -j0*dj;
+  xmax = (this->Nj-1-j0)*dj;
+  ymin = -i0*di;
+  ymax = (this->Ni-1-i0)*di;
+
+  for(int i=0;i<Ni;i++){
+    for(int j=0;j<Nj;j++){
+      x[i*Nj+j]   =  (j-j0)*dj;
+      y[i*Nj+j]   = -(i-i0)*di;//reflect y-axis
     }
   }
 }
@@ -99,28 +111,34 @@ ImagePlane::ImagePlane(int i,double w,double h){
   B.Ti = Nm;
   B.Tj = Nm;
 
-  img    = (double*) calloc(Nm,sizeof(double));
-  x      = (double*) calloc(Nm,sizeof(double));
-  y      = (double*) calloc(Nm,sizeof(double));
-  defl_x = (double*) calloc(Nm,sizeof(double));
-  defl_y = (double*) calloc(Nm,sizeof(double));
-  active = (int*) calloc(Nm,sizeof(int));
-  cells  = (SourceCell**) calloc(Nm,sizeof(SourceCell*));
+  img     = (double*) calloc(Nm,sizeof(double));
+  x       = (double*) calloc(Nm,sizeof(double));
+  y       = (double*) calloc(Nm,sizeof(double));
+  defl_x  = (double*) calloc(Nm,sizeof(double));
+  defl_y  = (double*) calloc(Nm,sizeof(double));
+  active  = (int*) calloc(Nm,sizeof(int));
+  cells   = (SourceCell**) calloc(Nm,sizeof(SourceCell*));
+  crosses = (Cross**) malloc(Nm*sizeof(Cross*));
 }
 
 ImagePlane::ImagePlane(const ImagePlane& image){
   Ni = image.Ni;
   Nj = image.Nj;
   Nm = image.Nm;
-  width = image.width;
+  width  = image.width;
   height = image.height;
-  img    = (double*) calloc(Nm,sizeof(double));
-  x      = (double*) calloc(Nm,sizeof(double));
-  y      = (double*) calloc(Nm,sizeof(double));
-  defl_x = (double*) calloc(Nm,sizeof(double));
-  defl_y = (double*) calloc(Nm,sizeof(double));
-  active = (int*) calloc(Nm,sizeof(int));
-  cells  = (SourceCell**) calloc(Nm,sizeof(SourceCell*));
+  xmin = image.xmin;
+  xmax = image.xmax;
+  ymin = image.ymin;
+  ymax = image.ymax;
+  img     = (double*) calloc(Nm,sizeof(double));
+  x       = (double*) calloc(Nm,sizeof(double));
+  y       = (double*) calloc(Nm,sizeof(double));
+  defl_x  = (double*) calloc(Nm,sizeof(double));
+  defl_y  = (double*) calloc(Nm,sizeof(double));
+  active  = (int*) calloc(Nm,sizeof(int));
+  cells   = (SourceCell**) calloc(Nm,sizeof(SourceCell*));
+  crosses = (Cross**) malloc(Nm*sizeof(Cross*));
   for(int i=0;i<Nm;i++){
     img[i] = image.img[i];
     x[i] = image.x[i];
@@ -135,7 +153,12 @@ ImagePlane::~ImagePlane(){
   free(defl_x);
   free(defl_y);
   free(active);
+  for(int i=0;i<this->Nm;i++){
+    delete(cells[i]);
+    delete(crosses[i]);
+  }
   free(cells);
+  free(crosses);
 }
 
 
@@ -516,3 +539,29 @@ void ImagePlane::setCroppedLimitsOdd(int k,int Ncrop,int Nimg,int Nquad,int &Npr
   }
 }
 
+
+//void ImagePlane::printCross(int k,mytable Ds){
+void ImagePlane::printCross(int k){
+  double coeffs[12] = {0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0};
+  double dsx = 1.0;//Ds.tri[2*k].v;
+  double dsy = 1.0;//Ds.tri[2*k+1].v;
+
+  coeffs[0]  = this->crosses[k]->coeff_y[0]*dsy;
+  coeffs[1]  = this->crosses[k]->coeff_y[4]*dsy;
+  coeffs[2]  = this->crosses[k]->coeff_x[0]*dsx;
+  coeffs[3]  = this->crosses[k]->coeff_y[1]*dsy + this->crosses[k]->coeff_x[1]*dsx;
+  coeffs[4]  = this->crosses[k]->coeff_y[5]*dsy + this->crosses[k]->coeff_x[2]*dsx;
+  coeffs[5]  = this->crosses[k]->coeff_x[3]*dsx;
+  coeffs[6]  = this->crosses[k]->coeff_x[4]*dsx;
+  coeffs[7]  = this->crosses[k]->coeff_y[2]*dsy + this->crosses[k]->coeff_x[5]*dsx;
+  coeffs[8]  = this->crosses[k]->coeff_y[6]*dsy + this->crosses[k]->coeff_x[6]*dsx;
+  coeffs[9]  = this->crosses[k]->coeff_x[7]*dsx;
+  coeffs[10] = this->crosses[k]->coeff_y[3]*dsy;
+  coeffs[11] = this->crosses[k]->coeff_y[7]*dsy;
+
+  printf("\n");
+  printf("%10s %10.3f %10.3f %10s\n"," ",coeffs[0],coeffs[1]," ");
+  printf("%10.3f %10.3f %10.3f %10.3f\n",coeffs[2],coeffs[3],coeffs[4],coeffs[5]);
+  printf("%10.3f %10.3f %10.3f %10.3f\n",coeffs[6],coeffs[7],coeffs[8],coeffs[9]);
+  printf("%10s %10.3f %10.3f %10s\n"," ",coeffs[10],coeffs[11]," ");
+}

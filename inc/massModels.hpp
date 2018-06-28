@@ -12,7 +12,6 @@
 #include "sourcePlane.hpp"
 #include "tableDefinition.hpp"
 
-
 extern "C"{
   void fastelldefl_(double* x1,double* x2,double* b,double* g,double* q,double* s2,double* defl);
 }
@@ -56,6 +55,7 @@ public:
   mytable Bdev;
 
   Pert(int Ni,int Nj,double width,double height,std::string reg);
+  Pert(int Ni,int Nj,ImagePlane* image,std::string reg);
   Pert(std::string filename,int Ni,int Nj,double width,double height,std::string reg);
   Pert(FixedSource* new_dpsi);
   ~Pert(){
@@ -69,10 +69,13 @@ public:
   void updatePert();
   void createAint(ImagePlane* data);
   void createBdev();
+  void tableDefl(int Nm,double* xdefl,double* ydefl);
+  void createCrosses(ImagePlane* image);
 
 private:
   double di;
   double dj;
+  void derivativeDirection(int q,int qmax,double den,int* rel_ind,double* coeff);
 };
 
 

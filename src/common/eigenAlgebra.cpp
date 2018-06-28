@@ -333,6 +333,7 @@ PerturbationsAlgebra::PerturbationsAlgebra(PerturbationsLikelihood* a){
 void PerturbationsAlgebra::setAlgebraInit(ImagePlane* image,Pert* pert_mass_model,double* res){
   Eigen::Map<Eigen::VectorXd> dd(res,image->Nm);
 
+  /*
   Eigen::SparseMatrix<double> AA(pert_mass_model->Aint.Ti,pert_mass_model->Aint.Tj);
   AA.reserve(Eigen::VectorXi::Constant(pert_mass_model->Aint.Ti,4));//setting the non-zero coefficients per row of the interpolation matrix (4 for bi-linear interpolation scheme, etc)
   for(int i=0;i<pert_mass_model->Aint.tri.size();i++){  AA.insert(pert_mass_model->Aint.tri[i].i,pert_mass_model->Aint.tri[i].j) = pert_mass_model->Aint.tri[i].v;  }
@@ -340,6 +341,7 @@ void PerturbationsAlgebra::setAlgebraInit(ImagePlane* image,Pert* pert_mass_mode
   Eigen::SparseMatrix<double> TT(pert_mass_model->Bdev.Ti,pert_mass_model->Bdev.Tj);
   TT.reserve(Eigen::VectorXi::Constant(pert_mass_model->Bdev.Ti,2));//setting the non-zero coefficients per row of the derivative matrix (2 for first order gradient, etc)
   for(int i=0;i<pert_mass_model->Bdev.tri.size();i++){  TT.insert(pert_mass_model->Bdev.tri[i].i,pert_mass_model->Bdev.tri[i].j) = pert_mass_model->Bdev.tri[i].v;  }
+  */
 
   Eigen::SparseMatrix<double> HH(pert_mass_model->dpsi->Sm,pert_mass_model->dpsi->Sm);
   HH.reserve(Eigen::VectorXi::Constant(pert_mass_model->dpsi->Sm,pert_mass_model->dpsi->eigenSparseMemoryAllocForH));//overestimating the number of non-zero coefficients per HH row (different number for 1st,2nd order derivative etc)
@@ -373,33 +375,98 @@ void PerturbationsAlgebra::setAlgebraInit(ImagePlane* image,Pert* pert_mass_mode
     HtH = (HHt * HH);    
     HHt.resize(0,0);
   }
-  
+
+  /*  
   Eigen::SparseMatrix<double> Dpsi(2*image->Nm,pert_mass_model->dpsi->Sm);
   Dpsi = (AA * TT);
 
+  for(int k=0;k<Dpsi.outerSize();k++){
+    for(Eigen::SparseMatrix<double>::InnerIterator it(Dpsi,k);it;++it){
+      printf("%4d %4d %8.4f\n",it.row(),it.col(),it.value());
+    }
+  }
+  */
+
   this->dd       = dd;
-  this->Dpsi     = Dpsi;
+  //  this->Dpsi     = Dpsi;
   this->HtH_pert = HtH;
 
   HtH.resize(0,0);
-  AA.resize(0,0);
-  TT.resize(0,0);
+  //  AA.resize(0,0);
+  //  TT.resize(0,0);
 }
 
 void PerturbationsAlgebra::setAlgebraRuntime(ImagePlane* image,BaseSourcePlane* source,Pert* pert_mass_model,BaseLikelihoodModel* smooth_like,double lambda){
+  /*
   Eigen::SparseMatrix<double> Ds(source->Ds.Ti,source->Ds.Tj);
   Ds.reserve(Eigen::VectorXi::Constant(source->Ds.Tj,4));//setting the non-zero coefficients per row of the lensing matrix (4 for bi-linear interpolation scheme, etc)
   for(int i=0;i<source->Ds.tri.size();i++){  Ds.insert(source->Ds.tri[i].i,source->Ds.tri[i].j) = source->Ds.tri[i].v;  }
+  */
+
+  // Create DsDpsi sparse matrix directly based on source->Ds (varying at each call) and image->crosses (fixed at initialization)
+  Eigen::SparseMatrix<double> DsDpsi(image->Nm,pert_mass_model->dpsi->Sm);
+  DsDpsi.reserve(Eigen::VectorXi::Constant(pert_mass_model->dpsi->Sm,12));
+  int i0,j0,j_index;
+  double dsx,dsy;
+  int rel_i[12] = {-1,-1,0,0,0,0,1,1,1,1,2,2};
+  int rel_j[12] = {0,1,-1,0,1,2,-1,0,1,2,0,1};
+  double coeffs[12] = {0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0};
+
+  for(int h=0;h<image->Nm;h++){
+    dsx = source->Ds.tri[2*h].v;
+    dsy = source->Ds.tri[2*h+1].v;
+
+    i0 = image->crosses[h]->i0;
+    j0 = image->crosses[h]->j0;
+
+    coeffs[0]  = image->crosses[h]->coeff_y[0]*dsy;
+    coeffs[1]  = image->crosses[h]->coeff_y[4]*dsy;
+    coeffs[2]  = image->crosses[h]->coeff_x[0]*dsx;
+    coeffs[3]  = image->crosses[h]->coeff_y[1]*dsy + image->crosses[h]->coeff_x[1]*dsx;
+    coeffs[4]  = image->crosses[h]->coeff_y[5]*dsy + image->crosses[h]->coeff_x[2]*dsx;
+    coeffs[5]  = image->crosses[h]->coeff_x[3]*dsx;
+    coeffs[6]  = image->crosses[h]->coeff_x[4]*dsx;
+    coeffs[7]  = image->crosses[h]->coeff_y[2]*dsy + image->crosses[h]->coeff_x[5]*dsx;
+    coeffs[8]  = image->crosses[h]->coeff_y[6]*dsy + image->crosses[h]->coeff_x[6]*dsx;
+    coeffs[9]  = image->crosses[h]->coeff_x[7]*dsx;
+    coeffs[10] = image->crosses[h]->coeff_y[3]*dsy;
+    coeffs[11] = image->crosses[h]->coeff_y[7]*dsy;
+
+    for(int q=0;q<12;q++){
+      if( coeffs[q] != 0.0 ){
+	j_index = (i0 + rel_i[q])*pert_mass_model->dpsi->Sj + (j0 + rel_j[q]);
+	DsDpsi.insert( h, j_index) = coeffs[q];
+	coeffs[q] = 0.0; // need to reset the vector "coeffs"
+      }
+    }
+  }
+
+  //  image->printCross(1*image->Nj+1,source->Ds);
+  //  image->printCross(1*image->Nj+image->Nj-2,source->Ds);
+  //  image->printCross((image->Ni-1)*image->Nj+1,source->Ds);
+  //  image->printCross((image->Ni-1)*image->Nj+image->Nj-2,source->Ds);
+
 
   Eigen::SparseMatrix<double> M_pert(image->Nm,pert_mass_model->dpsi->Sm);
   Eigen::SparseMatrix<double> Mt_pert(pert_mass_model->dpsi->Sm,image->Nm);
   StandardLikelihood* specific_pointer = dynamic_cast<StandardLikelihood*>(smooth_like);
 
-  M_pert        = -specific_pointer->algebra->B * Ds * this->Dpsi;
+  //  M_pert        = (-specific_pointer->algebra->B) * Ds * this->Dpsi;
+  M_pert        = (-specific_pointer->algebra->B) * DsDpsi;
+  //  M_pert        = -DsDpsi;
   Mt_pert       = M_pert.transpose();
   this->M_pert  = M_pert;
   this->Mt_pert = Mt_pert;
 
+
+  /*
+  for(int k=0;k<DsDpsi.outerSize();k++){
+    for(Eigen::SparseMatrix<double>::InnerIterator it(DsDpsi,k);it;++it){
+      printf("%4d %4d %8.4f\n",it.row(),it.col(),it.value());
+    }
+  }
+  */
+  
 
   //I need also to calculate HtH, and detHtH for an adaptive source
   if( pert_mass_model->dpsi->sample_reg ){
@@ -441,7 +508,7 @@ void PerturbationsAlgebra::setAlgebraRuntime(ImagePlane* image,BaseSourcePlane* 
   this->A_pert = A_pert;
   
 
-  Ds.resize(0,0);
+  DsDpsi.resize(0,0);
   M_pert.resize(0,0);
   Mt_pert.resize(0,0);
   A_pert.resize(0,0);

@@ -47,6 +47,40 @@ int main(int argc,char* argv[]){
 
 
 
+  /*
+  Pert* test = new Pert(40,40,4.05,4.05,"curvature");
+  double* dpsi = (double*) malloc(test->dpsi->Sm*sizeof(double));
+  for(int i=0;i<test->dpsi->Sm;i++){
+    dpsi[i] = (static_cast <double> (rand()) / static_cast <double> (RAND_MAX))*0.2 - 0.1;
+  }
+  test->replaceDpsi(dpsi);
+  test->updatePert();
+  test->createAint(mydata);
+  free(dpsi);
+
+  double xdefl,ydefl;
+  for(int i=0;i<10;i++){
+    test->defl(mydata->x[i],mydata->y[i],xdefl,ydefl);
+    printf("%8.3f%8.3f%8.3f%8.3f\n",mydata->x[i],mydata->y[i],xdefl,ydefl);
+  }
+  
+
+  double* xdeflarr = (double*) malloc(2*mydata->Nm*sizeof(double));
+  double* ydeflarr = (double*) malloc(2*mydata->Nm*sizeof(double));
+  test->tableDefl(mydata->Nm,xdeflarr,ydeflarr);
+  for(int i=0;i<10;i++){
+    printf("%8.3f%8.3f%8.3f%8.3f\n",mydata->x[i],mydata->y[i],xdeflarr[i],ydeflarr[i]);
+  }
+  free(xdeflarr);
+  free(ydeflarr);
+
+
+  MPI_Finalize();
+  return 0;
+  */
+
+
+
   //=============== BEGIN:SMOOTH MODEL =========================
   // Initial output
   if( myrank == 0 ){
@@ -72,6 +106,26 @@ int main(int argc,char* argv[]){
 
   delete(smooth_minimizer);
   //================= END:SMOOTH MODEL =========================
+
+
+
+
+
+  /*
+  //  mycollection->all_defl(mydata);
+  //  mysource->createInterpolationWeights(mydata);
+  mysource->constructDs(mydata);
+
+  for(int i=0;i<mysource->Sm;i++){
+    //  std::cout << mysource->s_dx[i] << std::endl;
+    mysource->src[i] = hypot(mysource->s_dx[i],mysource->s_dy[i]);
+  }
+  mysource->outputSource(init->output);
+
+  MPI_Finalize();
+  return 0;
+  */
+
 
 
 

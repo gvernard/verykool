@@ -8,6 +8,30 @@
 
 #include "tableDefinition.hpp"
 
+class Cross {
+public:
+  int i0;
+  int j0;
+  double* coeff_x;
+  double* coeff_y;
+
+  Cross(int a,int b){
+    this->i0 = a;
+    this->j0 = b;
+    int n = 8;
+    this->coeff_x = (double*) malloc(n*sizeof(double));
+    this->coeff_y = (double*) malloc(n*sizeof(double));
+    for(int i=0;i<n;i++){
+      this->coeff_x[i] = 0.0;
+      this->coeff_y[i] = 0.0;
+    }
+  }
+  ~Cross(){
+    free(coeff_x);
+    free(coeff_y);
+  }
+};
+
 
 class ImagePlane {
 public:
@@ -17,13 +41,18 @@ public:
   std::map<int,int> lookup;  //matching the indices of the data pixels to the indices of the mask pixels
   double width;              //in arcsec
   double height;             //in arcsec
+  double xmin;
+  double xmax;
+  double ymin;
+  double ymax;
   double* img;               //values of the pixels
   double* x;                 //pixel x-coordinates in arcsec
   double* y;                 //pixel y-coordinates in arcsec
   double* defl_x;            //deflected x coordinates
   double* defl_y;            //deflected y coordinates
   int* active;               //active image pixels used in the construction of the adaptive grid
-  SourceCell** cells;        //for each image pixel, the corresponding source pixels and interpolation weights
+  SourceCell** cells = 0;    //for each image pixel, the corresponding source pixels and interpolation weights
+  Cross** crosses = 0;       //array of cross structures for creating the D_s(s_p)*D_psi for reconstructing perturbations
   mytable B;
   mytable C;
   mytable S;
@@ -43,6 +72,8 @@ public:
   void readS(const std::string filepath);
   //  void setMaskedC(mytable* Cout,mytable* S,mytable* C);
   void maskData(std::map<int,int> lookup,ImagePlane* masked);
+  //  void printCross(int k,mytable Ds);
+  void printCross(int k);
 
 private:
   void setCroppedLimitsEven(int k,int Ncrop,int Nimg,int Nquad,int &Npre,int &Npost,int& offset);

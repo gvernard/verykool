@@ -82,6 +82,7 @@ public:
   //virtual members
   FixedSource(int source_i,int source_j,double size,std::string reg_scheme);
   FixedSource(int i,int j,double width,double height,std::string reg_scheme);
+  FixedSource(int i,int j,double xmin,double xmax,double ymin,double ymax,std::string reg_scheme);
   FixedSource(const FixedSource& source);
   void createInterpolationWeights(ImagePlane* image);
   void constructH();
@@ -90,8 +91,8 @@ public:
   void outputSourceErrors(double* errors,const std::string path);
 
   //non-virtual members
-  void setGridSquare(std::map<std::string,std::string> pars);
   void setGridRect(double width,double height);
+  void setGridRect(double xmin,double xmax,double ymin,double ymax);
   void boundPolygon();
   bool pointInPolygon(double x,double y);
 

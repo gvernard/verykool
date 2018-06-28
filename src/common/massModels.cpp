@@ -9,6 +9,8 @@
 #include "sourcePlane.hpp"
 #include "tableDefinition.hpp"
 
+#include "eigenAlgebra.hpp"
+
 
 //Abstract class: BaseMassModel
 //===============================================================================================================
@@ -124,7 +126,23 @@ Pert::Pert(int a,int b,double c,double d,std::string reg){
   this->di = this->dpsi->height/(this->dpsi->Si);
   this->dj = this->dpsi->width/(this->dpsi->Sj);
 
-  createBdev();
+  //  createBdev();
+}
+
+Pert::Pert(int a,int b,ImagePlane* image,std::string reg){
+  this->type = "pert";
+  this->dpsi = new FixedSource(a,b,image->xmin,image->xmax,image->ymin,image->ymax,reg);
+
+  this->dpsi_dx = (double*) calloc(this->dpsi->Sm,sizeof(double));
+  this->dpsi_dy = (double*) calloc(this->dpsi->Sm,sizeof(double));
+
+  this->Bdev.Ti = 2*this->dpsi->Sm;
+  this->Bdev.Tj = this->dpsi->Sm;
+
+  this->di = this->dpsi->height/(this->dpsi->Si);
+  this->dj = this->dpsi->width/(this->dpsi->Sj);
+
+  //  createBdev();
 }
 
 Pert::Pert(std::string filepath,int a,int b,double c,double d,std::string reg){
@@ -145,7 +163,7 @@ Pert::Pert(std::string filepath,int a,int b,double c,double d,std::string reg){
   delete(image);
 
   updatePert();
-  createBdev();
+  //  createBdev();
 }
 
 Pert::Pert(FixedSource* new_dpsi){
@@ -162,7 +180,7 @@ Pert::Pert(FixedSource* new_dpsi){
   this->dj = this->dpsi->width/(this->dpsi->Sj);
 
   updatePert();
-  createBdev();
+  //  createBdev();
 }
 
 void Pert::replaceDpsi(double* new_dpsi){
@@ -279,8 +297,6 @@ void Pert::createBdev(){
   this->Bdev.tri.swap(tmp);
 }
 
-
-
 void Pert::createAint(ImagePlane* data){
   this->Aint.Ti = 2*data->Nm;
   this->Aint.Tj = 2*this->dpsi->Sm;
@@ -294,8 +310,8 @@ void Pert::createAint(ImagePlane* data){
   int Sj = this->dpsi->Sj;
 
   for(int k=0;k<data->Nm;k++){
-    int j = floor( (data->x[k]+this->dpsi->width/2.0)/dj );
-    int i = floor( (data->y[k]+this->dpsi->height/2.0)/di );  
+    int j = floor( (data->x[k]+this->dpsi->width/2.0)/this->dj );
+    int i = floor( (data->y[k]+this->dpsi->height/2.0)/this->di );  
 
     if( j == this->dpsi->Sj-1 ){
       j = j-2;
@@ -327,6 +343,101 @@ void Pert::createAint(ImagePlane* data){
 
   this->Aint.tri.swap(tmp);
 }
+
+
+void Pert::createCrosses(ImagePlane* image){
+  int i0,j0;
+  double xa,ya,xb,yb,w00,w10,w01,w11,f00,f10,f01,f11;
+  double den = this->di*this->dj;
+  double four_i[4]; // to hold the indices of the four vertices of a dpsi pixel
+  double four_j[4]; // same as above
+  double four_w[4]; // to hold the interpolation weights between the ray and each dpsi pixel vertex (in the image plane)
+  int rel_ind[3];   // to hold the finite difference coefficients for 
+  double coeffs[3];
+  int cross_index;
+  
+  for(int h=0;h<image->Nm;h++){
+    // Step 1: find the i-j indices of the top-left point in the dpsi grid, in the dpsi pixel where the ray lies (in the image plane)
+    j0 = floor( (image->x[h] - this->dpsi->xmin)/this->dj );
+    i0 = floor( (this->dpsi->ymax - image->y[h])/this->di ); // y-axis is reflected (indices i start from the top)
+    if( j0 >= this->dpsi->Sj-1 ){
+      j0 = this->dpsi->Sj - 2;
+    }
+    if( i0 >= this->dpsi->Si-1 ){
+      i0 = this->dpsi->Si - 2;
+    }
+    four_i[0] = i0;
+    four_i[1] = i0;
+    four_i[2] = i0+1;
+    four_i[3] = i0+1;
+    four_j[0] = j0;
+    four_j[1] = j0+1;
+    four_j[2] = j0;
+    four_j[3] = j0+1;
+
+    // Step 2: get the interpolation weights for the ray in the dpsi pixel
+    ya = image->y[h]                           - this->dpsi->y[(i0+1)*this->dpsi->Sj];
+    yb = this->dpsi->y[i0*this->dpsi->Sj]      - image->y[h];
+    xa = image->x[h]                           - this->dpsi->x[i0*this->dpsi->Sj+j0];
+    xb = this->dpsi->x[i0*this->dpsi->Sj+j0+1] - image->x[h];
+    four_w[0] = xb*ya/den;
+    four_w[1] = xa*ya/den;
+    four_w[2] = xb*yb/den;
+    four_w[3] = xa*yb/den;
+
+    // Step 3: loop over the dpsi pixel vertices
+    //         cross_coeffs_x and cross_coeff_y have a particular structure, different in each case,
+    //         which plays a role in how they are combined to create the final entries in the D_s(s_p)*D_psi table
+    Cross* a_cross = new Cross(four_i[0],four_j[0]);
+    for(int k=0;k<4;k++){
+      // X derivatives
+      this->derivativeDirection(four_j[k],this->dpsi->Sj-1,this->dj,rel_ind,coeffs);
+      for(int q=0;q<3;q++){
+	cross_index = (1 + (four_i[k]-i0)*4 + (four_j[k]-j0)) + rel_ind[q];
+	a_cross->coeff_x[cross_index] += (coeffs[q]*four_w[k]);
+      }
+
+      // Y derivatives
+      this->derivativeDirection(four_i[k],this->dpsi->Si-1,this->di,rel_ind,coeffs);
+      for(int q=0;q<3;q++){
+	cross_index = (1 + (four_j[k]-j0)*4 + (four_i[k]-i0)) + rel_ind[q];
+	a_cross->coeff_y[cross_index] += (coeffs[q]*four_w[k]);
+      }
+    }
+    image->crosses[h] = a_cross;
+  }
+
+}
+
+//private
+void Pert::derivativeDirection(int q,int qmax,double den,int* rel_ind,double* coeff){
+  if( q == 0 ){
+    // forward
+    rel_ind[0] = 0;
+    rel_ind[1] = 1;
+    rel_ind[2] = 2;
+    coeff[0] = (-3.0/2.0)/den;
+    coeff[1] = (2.0)/den;
+    coeff[2] = (-1.0/2.0)/den;
+  } else if( q == qmax ){
+    // backward
+    rel_ind[0] = 0;
+    rel_ind[1] = -1;
+    rel_ind[2] = -2;
+    coeff[0] = (3.0/2.0)/den;
+    coeff[1] = (-2.0)/den;
+    coeff[2] = (1.0/2.0)/den;
+  } else {
+    // central
+    rel_ind[0] = -1;
+    rel_ind[1] = 0;
+    rel_ind[2] = 1;
+    coeff[0] = (-1.0/2.0)/den;
+    coeff[1] = 0.0;
+    coeff[2] = (1.0/2.0)/den;
+  }
+}
+
 
 
 
@@ -374,6 +485,32 @@ void Pert::defl(double xin,double yin,double& xout,double& yout){
   yout = ay;
 
 }
+
+
+void Pert::tableDefl(int Nm,double* xdefl,double* ydefl){
+  Eigen::SparseMatrix<double> A(2*Nm,2*this->dpsi->Sm);
+  A.reserve(Eigen::VectorXi::Constant(2*Nm,2));//overestimating the mask matrix number of entries per row
+  for(int i=0;i<this->Aint.tri.size();i++){  A.insert(this->Aint.tri[i].i,this->Aint.tri[i].j) = this->Aint.tri[i].v;  }
+
+  Eigen::SparseMatrix<double> B(2*this->dpsi->Sm,this->dpsi->Sm);
+  B.reserve(Eigen::VectorXi::Constant(2*Nm,2));//overestimating the mask matrix number of entries per row
+  for(int i=0;i<this->Bdev.tri.size();i++){  B.insert(this->Bdev.tri[i].i,this->Bdev.tri[i].j) = this->Bdev.tri[i].v;  }
+
+  Eigen::Map<Eigen::VectorXd> dpsi(this->dpsi->src,this->dpsi->Sm);
+
+  Eigen::VectorXd defl(2*Nm);
+
+  defl = A*B*dpsi;
+
+  for(int i=0;i<Nm;i++){
+    xdefl[i] = defl[2*i];
+    ydefl[i] = defl[2*i+1];
+  }
+
+  A.resize(0,0);
+  B.resize(0,0);
+}
+
 
 //Class: CollectionMassModels
 //===============================================================================================================
