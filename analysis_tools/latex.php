@@ -1,15 +1,21 @@
 <?php
 $path = trim($argv[1]);
-$step = trim($argv[2]);
+$run  = trim($argv[2]);
 
-$dum   = explode('/',$path);
-$case_name = $dum[count($dum)-2];
+if( count($argv) > 3 ){
+    $step = $argv[3];
+    $out_path = $path . $run . "output/" . $step . "_";
+} else {
+    $step = "";
+    $out_path = $path . $run . "output/";
+}
 
-$dum    = file_get_contents($path . 'vkl_input.json');
-$dum    = preg_replace("#(/\*([^*]|[\r\n]|(\*+([^*/]|[\r\n])))*\*+/)|([\s\t]//.*)|(^//.*)#", '', $dum);
-$inp    = json_decode($dum,true);
 
-$dum    = file_get_contents($path . 'output/'.$step.'_vkl_output.json');
+$dum = file_get_contents($path . $run .  'vkl_input.json');
+$dum = preg_replace("#(/\*([^*]|[\r\n]|(\*+([^*/]|[\r\n])))*\*+/)|([\s\t]//.*)|(^//.*)#", '', $dum);
+$inp = json_decode($dum,true);
+
+$dum    = file_get_contents($out_path . 'vkl_output.json');
 $out    = json_decode($dum,true);
 
 
@@ -17,10 +23,12 @@ $out    = json_decode($dum,true);
 
 
 $params = array();
-foreach($inp['lenses'][0]['nlpars'] as $param){
-    if( $param['fix'] == 0 ){
-	//$param['map'] = $out['pars'][$param['nam']];
-	$params[$param['nam']] = $param;
+foreach($inp['lenses'] as $key=>$lens){
+    foreach($lens['nlpars'] as $param){
+	if( $param['fix'] == 0 ){
+	    //$param['map'] = $out['pars'][$param['nam']];
+	    $params[$key . '_' . $param['nam']] = $param;
+	}
     }
 }
 foreach($inp['reg']['nlpars'] as $param){
@@ -29,7 +37,7 @@ foreach($inp['reg']['nlpars'] as $param){
 	$params[$param['nam']] = $param;
     }
 }
-foreach($inp['physical'] as $param){
+foreach($inp['physical']['nlpars'] as $param){
     if( $param['fix'] == 0 ){
 	//$param['map'] = $out['pars'][$param['nam']];
 	$params[$param['nam']] = $param;
@@ -37,6 +45,7 @@ foreach($inp['physical'] as $param){
 }
 
 
+/*
 $fh = fopen($path . 'output/vkl_stats.txt','r');
 while( $dum = fscanf($fh,"%s%f%f%f%f\n") ){
     list($name,$mean,$sdev,$best,$map) = $dum;
@@ -46,14 +55,14 @@ while( $dum = fscanf($fh,"%s%f%f%f%f\n") ){
     $params[$name]['map']  = $map;
 }
 fclose($fh);
-
+*/
 
 
 
 
 // Title
 $str = '';
-$str .= '\section*{\hfil Name: '.str_replace('_',' ',$case_name).' \hfil}';
+$str .= '\section*{\hfil Name: '.str_replace('_',' ',$run).' \hfil}';
 file_put_contents('title.tex',$str);
 
 
@@ -61,6 +70,7 @@ file_put_contents('title.tex',$str);
 
 // True, mean, sdev and MAP parameters
 $str =  '';
+/*
 $str .= '\begin{table*}[!htb]';
 $str .= '\caption{True vs Maximum A Posteriori (MAP) parameters.}';
 $str .= '\begin{center}';
@@ -77,6 +87,7 @@ $str .= '\end{tabular}';
 $str .= '\end{center}';
 $str .= '\label{tab:1}';
 $str .= '\end{table*}';
+*/
 file_put_contents('table1.tex',$str);
 
 
@@ -86,6 +97,7 @@ file_put_contents('table1.tex',$str);
 
 // Table with the terms that contribute to the evidence calculation
 $str =  '';
+/*
 $str .= '\begin{table*}[!htb]';
 $str .= '\caption{Values of the various evidence terms at the MAP parameter values.}';
 $str .= '\begin{center}';
@@ -108,13 +120,14 @@ $str .= '\end{tabular}';
 $str .= '\end{center}';
 $str .= '\label{tab:2}';
 $str .= '\end{table*}';
+*/
 file_put_contents('table2.tex',$str);
 
 
 
 
 // Table of other values of interest
-$fh    = fopen($path . "output/mn-resume.dat","r");
+$fh    = fopen($path . $run . "output/" . "mn-resume.dat","r");
 $line  = fgets($fh);
 $line  = fgets($fh);
 $line  = trim(preg_replace('!\s+!',' ',$line));
@@ -131,8 +144,8 @@ $str .= '\begin{tabular}{ r l l }';
 
 $str .= '\hline';
 
-$str .= ' $N_{source}$ & number of source pixels           & ' . $out["other"]["Nsource"] . ' \\\\ ' . "\n";
-$str .= ' $N_{data}$   & number of data pixels             & ' . $out["other"]["Ndata"] . ' \\\\ ' . "\n";
+$str .= ' $N_{source}$ & number of source pixels           & ' . $out["generic"]["Nsource"] . ' \\\\ ' . "\n";
+$str .= ' $N_{data}$   & number of data pixels             & ' . $out["generic"]["Ndata"] . ' \\\\ ' . "\n";
 if( strlen($inp['psfpath']) < 2 ){
     $str .= ' PSF & is PSF included?                          & No  \\\\' . "\n";
 } else {
@@ -144,7 +157,7 @@ if( $inp['noise_flag'] == 'uniform' ){
 } else if( $inp['noise_flag'] == 'map' ){
     $str .= ' $C_D$        & covariance of the data            & map \\\\ ' . "\n";
 }
-$str .= ' $P_{data}$   & size of data pixels               & ' . $out["other"]["Psize"] . ' \\\\ ' . "\n";
+$str .= ' $P_{data}$   & size of data pixels               & ' . $out["generic"]["Psize"] . ' \\\\ ' . "\n";
 $str .= ' $N_{iter}$   & number of MultiNest iterations    & ' . $iters[1] . ' \\\\ ' . "\n";
 $str .= ' $N_{repl}$   & number of live point replacements & ' . $iters[0] . ' \\\\ ' . "\n";
 

@@ -23,8 +23,14 @@ def main():
     
     
     
-    
-    
+    # Check length of path + run. MultiNest supports up to 100 characters for the full path.
+    ##############################################################################################
+    full_path = path+run+"output/"
+    if len(full_path) > 80:
+        print "The full path to the output is too long, MultiNest uses files with a name of max. 100 characters."
+        sys.exit()
+
+
     
     # Check/create relative directories and files
     ##############################################################################################

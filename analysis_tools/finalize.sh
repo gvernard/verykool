@@ -1,39 +1,62 @@
 #!/bin/bash
-# command line argument 1: path to root directory of a run of VeryKooL code, e.g. /smth/smth/../mysimX/
-# command line argument 2: step of the partial code output that is reported
 
-#path2data=$1data/
-#path2out=$1output/
+path=$1
+run=$2
+target=$run
 
-#ds9 $path2data/image.fits -export png image.png -quit
-#ds9 $path2out/vkl_image.fits -export png vkl_image.png -quit
-#ds9 $path2out/vkl_residual.fits -export png vkl_residual.png -quit
-#ds9 $path2data/source.fits -export png source.png -quit
-#python plot_voronoi.py $path2out
-#mv voronoi.png vkl_source.png
-#convert vkl_source.png -resize 110x100 vkl_source.png
-
-#montage image.png vkl_image.png vkl_residual.png source.png vkl_source.png -mode Unframe -tile 3x -background WHITE collage.png
-#eog collage.png
+if [ "$#" -eq 3 ]; then
+    step=$3
+    out_path=${path}${run}output/${step}_
+else
+    step=''
+    out_path=${path}${run}output/
+fi
 
 
 
+mkdir -p $target
+source activate /data/users/gvernard/myLibraries/anaconda_envs/new_basic
 
-#eog all.png &
-#eog corner.png &
-
-
+#########################################
 echo ' >>> plotting images...'
-python plot_all.py $1 $2
+python plot_all.py $path $run $step
+
+#########################################
 echo ' >>> making corner plot...'
-cp $1output/$2_corner.txt $1output/corner.txt
-python plot_corner.py $1
+python plot_corner.py $path $run $step
+
+#########################################
 echo ' >>> producing latex tables...'
-php latex.php $1 $2
+php latex.php $path $run $step
+
+#########################################
 echo ' >>> producing latex document...'
 pdflatex report.tex > /dev/null 
+cp report.pdf ${path}${run}report.pdf
 
-mv report.pdf $1
+#########################################
+echo ' >>> collecting and packaging code output...'
+cp ${path}data/mask.fits $target/
+cp ${path}data/psf.fits $target/
+cp ${path}data/noise.* $target/
+cp ${path}data/image.fits $target/
+cp ${out_path}vkl_image.fits $target/model.fits
+cp ${out_path}vkl_residual.fits $target/residual.fits
 
-evince $1report.pdf
+./create_gridded_source ${out_path} 200 # second argument is the resolution of the gridded source
+mv vkl_source.fits $target/source.fits
 
+php get_par_table.php $path $run
+
+
+
+mv all.png $target
+mv corner.pdf $target
+mv report.pdf $target
+mv table_pars.txt $target/
+
+
+
+
+conda deactivate
+echo "Done!"

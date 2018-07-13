@@ -151,9 +151,9 @@ im_res = fits.getdata(out_path+'vkl_residual.fits',ext=0)
 im_res = im_res[::-1,:]
 im_res = im_res*np.flipud(np.array(mask))
 
-tmp = np.flipud(im_res)
-hdu = fits.PrimaryHDU(tmp)
-hdu.writeto('new.fits',clobber=True)
+#tmp = np.flipud(im_res)
+#hdu = fits.PrimaryHDU(tmp)
+#hdu.writeto('new.fits',clobber=True)
 
 # Set color scale
 limit = max([abs(np.amax(im_res)),abs(np.amin(im_res))])

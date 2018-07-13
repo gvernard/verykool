@@ -41,6 +41,9 @@ void MultiNest::minimize(std::map<std::string,std::string> opt,BaseLikelihoodMod
   std::copy(strroot.begin(),strroot.end(),root);
   root[strroot.size()] = '\0';
 
+  //  std::cout << strroot << std::endl;
+  //  std::cout << root << std::endl;
+
 
   int seed       = stoi(opt["seed"]);		// random no. generator seed, if < 0 then take the seed from system clock
   int fb         = 1;				// need feedback on standard output?
