@@ -411,23 +411,14 @@ void StandardLikelihood::outputLikelihoodModel(std::string output){
   other["Psize"]   = this->image->width/this->image->Ni;
   json_output["generic"] = other;
 
-  /*
+
   // Write likelihood terms
   Json::Value terms;
-  terms["ED"]        =  pcomp->chi2/2.0;
-  terms["ES"]        =  pcomp->reg/2.0;
-  terms["logdetA"]   = -pcomp->detA/2.0;
-  terms["logdetHtH"] =  pcomp->detHtH/2.0;
-  terms["logdetC"]   =  pcomp->detC/2.0;
-  if( source->reg == "covariance_kernel" ){
-    // do nothing
-  } else {
-    terms["logl"]      =  source->Sm*log10(nlpars[1]["lambda"]->val)/2.0;
+  std::map<std::string,double>::iterator it;
+  for(it=this->terms.begin();it!=this->terms.end();it++){
+    terms[it->first] = it->second;
   }
-  double pi          =  3.14159265358979323846;
-  terms["log2pi"]    = -image->Nm*log10(2*pi)/2.0;
   json_output["terms"] = terms;
-  */
 
 
   std::ofstream jsonfile(output+"vkl_output.json");

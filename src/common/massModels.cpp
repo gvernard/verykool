@@ -438,10 +438,6 @@ void Pert::derivativeDirection(int q,int qmax,double den,int* rel_ind,double* co
   }
 }
 
-
-
-
-
 void Pert::defl(double xin,double yin,double& xout,double& yout){
   int j = floor( (xin+this->dpsi->width/2.0)/dj );
   int i = floor( (yin+this->dpsi->height/2.0)/di );  
@@ -486,7 +482,6 @@ void Pert::defl(double xin,double yin,double& xout,double& yout){
 
 }
 
-
 void Pert::tableDefl(int Nm,double* xdefl,double* ydefl){
   Eigen::SparseMatrix<double> A(2*Nm,2*this->dpsi->Sm);
   A.reserve(Eigen::VectorXi::Constant(2*Nm,2));//overestimating the mask matrix number of entries per row
@@ -510,6 +505,60 @@ void Pert::tableDefl(int Nm,double* xdefl,double* ydefl){
   A.resize(0,0);
   B.resize(0,0);
 }
+
+
+void Pert::getConvergence(ImagePlane* kappa){
+  double ddx,ddy;
+  int Ni = kappa->Ni;
+  int Nj = kappa->Nj;
+
+
+  // Calculate second derivatives:
+  // first row
+  ddx = 1.0*this->dpsi->src[0] - 2.0*this->dpsi->src[1] + 1.0*this->dpsi->src[2];
+  ddy = 1.0*this->dpsi->src[0] - 2.0*this->dpsi->src[Nj] + 1.0*this->dpsi->src[2*Nj];
+  kappa->img[0] = 0.5*(ddx + ddy);
+  for(int j=1;j<Nj-1;j++){
+    ddx = 1.0*this->dpsi->src[j-1] - 2.0*this->dpsi->src[j] + 1.0*this->dpsi->src[j+1];
+    ddy = 1.0*this->dpsi->src[j] - 2.0*this->dpsi->src[Nj+j] + 1.0*this->dpsi->src[2*Nj+j];
+    kappa->img[j] = 0.5*(ddx + ddy);
+  }
+  ddx = 1.0*this->dpsi->src[Nj-3] - 2.0*this->dpsi->src[Nj-2] + 1.0*this->dpsi->src[Nj-1];
+  ddy = 1.0*this->dpsi->src[Nj-1] - 2.0*this->dpsi->src[2*Nj-1] + 1.0*this->dpsi->src[3*Nj-1];
+  kappa->img[Nj-1] = 0.5*(ddx + ddy);
+
+  // in-between rows
+  for(int i=1;i<Ni-1;i++){
+    ddx = 1.0*this->dpsi->src[i*Nj] - 2.0*this->dpsi->src[i*Nj+1] + 1.0*this->dpsi->src[i*Nj+2];
+    ddy = 1.0*this->dpsi->src[(i-1)*Nj] - 2.0*this->dpsi->src[i*Nj] + 1.0*this->dpsi->src[(i+1)*Nj];
+    kappa->img[i*Nj] = 0.5*(ddx + ddy);
+    for(int j=1;j<Nj-1;j++){
+      ddx = 1.0*this->dpsi->src[i*Nj+j-1] - 2.0*this->dpsi->src[i*Nj+j] + 1.0*this->dpsi->src[i*Nj+j+1];
+      ddy = 1.0*this->dpsi->src[(i-1)*Nj+j] - 2.0*this->dpsi->src[i*Nj+j] + 1.0*this->dpsi->src[(i+1)*Nj+j];
+      kappa->img[i*Nj+j] = 0.5*(ddx + ddy);
+    }
+    ddx = 1.0*this->dpsi->src[i*Nj+Nj-3] - 2.0*this->dpsi->src[i*Nj+Nj-2] + 1.0*this->dpsi->src[i*Nj+Nj-1];
+    ddy = 1.0*this->dpsi->src[(i-1)*Nj+Nj-1] - 2.0*this->dpsi->src[i*Nj+Nj-1] + 1.0*this->dpsi->src[(i+1)*Nj+Nj-1];
+    kappa->img[i*Nj+Nj-1] = 0.5*(ddx + ddy);
+  }
+
+  // last row
+  ddx = 1.0*this->dpsi->src[(Ni-1)*Nj] - 2.0*this->dpsi->src[(Ni-1)*Nj+1] + 1.0*this->dpsi->src[(Ni-1)*Nj+2];
+  ddy = 1.0*this->dpsi->src[(Ni-1)*Nj] - 2.0*this->dpsi->src[(Ni-2)*Nj] + 1.0*this->dpsi->src[(Ni-3)*Nj];
+  kappa->img[(Ni-1)*Nj] = 0.5*(ddx + ddy);
+  for(int j=1;j<Nj-1;j++){
+    ddx = 1.0*this->dpsi->src[(Ni-1)*Nj+j-1] - 2.0*this->dpsi->src[(Ni-1)*Nj+j] + 1.0*this->dpsi->src[(Ni-1)*Nj+j+1];
+    ddy = 1.0*this->dpsi->src[(Ni-1)*Nj+j] - 2.0*this->dpsi->src[(Ni-2)*Nj+j] + 1.0*this->dpsi->src[(Ni-3)*Nj+j];
+    kappa->img[(Ni-1)*Nj+j] = 0.5*(ddx + ddy);
+  }
+  ddx = 1.0*this->dpsi->src[(Ni-1)*Nj+Nj-3] - 2.0*this->dpsi->src[(Ni-1)*Nj+Nj-2] + 1.0*this->dpsi->src[(Ni-1)*Nj+Nj-1];
+  ddy = 1.0*this->dpsi->src[(Ni-1)*Nj+Nj-1] - 2.0*this->dpsi->src[(Ni-2)*Nj+Nj-1] + 1.0*this->dpsi->src[(Ni-3)*Nj+Nj-1];
+  kappa->img[(Ni-1)*Nj+Nj-1] = 0.5*(ddx + ddy);
+
+}
+
+
+
 
 
 //Class: CollectionMassModels

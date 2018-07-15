@@ -71,7 +71,8 @@ public:
   void createBdev();
   void tableDefl(int Nm,double* xdefl,double* ydefl);
   void createCrosses(ImagePlane* image);
-
+  void getConvergence(ImagePlane* kappa);
+  
 private:
   double di;
   double dj;
