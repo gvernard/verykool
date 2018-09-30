@@ -46,7 +46,7 @@ cp ${out_path}vkl_residual.fits $target/residual.fits
 ./create_gridded_source ${out_path} 200 # second argument is the resolution of the gridded source
 mv vkl_source.fits $target/source.fits
 
-php get_par_table.php $path $run
+php get_par_table.php $path $run $step
 
 
 

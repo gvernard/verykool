@@ -137,8 +137,16 @@ int main(int argc,char* argv[]){
     }
 
     //Initialize perturbations
-    PerturbationsLikelihood* specific_pointer = dynamic_cast<PerturbationsLikelihood*>(pert_like);
-    specific_pointer->initializePert(smooth_like);
+    SmoothLikelihood* smooth_pointer = dynamic_cast<SmoothLikelihood*>(smooth_like);
+
+    if( init->pert_like == "perturbations_standard" ){
+      PertLikelihood* pert_pointer   = dynamic_cast<PertLikelihood*>(pert_like);
+      pert_pointer->initializePert(smooth_pointer);
+    } else if( init->pert_like == "perturbations_iter" ){
+      PertIterationLikelihood* pert_pointer   = dynamic_cast<PertIterationLikelihood*>(pert_like);
+      pert_pointer->initializePert(smooth_pointer);      
+    }
+
 
     printf("%-25s","Starting perturbation minimization ");
     fflush(stdout);

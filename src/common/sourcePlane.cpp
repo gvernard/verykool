@@ -25,6 +25,30 @@
 
 //Abstract class: BaseSourcePlane
 //===============================================================================================================
+BaseSourcePlane::BaseSourcePlane(const BaseSourcePlane& other){
+  type = other.type;
+  Si = other.Si;
+  Sj = other.Sj;
+  Sm = other.Sm;
+  reg = other.reg;
+  eigenSparseMemoryAllocForH = other.eigenSparseMemoryAllocForH;
+  sample_reg = other.sample_reg;
+  
+  src  = (double*) calloc(Sm,sizeof(double));
+  x    = (double*) calloc(Sm,sizeof(double));
+  y    = (double*) calloc(Sm,sizeof(double));
+  s_dx = (double*) calloc(Sm,sizeof(double));
+  s_dy = (double*) calloc(Sm,sizeof(double));
+  
+  for(int i=0;i<Sm;i++){
+    src[i]  = other.src[i];
+    x[i]    = other.x[i];
+    y[i]    = other.y[i];
+    s_dx[i] = other.s_dx[i];
+    s_dy[i] = other.s_dy[i];
+  }
+}
+
 void BaseSourcePlane::normalize(){
   double sum = 0.;
   for(int j=0;j<this->Sm;j++){
@@ -152,43 +176,50 @@ FixedSource::FixedSource(const FixedSource& source){
 
 //non-virtual
 void FixedSource::setGridRect(double width,double height){
-  // set xmin,xmax,ymin,ymax,width,height, andx and y grids
-  this->xmax =  width/2.0;
-  this->xmin = -width/2.0;
-  this->ymax =  height/2.0;
-  this->ymin = -height/2.0;
+  // Origin is set to (0,0)
+  // set xmin,xmax,ymin,ymax,width,height, and x and y grids
   this->width  = width;
   this->height = height;
 
   int i0    = floor(Si/2);
   int j0    = floor(Sj/2);
-  double di = height/(Sj);
-  double dj = width/(Si);
+  double di = height/Si;
+  double dj = width/Sj;
+
+  // xmax,xmin are the x coordinates of the leftmost and eightmost pixels.
+  // REMEMBER: xmax-xmin != width (Nj*dj).
+  // Similarly for y.
+  this->xmin = -j0*dj;
+  this->xmax = (this->Sj-1-j0)*dj;
+  this->ymin = -i0*di;
+  this->ymax = (this->Si-1-i0)*di;
 
   for(int i=0;i<Si;i++){
     for(int j=0;j<Sj;j++){
-      x[i*Sj+j]   =  (j-j0)*di;
-      y[i*Sj+j]   = -(i-i0)*dj; // reflect y-axis
+      x[i*Sj+j] =  (j-j0)*dj;
+      y[i*Sj+j] = -(i-i0)*di; // reflect y-axis
     }
   }
 }
 
 //non-virtual
-void FixedSource::setGridRect(double xmin,double xmax,double ymin,double ymax){
-  this->xmin = xmin;
-  this->xmax = xmax;
-  this->ymin = ymin;
-  this->ymax = ymax;
-  this->width  = this->xmax - this->xmin;
-  this->height = this->ymax - this->ymin;
-
-  double dj = width/(Sj-1);
-  double di = height/(Si-1);
+void FixedSource::setGridRect(double x_left,double x_right,double y_bottom,double y_top){
+  // Origin is not necessarily set to (0,0)
+  this->width  = x_right - x_left;
+  this->height = y_top - y_bottom;
   
+  double di = height/Si;
+  double dj = width/Sj;
+
+  this->xmin = x_left;
+  this->xmax = x_left + (Sj-1)*dj;
+  this->ymin = y_top - (Si-1)*di;
+  this->ymax = y_top;
+
   for(int i=0;i<Si;i++){
     for(int j=0;j<Sj;j++){
-      x[i*Sj+j] = this->xmin + j*dj;
-      y[i*Sj+j] = this->ymax - i*di; // reflect y-axis
+      x[i*Sj+j] = x_left + j*dj;
+      y[i*Sj+j] = y_top - i*di; // reflect y-axis
     }
   }
 }
@@ -213,8 +244,8 @@ bool FixedSource::pointInPolygon(double x,double y){
 //virtual
 void FixedSource::createInterpolationWeights(ImagePlane* image){
   double xp,yp;
-  double dx     = (this->xmax - this->xmin)/(this->Si);
-  double dy     = (this->ymax - this->ymin)/(this->Sj);
+  double dx     = this->x[1] - this->x[0];
+  double dy     = this->y[this->Sj] - this->y[0];
   double norm   = 1.0/(dx*dy);
   int ic        = 0;
   int jc        = 0;
@@ -276,8 +307,8 @@ void FixedSource::constructH(){
     this->eigenSparseMemoryAllocForH = 8;
     int Si = this->Si;
     int Sj = this->Sj;
-    double ddx = 1./fabs(this->x[1]  - this->x[0]);
-    double ddy = 1./fabs(this->y[Sj] - this->y[0]);
+    double ddx = 1.0/fabs(this->x[1]  - this->x[0]);
+    double ddy = 1.0/fabs(this->y[Sj] - this->y[0]);
 
     for(int i=1;i<Si-1;i++){
       for(int j=1;j<Sj-1;j++){
@@ -438,7 +469,7 @@ void FixedSource::outputSourceErrors(double* errors,const std::string path){}
 
 //Derived class from BaseSourcePlane: FloatingSource
 //===============================================================================================================
-
+/*
 //virtual
 FloatingSource::FloatingSource(int i,int j,double size,double x0,double y0,std::string reg_scheme){
   type = "floating";
@@ -657,7 +688,7 @@ void FloatingSource::outputSource(const std::string path){
 
 //virtual
 void FloatingSource::outputSourceErrors(double* errors,const std::string path){}
-
+*/
 
 //Derived class from BaseSourcePlane: AdaptiveSource
 //===============================================================================================================
@@ -730,16 +761,11 @@ AdaptiveSource::~AdaptiveSource(){
 void AdaptiveSource::createAdaGrid(ImagePlane* image,CollectionMassModels* mycollection){
   if( this->mode == "random" ){
     
-    double xmax =  image->width/2.;
-    double xmin = -image->width/2.;
-    double ymax =  image->height/2.;
-    double ymin = -image->height/2.;
-    
     double xtmp,ytmp;
     srand48(time(NULL));
     for(int i=0;i<this->Sm;i++){
-      xtmp = drand48()*(xmax - xmin) + xmin;
-      ytmp = drand48()*(ymax - ymin) + ymin;
+      xtmp = drand48()*(image->xmax - image->xmin) + image->xmin;
+      ytmp = drand48()*(image->ymax - image->ymin) + image->ymin;
       mycollection->all_defl(xtmp,ytmp,this->x[i],this->y[i]);   
     }
 
@@ -1016,7 +1042,7 @@ void AdaptiveSource::constructH(){
 	  }
 	  
 	  //Find intersection point (if it exists), interpolate to get the weights, and add them to <map>weights
-	  if( ymin <= p0.y && p0.y <= ymax ){
+	  if( ymin <= p0.y && p0.y < ymax ){
 	    xypoint pint = intersection_point_x(p0,p1,p2);
 	    points_x.push_back( pint.x );
 
@@ -1040,8 +1066,8 @@ void AdaptiveSource::constructH(){
 
 
 	  //Smoothing in the y-direction
-	  double xmin = 0.;
-	  double xmax = 0.;
+	  double xmin = 0.0;
+	  double xmax = 0.0;
 
 	  if( p1.x > p2.x ){
 	    xmax = p1.x;
@@ -1052,7 +1078,7 @@ void AdaptiveSource::constructH(){
 	  }
 
 	  //Find intersection point (if it exists), interpolate to get the weights, and add them to <map>weights
-	  if( xmin <= p0.x && p0.x <= xmax ){
+	  if( xmin <= p0.x && p0.x < xmax ){
 	    xypoint pint = intersection_point_y(p0,p1,p2);
 	    points_y.push_back( pint.y );
 
@@ -1118,10 +1144,10 @@ void AdaptiveSource::constructH(){
 	std::map<int,double> weights;
 
 	for(int j=0;j<indices.size();j=j+2){
-	  double ymin = 0.;
-	  double ymax = 0.;
-	  double xmin = 0.;
-	  double xmax = 0.;
+	  double ymin = 0.0;
+	  double ymax = 0.0;
+	  double xmin = 0.0;
+	  double xmax = 0.0;
 	  
 	  xypoint p1 = {this->x[indices[j]],this->y[indices[j]]};
 	  xypoint p2 = {this->x[indices[j+1]],this->y[indices[j+1]]};
@@ -1136,7 +1162,7 @@ void AdaptiveSource::constructH(){
 	  }
 	  
 	  //Find intersection point (if it exists), interpolate to get the weights, and add them to <map>weights
-	  if( ymin <= p0.y && p0.y <= ymax ){
+	  if( ymin <= p0.y && p0.y < ymax ){
 	    xypoint pint = intersection_point_x(p0,p1,p2);
 	    double l2 = ((p1.y-p0.y)*(pint.x-p1.x)+(p0.x-p1.x)*(pint.y-p1.y))/((p2.y-p1.y)*(p0.x-p1.x)+(p1.x-p2.x)*(p0.y-p1.y));
 	    double l1 = 1.0 - l2;
@@ -1160,7 +1186,7 @@ void AdaptiveSource::constructH(){
 	  }
 
 	  //Find intersection point (if it exists), interpolate to get the weights, and add them to <map>weights
-	  if( xmin <= p0.x && p0.x <= xmax ){
+	  if( xmin <= p0.x && p0.x < xmax ){
 	    xypoint pint = intersection_point_y(p0,p1,p2);
 	    double l2 = ((p1.y-p0.y)*(pint.x-p1.x)+(p0.x-p1.x)*(pint.y-p1.y))/((p2.y-p1.y)*(p0.x-p1.x)+(p1.x-p2.x)*(p0.y-p1.y));
 	    double l1 = 1.0 - l2;
@@ -1232,7 +1258,7 @@ void AdaptiveSource::constructDs(ImagePlane* image){
     
     xypoint p0 = {this->x[i],this->y[i]};
     std::vector<int> indices = this->opposite_edges_per_vertex[i];
-      
+
     if( indices.size() == 0 ){
       
       //we are on a convex-hull point that has zero source derivative
@@ -1257,7 +1283,7 @@ void AdaptiveSource::constructDs(ImagePlane* image){
 	  ymin = p1.y;
 	}
 	//Find intersection point (if it exists), interpolate to get the weights, and add them to <map>weights
-	if( ymin <= p0.y && p0.y <= ymax ){
+	if( ymin <= p0.y && p0.y < ymax ){
 	  xypoint pint = intersection_point_x(p0,p1,p2);
 	  double l2 = ((p1.y-p0.y)*(pint.x-p1.x)+(p0.x-p1.x)*(pint.y-p1.y))/((p2.y-p1.y)*(p0.x-p1.x)+(p1.x-p2.x)*(p0.y-p1.y));
 	  double l1 = 1.0 - l2;
@@ -1274,8 +1300,8 @@ void AdaptiveSource::constructDs(ImagePlane* image){
 	  xmax = p2.x;
 	  xmin = p1.x;
 	}	
-	//Find intersection point (if it exists), interpolate to get the weights, and add them to <map>weights
-	if( xmin <= p0.x && p0.x <= xmax ){
+	//Find intersection point (if it exists), interpolate to get the weights, and add them to <map>weight
+	if( xmin <= p0.x && p0.x < xmax ){
 	  xypoint pint = intersection_point_y(p0,p1,p2);
 	  double l2 = ((p1.y-p0.y)*(pint.x-p1.x)+(p0.x-p1.x)*(pint.y-p1.y))/((p2.y-p1.y)*(p0.x-p1.x)+(p1.x-p2.x)*(p0.y-p1.y));
 	  double l1 = 1.0 - l2;

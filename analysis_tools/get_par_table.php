@@ -3,7 +3,13 @@
 $path = $argv[1];
 $case = $argv[2];
 
-$json = json_decode(file_get_contents($path . $case . "output/vkl_output.json"),true);
+if( count($argv) > 3 ){
+    $step = $argv[3] . "_";
+} else {
+    $step = "";
+}
+
+$json = json_decode(file_get_contents($path . $case . "output/".$step."vkl_output.json"),true);
 $dum = $json["full_pars"];
 $keys = array_keys($dum);
 $pars = array_values($dum);

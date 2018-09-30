@@ -99,7 +99,10 @@ im_data  = im_data[::-1,:]
 im_model = fits.getdata(out_path+'vkl_image.fits',ext=0)
 im_model = im_model[::-1,:]
 # Read mask
-mask     = fits.getdata(data_path+'mask.fits',ext=0)
+if pars["maskpath"] == "0":
+    mask = np.ones(im_model.shape)
+else:
+    mask = fits.getdata(data_path+'mask.fits',ext=0)
 
 # Set color scale
 limit = max([abs(np.amax(im_data)),abs(np.amin(im_data)),abs(np.amax(im_model)),abs(np.amin(im_model))])
@@ -120,7 +123,8 @@ cax = divider.append_axes("right",size="5%",pad=0.05)
 #fig.colorbar(im,cax=cax,ticks=MultipleLocator(0.2),format="%4.1f")
 fig.colorbar(im,cax=cax,format="%5.2f")
 # Plot mask contour
-data.contour(mask,levels=[0.5],extent=[xmin,xmax,ymin,ymax],colors='#001A47')
+if pars["maskpath"] != "0":
+    data.contour(mask,levels=[0.5],extent=[xmin,xmax,ymin,ymax],colors='#001A47')
 
 
 # Plot model
@@ -138,7 +142,8 @@ cax = divider.append_axes("right",size="5%",pad=0.05)
 #fig.colorbar(im,cax=cax,ticks=MultipleLocator(0.2),format="%4.1f")
 fig.colorbar(im,cax=cax,format="%5.2f")
 # Plot mask contour
-model.contour(mask,levels=[0.5],extent=[xmin,xmax,ymin,ymax],colors='#001A47')
+if pars["maskpath"] != "0":
+    model.contour(mask,levels=[0.5],extent=[xmin,xmax,ymin,ymax],colors='#001A47')
 
 
 
@@ -149,7 +154,8 @@ model.contour(mask,levels=[0.5],extent=[xmin,xmax,ymin,ymax],colors='#001A47')
 # Read residuals
 im_res = fits.getdata(out_path+'vkl_residual.fits',ext=0)
 im_res = im_res[::-1,:]
-im_res = im_res*np.flipud(np.array(mask))
+if pars["maskpath"] != "0":
+    im_res = im_res*np.flipud(np.array(mask))
 
 #tmp = np.flipud(im_res)
 #hdu = fits.PrimaryHDU(tmp)
@@ -172,8 +178,9 @@ cax = divider.append_axes("right",size="5%",pad=0.05)
 #fig.colorbar(im,cax=cax,ticks=MultipleLocator(0.2),format="%4.1f")
 #cax.yaxis.set_major_locator(matplotlib.ticker.MaxNLocator(4))
 fig.colorbar(im,cax=cax,format="%5.2f")
-res.contour(mask,levels=[0.5],extent=[xmin,xmax,ymin,ymax],colors='#001A47')
-res.imshow(np.flipud(np.ma.masked_where(mask>0,mask)),interpolation='none',cmap='Greys',extent=[xmin,xmax,ymin,ymax])
+if pars["maskpath"] != "0":
+    res.contour(mask,levels=[0.5],extent=[xmin,xmax,ymin,ymax],colors='#001A47')
+    res.imshow(np.flipud(np.ma.masked_where(mask>0,mask)),interpolation='none',cmap='Greys',extent=[xmin,xmax,ymin,ymax])
 
 
 # True source (in case of mock data) and reconstructed adaptive source. They need to share the same color scale

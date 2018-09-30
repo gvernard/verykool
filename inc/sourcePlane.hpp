@@ -48,7 +48,7 @@ public:
   
 
   BaseSourcePlane(){};
-
+  BaseSourcePlane(const BaseSourcePlane& other);
   ~BaseSourcePlane(){
     free(src);
     free(x);
@@ -104,6 +104,7 @@ public:
   double height;
 };
 
+/*
 class FloatingSource: public BaseSourcePlane {
 public:
 
@@ -127,6 +128,7 @@ public:
   double ymin;
   double ymax;
 };
+*/
 
 class AdaptiveSource: public BaseSourcePlane {
 public:
@@ -187,8 +189,8 @@ public:
   BaseSourcePlane* createSourcePlane(std::map<std::string,std::string> source){
     if( source["type"] == "fixed" ){
       return new FixedSource(stoi(source["sx"]),stoi(source["sy"]),stof(source["size"]),source["reg"]);
-    } else if( source["type"] == "floating" ){
-      return new FloatingSource(stoi(source["sx"]),stoi(source["sy"]),stof(source["size"]),stof(source["x0"]),stof(source["y0"]),source["reg"]);
+      //    } else if( source["type"] == "floating" ){
+      //      return new FloatingSource(stoi(source["sx"]),stoi(source["sy"]),stof(source["size"]),stof(source["x0"]),stof(source["y0"]),source["reg"]);
     } else if( source["type"] == "adaptive" ){
       if( source["mode"] == "random" ){
 	return new AdaptiveSource(stoi(source["sm"]),source["reg"]);

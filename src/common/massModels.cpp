@@ -310,8 +310,8 @@ void Pert::createAint(ImagePlane* data){
   int Sj = this->dpsi->Sj;
 
   for(int k=0;k<data->Nm;k++){
-    int j = floor( (data->x[k]+this->dpsi->width/2.0)/this->dj );
-    int i = floor( (data->y[k]+this->dpsi->height/2.0)/this->di );  
+    int j = floor( (data->x[k]-this->dpsi->xmin)/this->dj );
+    int i = floor( (data->y[k]-this->dpsi->ymin)/this->di );  
 
     if( j == this->dpsi->Sj-1 ){
       j = j-2;
@@ -439,8 +439,8 @@ void Pert::derivativeDirection(int q,int qmax,double den,int* rel_ind,double* co
 }
 
 void Pert::defl(double xin,double yin,double& xout,double& yout){
-  int j = floor( (xin+this->dpsi->width/2.0)/dj );
-  int i = floor( (yin+this->dpsi->height/2.0)/di );  
+  int j = floor( (xin-this->dpsi->xmin)/dj );
+  int i = floor( (yin-this->dpsi->ymin)/di );  
 
   if( j == this->dpsi->Sj-1 ){
     j = j-2;

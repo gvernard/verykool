@@ -11,14 +11,15 @@
 class ImagePlane;
 class BaseSourcePlane;
 class BaseLikelihoodModel;
-class StandardLikelihood;
-class PerturbationsLikelihood;
+class SmoothLikelihood;
+class PertLikelihood;
+class PertIterationLikelihood;
 class Pert;
 
-class StandardAlgebra {
+class SmoothAlgebra {
 public:
-  StandardAlgebra(StandardLikelihood* a);
-  ~StandardAlgebra(){};
+  SmoothAlgebra(SmoothLikelihood* a);
+  ~SmoothAlgebra(){};
 
   void setAlgebraInit(ImagePlane* mydata,BaseSourcePlane* mysource);
   void setAlgebraRuntime(ImagePlane* image,BaseSourcePlane* source,double lambda);
@@ -27,7 +28,7 @@ public:
   void getMockData(ImagePlane* mockdata,BaseSourcePlane* source);
 
 
-  StandardLikelihood* likeModel;
+  SmoothLikelihood* likeModel;
   Eigen::VectorXd d;
   Eigen::SparseMatrix<double> StCS;
   Eigen::SparseMatrix<double> C;
@@ -39,24 +40,46 @@ public:
 };
 
 
-class PerturbationsAlgebra {
+class PertAlgebra {
 public:
-  PerturbationsAlgebra(PerturbationsLikelihood* a);
-  ~PerturbationsAlgebra(){};
+  PertAlgebra(PertLikelihood* a);
+  ~PertAlgebra(){};
 
-  void setAlgebraInit(ImagePlane* mydata,Pert* mypert,double* res);
-  void setAlgebraRuntime(ImagePlane* image,BaseSourcePlane* source,Pert* pert_mass_model,BaseLikelihoodModel* smooth_like,double lambda);
-  void solvePert(ImagePlane* image,Pert* pert_mass_model,BaseLikelihoodModel* smooth_like);
+  void setAlgebraInit(BaseSourcePlane* source,Pert* pert_mass_model);
+  void setAlgebraRuntime(BaseSourcePlane* source,Pert* pert_mass_model,SmoothLikelihood* smooth_like);
+  void solveSourcePert(BaseSourcePlane* source,Pert* pert_mass_model,SmoothLikelihood* smooth_like);
 
 
-  PerturbationsLikelihood* likeModel;
-  Eigen::VectorXd dd;
-  Eigen::SparseMatrix<double> Dpsi;
-  Eigen::SparseMatrix<double> HtH_pert;
-  Eigen::SparseMatrix<double> M_pert;
-  Eigen::SparseMatrix<double> Mt_pert;
-  Eigen::SparseMatrix<double> A_pert;
+  PertLikelihood* likeModel;
+  Eigen::SparseMatrix<double> DsDpsi;
+  Eigen::SparseMatrix<double> M_r;
+  Eigen::SparseMatrix<double> Mt_r;
+  Eigen::SparseMatrix<double> A_r;
+  Eigen::SparseMatrix<double> C_s;
+  Eigen::SparseMatrix<double> C_dpsi;
+  Eigen::SparseMatrix<double> HtH_s;
+  Eigen::SparseMatrix<double> HtH_dpsi;
 };
 
+
+class PertIterationAlgebra {
+public:
+  PertIterationAlgebra(PertIterationLikelihood* a);
+  ~PertIterationAlgebra(){};
+
+  void setAlgebraInit(BaseSourcePlane* source,Pert* pert_mass_model);
+  void setAlgebraRuntime(BaseSourcePlane* source,Pert* pert_mass_model,SmoothLikelihood* smooth_like);
+  void solveSourcePert(BaseSourcePlane* source,Pert* pert_mass_model,SmoothLikelihood* smooth_like);
+
+  PertIterationLikelihood* likeModel;
+  Eigen::SparseMatrix<double> DsDpsi;
+  Eigen::SparseMatrix<double> M_r;
+  Eigen::SparseMatrix<double> Mt_r;
+  Eigen::SparseMatrix<double> A_r;
+  Eigen::SparseMatrix<double> C_s;
+  Eigen::SparseMatrix<double> C_dpsi;
+  Eigen::SparseMatrix<double> HtH_s;
+  Eigen::SparseMatrix<double> HtH_dpsi;
+};
 
 #endif /* ALGEBRA_HPP */

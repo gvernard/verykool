@@ -14,8 +14,9 @@ class Nlpar;
 class ImagePlane;
 class BaseSourcePlane;
 class CollectionMassModels;
-class StandardAlgebra;
-class PerturbationsAlgebra;
+class SmoothAlgebra;
+class PertAlgebra;
+class PertIterationAlgebra;
 class Pert;
 
 class BaseLikelihoodModel {
@@ -46,7 +47,7 @@ public:
 };
 
 
-class StandardLikelihood : public BaseLikelihoodModel {
+class SmoothLikelihood : public BaseLikelihoodModel {
 public:
   std::vector<Nlpar*> physical;
   std::vector<Nlpar*> reg;
@@ -55,12 +56,12 @@ public:
   ImagePlane* image;
   BaseSourcePlane* source;
   CollectionMassModels* collection;
-  StandardAlgebra* algebra;
+  SmoothAlgebra* algebra;
   ImagePlane* model;
   ImagePlane* res;
 
-  StandardLikelihood(std::vector<Nlpar*> a,std::vector<Nlpar*> b,std::vector< std::vector<Nlpar*> > c,std::vector<std::string> d,ImagePlane* e,BaseSourcePlane* f,CollectionMassModels* g);
-  ~StandardLikelihood();
+  SmoothLikelihood(std::vector<Nlpar*> a,std::vector<Nlpar*> b,std::vector< std::vector<Nlpar*> > c,std::vector<std::string> d,ImagePlane* e,BaseSourcePlane* f,CollectionMassModels* g);
+  ~SmoothLikelihood();
 
   //non-virtual
   std::vector<Nlpar*> getRegPars();
@@ -82,29 +83,63 @@ public:
 };
 
 
-class SourceCovarianceKernel : public StandardLikelihood {
+class SourceCovarianceKernel : public SmoothLikelihood {
 public:
-  using StandardLikelihood::StandardLikelihood;
+  using SmoothLikelihood::SmoothLikelihood;
 
   double getLogLike();
 };
 
 
-class PerturbationsLikelihood : public BaseLikelihoodModel {
+class PertLikelihood : public BaseLikelihoodModel {
 public:
-  std::vector<Nlpar*> reg;
-  ImagePlane* image;
+  std::vector<Nlpar*> reg_s;
+  std::vector<Nlpar*> reg_dpsi;
+  std::string reg_s_type;
+  std::string reg_dpsi_type;
+  SmoothLikelihood* smooth_like;
   BaseSourcePlane* source;
-  CollectionMassModels* collection;
-  BaseLikelihoodModel* smooth_like;
   Pert* pert_mass_model;
-  PerturbationsAlgebra* algebra;
+  PertAlgebra* algebra;
 
-  PerturbationsLikelihood(std::vector<Nlpar*> reg,ImagePlane* a,BaseSourcePlane* b,CollectionMassModels* c,Pert* d);
-  ~PerturbationsLikelihood();
+  PertLikelihood(std::vector<Nlpar*> reg_s,std::vector<Nlpar*> reg_dpsi,std::string a,std::string b,BaseSourcePlane* c,Pert* d);
+  ~PertLikelihood();
 
   //non-virtual
-  void initializePert(BaseLikelihoodModel* smooth_like);
+  void initializePert(SmoothLikelihood* smooth_like);
+
+  //virtual
+  std::vector<std::string> getFullNames(){};
+  std::vector<std::string> getActiveFullNames(){};
+  std::vector<double> getValues(){};
+  std::vector<Nlpar*> getPhysicalPars(){};
+  std::vector<Nlpar*> getMassModelPars(int i){};
+  Json::Value getActiveNamesValues(){};
+  void initializeAlgebra();
+  void updateLikelihoodModel();
+  double getLogLike();
+  void initialOutputLikelihoodModel(std::string output);
+  void outputLikelihoodModel(std::string output);
+};
+
+
+class PertIterationLikelihood : public BaseLikelihoodModel {
+public:
+  std::vector<Nlpar*> reg_s;
+  std::vector<Nlpar*> reg_dpsi;
+  std::string reg_s_type;
+  std::string reg_dpsi_type;
+  SmoothLikelihood* smooth_like;
+  BaseSourcePlane* source;
+  Pert* pert_mass_model;
+  PertIterationAlgebra* algebra;
+  CollectionMassModels* collection;
+
+  PertIterationLikelihood(std::vector<Nlpar*> reg_s,std::vector<Nlpar*> reg_dpsi,std::string a,std::string b,BaseSourcePlane* c,Pert* d,CollectionMassModels* e);
+  ~PertIterationLikelihood();
+
+  //non-virtual
+  void initializePert(SmoothLikelihood* smooth_like);
 
   //virtual
   std::vector<std::string> getFullNames(){};
@@ -154,7 +189,7 @@ public:
 	lenses.push_back( nlparsFromJsonVector(root["lenses"][jmembers[i]]["nlpars"]) );
 	lens_names.push_back( jmembers[i] );
       }
-      return new StandardLikelihood(physical,reg,lenses,lens_names,image,source,collection);
+      return new SmoothLikelihood(physical,reg,lenses,lens_names,image,source,collection);
 
     } else if( like_model == "source_covariance_kernel" ){
 
@@ -171,8 +206,19 @@ public:
 
     } else if( like_model == "perturbations_standard" ){
 
-      std::vector<Nlpar*> reg = nlparsFromJsonVector(root["perturbations"]["reg"]["nlpars"]);
-      return new PerturbationsLikelihood(reg,image,source,collection,pert_mass_model);
+      std::vector<Nlpar*> reg_s    = nlparsFromJsonVector(root["perturbations"]["reg_s"]["nlpars"]);
+      std::vector<Nlpar*> reg_dpsi = nlparsFromJsonVector(root["perturbations"]["reg_dpsi"]["nlpars"]);
+      std::string reg_s_type       = root["perturbations"]["reg_s"]["type"].asString();
+      std::string reg_dpsi_type    = root["perturbations"]["reg_dpsi"]["type"].asString();
+      return new PertLikelihood(reg_s,reg_dpsi,reg_s_type,reg_dpsi_type,source,pert_mass_model);
+
+    } else if( like_model == "perturbations_iter" ){
+
+      std::vector<Nlpar*> reg_s    = nlparsFromJsonVector(root["perturbations"]["reg_s"]["nlpars"]);
+      std::vector<Nlpar*> reg_dpsi = nlparsFromJsonVector(root["perturbations"]["reg_dpsi"]["nlpars"]);
+      std::string reg_s_type       = root["perturbations"]["reg_s"]["type"].asString();
+      std::string reg_dpsi_type    = root["perturbations"]["reg_dpsi"]["type"].asString();
+      return new PertIterationLikelihood(reg_s,reg_dpsi,reg_s_type,reg_dpsi_type,source,pert_mass_model,collection);
 
     } else {
       return NULL;

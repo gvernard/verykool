@@ -65,7 +65,7 @@ if os.path.isfile(path+run+'/vkl_input.json'):
             true_params[lens+'_'+param['nam']] = param['val']
 
     for i in range(0,len(names)):
-        if names[i] != "lambda":
+        if names[i] not in ["lambda","ampl","sdev"]:
             for ax in g.subplots[i:,i]:
                 ax.axvline(true_params[names[i]],color='black',ls='solid',alpha=0.5)
             for ax in g.subplots[i,:i]:

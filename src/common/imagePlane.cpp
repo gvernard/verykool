@@ -41,9 +41,12 @@ ImagePlane::ImagePlane(const std::string filepath,int i,int j,double h,double w)
 
   int i0    = floor(Ni/2);
   int j0    = floor(Nj/2);
-  double di = height/(Ni);
-  double dj = width/(Nj);
+  double di = height/Ni;
+  double dj = width/Nj;
 
+  // xmax,xmin are the x coordinates of the leftmost and eightmost pixels.
+  // REMEMBER: xmax-xmin != width (Nj*dj).
+  // Similarly for y.
   xmin = -j0*dj;
   xmax = (this->Nj-1-j0)*dj;
   ymin = -i0*di;
@@ -54,6 +57,8 @@ ImagePlane::ImagePlane(const std::string filepath,int i,int j,double h,double w)
       x[i*Nj+j]   =  (j-j0)*dj;
       y[i*Nj+j]   = -(i-i0)*di;//reflect y-axis
       img[i*Nj+j] = contents[i*Nj+j];
+      //      cells[i*Nj+j] = NULL;
+      //      crosses[i*Nj+j] = NULL;
     }
   }
 }
@@ -82,9 +87,12 @@ ImagePlane::ImagePlane(int i,int j,double h,double w){
 
   int i0    = floor(Ni/2);
   int j0    = floor(Nj/2);
-  double di = height/(Ni);
-  double dj = width/(Nj);
+  double di = height/Ni;
+  double dj = width/Nj;
 
+  // xmax,xmin are the x coordinates of the leftmost and eightmost pixels.
+  // REMEMBER: xmax-xmin != width (Nj*dj).
+  // Similarly for y.
   xmin = -j0*dj;
   xmax = (this->Nj-1-j0)*dj;
   ymin = -i0*di;
@@ -94,6 +102,8 @@ ImagePlane::ImagePlane(int i,int j,double h,double w){
     for(int j=0;j<Nj;j++){
       x[i*Nj+j]   =  (j-j0)*dj;
       y[i*Nj+j]   = -(i-i0)*di;//reflect y-axis
+      //      cells[i*Nj+j] = NULL;
+      //      crosses[i*Nj+j] = NULL;
     }
   }
 }
@@ -143,6 +153,8 @@ ImagePlane::ImagePlane(const ImagePlane& image){
     img[i] = image.img[i];
     x[i] = image.x[i];
     y[i] = image.y[i];
+    //    cells[i] = NULL;
+    //    crosses[i] = NULL;
   }
 }
 
