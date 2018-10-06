@@ -6,250 +6,38 @@
 #include "likelihoodModels.hpp"
 
 #include <iostream>
-
-SmoothAlgebra::SmoothAlgebra(SmoothLikelihood* a){
-  this->likeModel = a;
-}
+#include <cmath>
 
 
+// Class: BaseAlgebra
+//===============================================================================================================
+void BaseAlgebra::setAlgebraField(BaseSourcePlane* source,Eigen::SparseMatrix<double> mat_in,Eigen::SparseMatrix<double>& mat_out,double& det_out){
+  Eigen::SparseMatrix<double> out(source->Sm,source->Sm);
 
-void SmoothAlgebra::setAlgebraInit(ImagePlane* image,BaseSourcePlane* source){
-  int Nm = image->Nm;
-  int Sm = source->Sm;
-
-  Eigen::Map<Eigen::VectorXd> d(image->img,Nm);
-  
-  Eigen::SparseMatrix<double> SS(image->S.Ti,image->S.Tj);
-  SS.reserve(Eigen::VectorXi::Constant(image->S.Ti,1));//overestimating the mask matrix number of entries per row
-  for(int i=0;i<image->S.tri.size();i++){  SS.insert(image->S.tri[i].i,image->S.tri[i].j) = image->S.tri[i].v;  }
-
-  Eigen::SparseMatrix<double> CC(image->C.Ti,image->C.Tj);
-  CC.reserve(Eigen::VectorXi::Constant(image->C.Ti,8));//overestimating the covariance matrix number of entries per row
-  for(int i=0;i<image->C.tri.size();i++){  CC.insert(image->C.tri[i].i,image->C.tri[i].j) = image->C.tri[i].v;  }
-
-  Eigen::SparseMatrix<double> BB(image->B.Ti,image->B.Tj);
-  BB.reserve(Eigen::VectorXi::Constant(image->B.Ti,900));//overestimating the number of entries per row of the blurring matrix BB (900 for a 30x30 psf)
-  //  for(int i=0;i<imageB.tri.size();i++){  BB.insert(mat->B.tri[i].i,mat->B.tri[i].j) = mat->B.tri[i].v;  }//for row-major
-  for(int i=0;i<image->B.tri.size();i++){  BB.insert(image->B.tri[i].j,image->B.tri[i].i) = image->B.tri[i].v;  }//for column-major (swap the i and j indices of tri struct)
-
-  Eigen::SparseMatrix<double> HH(Sm,Sm);
-  HH.reserve(Eigen::VectorXi::Constant(Sm,source->eigenSparseMemoryAllocForH));//overestimating the number of non-zero coefficients per HH row (different number for 1st,2nd order derivative etc)
-  for(int i=0;i<source->H.tri.size();i++){  HH.insert(source->H.tri[i].i,source->H.tri[i].j) = source->H.tri[i].v;  }
-
-
-  /*
-  //calculate determinant of CCmasked
-  Eigen::SparseMatrix<double> CCtmp(mat->S.Ti,mat->S.Tj);
-  CCtmp = (CC * SS);
-  //now fix the indices to be in the reduced ranged of CCmasked
-  Eigen::SparseMatrix<double> CCmasked(image->lookup.size(),image->lookup.size());
-  for(int k=0;k<CCtmp.outerSize();k++){
-    for(Eigen::SparseMatrix<double>::InnerIterator it(CCtmp,k);it;++it){
-	CCmasked.insert( image->lookup[it.row()], image->lookup[it.col()] ) = it.value();
-    }
-  }
-  //  CCtmp.resize(0,0);
-  */
-
-  Eigen::SimplicialLDLT< Eigen::SparseMatrix<double> > solver;
-  Eigen::VectorXd diag;
-  double dum;
-
-
-  //calculate determinant of CC
-  double detC = 0.0;
-  solver.analyzePattern(CC);
-  solver.factorize(CC);
-  diag = solver.vectorD();
-  for(int i=0;i<diag.size();i++){
-    dum = *(diag.data()+i);
-    if( dum > 1.e-20 ){
-      detC += log10( dum );
-    }
-  }
-
-
-  //Calculate StCS
-  Eigen::SparseMatrix<double> SSt(Nm,Nm);
-  Eigen::SparseMatrix<double> StCS(Nm,Nm);
-  SSt   = SS.transpose();
-  StCS  = (SSt * CC * SS);
-
-
-  // Calculate HtH
-  Eigen::SparseMatrix<double> HtH(Sm,Sm);
   if( source->reg == "covariance_kernel" ){
-    // calculate the inverse of the source covariance matrix stored in H, and store it in HtH
-    Eigen::Matrix<double,Eigen::Dynamic,Eigen::Dynamic> inv(Sm,Sm);
-    Eigen::SimplicialLDLT<Eigen::SparseMatrix<double> > solver;
-    solver.compute(HH);
-    Eigen::VectorXd idc(HH.cols()),c(HH.cols());
-    for(int i=0;i<Sm;i++){
-      for(int j=0;j<idc.size();j++){
-	idc[j] = 0;
-      }
-      idc[i] = 1;
-      //this needs to be done in two steps, otherwise it does not work when using LU
-      c = solver.solve(idc);
-      inv.col(i) = c;
-    }
-    HtH = inv.sparseView();
-    
-    inv.resize(0,0);
+    this->getInverseAndDet(mat_in,out,det_out);
   } else {
     // calculate the product HtH of a derivative based H matrix
-    Eigen::SparseMatrix<double> HHt(Sm,Sm);
-    HHt = HH.transpose();
-    HtH = (HHt * HH);    
-    HHt.resize(0,0);
+    Eigen::SparseMatrix<double> mat_in_t(mat_in.rows(),mat_in.cols());
+    mat_in_t = mat_in.transpose();
+    out = (mat_in_t * mat_in);    
+    mat_in_t.resize(0,0);
+    det_out = this->getDeterminant(out);
   }
-
-  //calculate determinant of HtH
-  double detHtH = 0.;
-  solver.analyzePattern(HtH);
-  solver.factorize(HtH);
-  diag = solver.vectorD();
-  for(int i=0;i<diag.size();i++){
-    dum = *(diag.data()+i);
-    if( dum > 1.e-20 ){
-      detHtH += log10( dum );
-    }
-  }
-
-
-
-
-
-  this->d       = d;
-  this->C       = CC;
-  this->StCS    = StCS;
-  this->B       = BB;
-  this->HtH     = HtH;
-
-  this->likeModel->terms["detC"]    = detC/2.0;
-  this->likeModel->terms["detHtH"]  = detHtH/2.0;
-
-  SS.resize(0,0);
-  SSt.resize(0,0);
-  CC.resize(0,0);
-  BB.resize(0,0);
-  HH.resize(0,0);
-  HtH.resize(0,0);
+  
+  mat_out = out;
+  out.resize(0,0);
 }
 
-
-
-// Calculate tables and related quantities at every iteration
-void SmoothAlgebra::setAlgebraRuntime(ImagePlane* image,BaseSourcePlane* source,double lambda){
-  int Nm = image->Nm;
-  int Sm = source->Sm;
-
-
-  Eigen::SparseMatrix<double> LL(source->L.Ti,source->L.Tj);
-  LL.reserve(Eigen::VectorXi::Constant(source->L.Ti,4));//setting the non-zero coefficients per row of the lensing matrix (4 for bi-linear interpolation scheme, etc)
-  for(int i=0;i<source->L.tri.size();i++){  LL.insert(source->L.tri[i].i,source->L.tri[i].j) = source->L.tri[i].v;  }
-  
-  Eigen::SparseMatrix<double> M(Nm,Sm);
-  Eigen::SparseMatrix<double> Mt(Sm,Nm);
-
-  M        = this->B*LL;
-  Mt       = M.transpose();
-  this->M  = M;
-  this->Mt = Mt;
-
-
-  //I need also to calculate HtH, and detHtH for an adaptive source
-  if( source->type == "adaptive" || source->sample_reg ){
-
-    Eigen::SparseMatrix<double> HH(Sm,Sm);
-    HH.reserve(Eigen::VectorXi::Constant(Sm,source->eigenSparseMemoryAllocForH));//overestimating the number of non-zero coefficients per HH row (different number for 1st,2nd order derivative etc)
-    for(int i=0;i<source->H.tri.size();i++){  HH.insert(source->H.tri[i].i,source->H.tri[i].j) = source->H.tri[i].v;  }
-    Eigen::SparseMatrix<double> HtH(Sm,Sm);
-
-    // Calculate HtH
-    if( source->sample_reg ){
-      // calculate the inverse of the source covariance matrix stored in H, and store it in HtH
-      Eigen::Matrix<double,Eigen::Dynamic,Eigen::Dynamic> inv(Sm,Sm);
-      Eigen::SimplicialLDLT<Eigen::SparseMatrix<double> > solver;
-      solver.compute(HH);
-      Eigen::VectorXd idc(HH.cols()),c(HH.cols());
-      for(int i=0;i<Sm;i++){
-	for(int j=0;j<idc.size();j++){
-	  idc[j] = 0;
-	}
-	idc[i] = 1;
-	//this needs to be done in two steps, otherwise it does not work when using LU
-	c = solver.solve(idc);
-	inv.col(i) = c;
-      }
-      HtH = inv.sparseView();
-
-      inv.resize(0,0);
-      
-    } else {
-      // calculate the product HtH of a derivative based H matrix
-      Eigen::SparseMatrix<double> HHt(Sm,Sm);
-      HHt = HH.transpose();
-      HtH = (HHt * HH);    
-      HHt.resize(0,0);
-    }
-    HH.resize(0,0);   // no longer needed, all information has been passed to HtH
-    this->HtH = HtH;
-    
-    
-    // Calculate the determinant of HtH
-    Eigen::SimplicialLDLT< Eigen::SparseMatrix<double> > solver;
-    Eigen::VectorXd diag;
-    double dum;
-    double detHtH = 0.;
-    solver.analyzePattern(HtH);
-    solver.factorize(HtH);
-    diag = solver.vectorD();
-    for(int i=0;i<diag.size();i++){
-      dum = *(diag.data()+i);
-      if( dum > 1.e-20 ){
-	detHtH += log10( dum );
-      } else if( dum <= 0 ){
-	std::cout << "Negative eigenvalue in detHtH: " << dum << std::endl;
-      }
-    }
-    this->likeModel->terms["detHtH"] = detHtH/2.0;
-
-
-    HtH.resize(0,0);
-  }
-  
-  Eigen::SparseMatrix<double> A(Sm,Sm);
-  if( source->reg == "covariance_kernel" ){
-    A = Mt*this->C*M + this->HtH;
-  } else {
-    A = Mt*this->C*M + lambda*this->HtH;
-  }
-  this->A = A;
-
-
-
-  LL.resize(0,0);
-  M.resize(0,0);
-  Mt.resize(0,0);
-  A.resize(0,0);
-}
-
-
-// Solve for the source
-void SmoothAlgebra::solveLinearSparseS(ImagePlane* image,BaseSourcePlane* source){
-  int Nm = image->Nm;
-  int Sm = source->Sm;
-
-  Eigen::SparseMatrix<double> A(Sm,Sm);
-  A = this->A;
-  Eigen::Matrix<double,Eigen::Dynamic,Eigen::Dynamic> inv(Sm,Sm);
-  
-  //Get the inverse
+void BaseAlgebra::getInverseAndDet(Eigen::SparseMatrix<double> mat_in,Eigen::SparseMatrix<double>& mat_out,double& det_out){
+  Eigen::Matrix<double,Eigen::Dynamic,Eigen::Dynamic> inv(mat_in.rows(),mat_in.cols());
   Eigen::SimplicialLDLT<Eigen::SparseMatrix<double> > solver;
-  solver.compute(A);
-  Eigen::VectorXd idc(A.cols()),c(A.cols());
-  for(int i=0;i<Sm;i++){
+  Eigen::VectorXd idc(mat_in.cols()),c(mat_in.cols());
+  double det = 0.0;
+
+  // get inverse
+  solver.compute(mat_in);
+  for(int i=0;i<mat_in.rows();i++){
     for(int j=0;j<idc.size();j++){
       idc[j] = 0;
     }
@@ -259,33 +47,160 @@ void SmoothAlgebra::solveLinearSparseS(ImagePlane* image,BaseSourcePlane* source
     inv.col(i) = c;
   }
 
-  //Calculate determinant of A from the LDLT(Cholesky) decomposition
-  double detA = 0.0;
+  // get determinant
   Eigen::VectorXd diag = solver.vectorD();
+  diag = solver.vectorD();
   for(int i=0;i<diag.size();i++){
-    detA += log10( *(diag.data()+i) );
+    det += log10( *(diag.data()+i) );
+    //    dum = *(diag.data()+i);
+    //    if( dum > 1.e-20 ){
+    //      det += log10( dum );
+    //    }
   }
+
+
+  det_out = det;
+  mat_out = inv.sparseView();
+  inv.resize(0,0);
+}
+
+double BaseAlgebra::getDeterminant(Eigen::SparseMatrix<double> mat){
+  Eigen::SimplicialLDLT< Eigen::SparseMatrix<double> > solver;
+  Eigen::VectorXd diag;
+  double dum;
+  
+  double det = 0.0;
+  solver.analyzePattern(mat);
+  solver.factorize(mat);
+  diag = solver.vectorD();
+  for(int i=0;i<diag.size();i++){
+    dum = *(diag.data()+i);
+    if( dum > 1.e-20 ){
+      det += log10( dum );
+    }
+  }
+
+  return det;
+}
+
+
+// Class: SmoothAlgebra
+//===============================================================================================================
+SmoothAlgebra::SmoothAlgebra(SmoothLikelihood* a){
+  this->likeModel = a;
+}
+
+
+// Calculate tables and related quantities at initialization
+void SmoothAlgebra::setAlgebraInit(ImagePlane* image,BaseSourcePlane* source){
+  // Read the data
+  Eigen::Map<Eigen::VectorXd> d(image->img,image->Nm);
+  this->d = d;
+  
+  // Read CC and calculate detCs
+  Eigen::SparseMatrix<double> CC(image->C.Ti,image->C.Tj);
+  CC.reserve(Eigen::VectorXi::Constant(image->C.Ti,8));//overestimating the covariance matrix number of entries per row
+  for(int i=0;i<image->C.tri.size();i++){  CC.insert(image->C.tri[i].i,image->C.tri[i].j) = image->C.tri[i].v;  }
+  this->C = CC;
+  double detC = this->getDeterminant(this->C);
+  this->likeModel->terms["detC"] = detC/2.0;
+  CC.resize(0,0);
+
+  // Read mask and calculate StCS
+  Eigen::SparseMatrix<double> SS(image->S.Ti,image->S.Tj);
+  SS.reserve(Eigen::VectorXi::Constant(image->S.Ti,1));//overestimating the mask matrix number of entries per row
+  for(int i=0;i<image->S.tri.size();i++){  SS.insert(image->S.tri[i].i,image->S.tri[i].j) = image->S.tri[i].v;  }
+  Eigen::SparseMatrix<double> SSt(image->Nm,image->Nm);
+  Eigen::SparseMatrix<double> StCS(image->Nm,image->Nm);
+  SSt  = SS.transpose();
+  StCS = (SSt * this->C * SS);
+  this->StCS = StCS;
+  SS.resize(0,0);
+  SSt.resize(0,0);
+
+  // Read B
+  Eigen::SparseMatrix<double> BB(image->B.Ti,image->B.Tj);
+  BB.reserve(Eigen::VectorXi::Constant(image->B.Ti,900));//overestimating the number of entries per row of the blurring matrix BB (900 for a 30x30 psf)
+  //  for(int i=0;i<imageB.tri.size();i++){  BB.insert(mat->B.tri[i].i,mat->B.tri[i].j) = mat->B.tri[i].v;  }//for row-major
+  for(int i=0;i<image->B.tri.size();i++){  BB.insert(image->B.tri[i].j,image->B.tri[i].i) = image->B.tri[i].v;  }//for column-major (swap the i and j indices of tri struct)
+  this->B = BB;
+  BB.resize(0,0);
+
+  // Read HH and calculate Cs and detCs
+  Eigen::SparseMatrix<double> HH(source->Sm,source->Sm);
+  HH.reserve(Eigen::VectorXi::Constant(source->Sm,source->eigenSparseMemoryAllocForH));//overestimating the number of non-zero coefficients per HH row (different number for 1st,2nd order derivative etc)
+  for(int i=0;i<source->H.tri.size();i++){  HH.insert(source->H.tri[i].i,source->H.tri[i].j) = source->H.tri[i].v;  }
+  double detCs = 0.0;
+  this->setAlgebraField(source,HH,this->Cs,detCs);
+  this->likeModel->terms["detCs"] = detCs/2.0;
+  HH.resize(0,0);
+
+  // Calculate two likelihood terms
+  this->likeModel->terms["Nilog2p"] = -(image->lookup.size()*log10(2*M_PI)/2.0); // for some reason i need the outer parenthsis here, otherwise there is a memory problem
+  this->likeModel->terms["Nslogl"]  = source->Sm*log10(Nlpar::getValueByName("lambda",this->likeModel->reg))/2.0;
+}
+
+
+// Calculate tables and related quantities at every iteration
+void SmoothAlgebra::setAlgebraRuntime(ImagePlane* image,BaseSourcePlane* source){
+  // Update Mt and M matrices based on the new lensing matrix L
+  Eigen::SparseMatrix<double> LL(source->L.Ti,source->L.Tj);
+  LL.reserve(Eigen::VectorXi::Constant(source->L.Ti,4));//setting the non-zero coefficients per row of the lensing matrix (4 for bi-linear interpolation scheme, etc)
+  for(int i=0;i<source->L.tri.size();i++){  LL.insert(source->L.tri[i].i,source->L.tri[i].j) = source->L.tri[i].v;  }
+  Eigen::SparseMatrix<double> M(image->Nm,source->Sm);
+  Eigen::SparseMatrix<double> Mt(source->Sm,image->Nm);
+  M        = this->B*LL;
+  Mt       = M.transpose();
+  this->M  = M;
+  this->Mt = Mt;
+  LL.resize(0,0);
+  M.resize(0,0);
+  Mt.resize(0,0);
+
+  // If the source is adaptive, or if the source covariance matrix has changed, calculate Cs and detCs
+  if( source->type == "adaptive" || source->sample_reg ){
+    Eigen::SparseMatrix<double> HH(source->Sm,source->Sm);
+    HH.reserve(Eigen::VectorXi::Constant(source->Sm,source->eigenSparseMemoryAllocForH));//overestimating the number of non-zero coefficients per HH row (different number for 1st,2nd order derivative etc)
+    for(int i=0;i<source->H.tri.size();i++){  HH.insert(source->H.tri[i].i,source->H.tri[i].j) = source->H.tri[i].v;  }
+
+    double detCs = 0.0;
+    this->setAlgebraField(source,HH,this->Cs,detCs);
+    this->likeModel->terms["detCs"] = detCs/2.0;
+    HH.resize(0,0);
+  }
+
+  // Calculate the new A matrix
+  Eigen::SparseMatrix<double> A(source->Sm,source->Sm);
+  A = this->Mt*this->C*this->M + Nlpar::getValueByName("lambda",this->likeModel->reg)*this->Cs;
+  this->A = A;
+  A.resize(0,0);
+}
+
+
+// Solve for the source and calculate likelihood terms at every iteration
+void SmoothAlgebra::solveSource(BaseSourcePlane* source){
+  // Get the inverse and the det of A
+  Eigen::SparseMatrix<double> inv(source->Sm,source->Sm);
+  double detA = 0.0;
+  this->getInverseAndDet(this->A,inv,detA);
   this->likeModel->terms["detA"] = -detA/2.0;
 
   //Get the Most Probable solution for the source
-  Eigen::VectorXd s(Sm);
+  Eigen::VectorXd s(source->Sm);
   s = inv*(this->Mt*this->C*this->d);
   Eigen::Map<Eigen::VectorXd>(source->src,s.size()) = s;
+  inv.resize(0,0);
 
-  //Get the chi-squared term
+  //Get the chi-squared and reg terms
   Eigen::VectorXd st = s.transpose();
   Eigen::VectorXd y  = this->d - (this->M*s);
   Eigen::VectorXd yt = y.transpose();
   double chi2        = yt.dot(this->StCS*y);
-  double reg         = st.dot(this->HtH*s);
-
+  double reg         = st.dot(this->Cs*s);
   this->likeModel->terms["chi2"] = -chi2/2.0;
-  this->likeModel->terms["reg"]  = -reg/2.0;
-
-
-  inv.resize(0,0);
-  A.resize(0,0);
+  this->likeModel->terms["reg"]  = -Nlpar::getValueByName("lambda",this->likeModel->reg)*reg/2.0;
 }
+
 
 
 void SmoothAlgebra::getMockData(ImagePlane* mockdata,BaseSourcePlane* source){
@@ -314,7 +229,6 @@ void SmoothAlgebra::getSourceErrors(int Sm,double* errors){
     inv.col(i) = c;
   }
 
-
   //  get the diagonal elements of matrix inv as source values
   Eigen::VectorXd diag = inv.diagonal();
   for(int i=0;i<diag.size();i++){
@@ -336,70 +250,27 @@ void PertAlgebra::setAlgebraInit(BaseSourcePlane* source,Pert* pert_mass_model){
   HH_s.reserve(Eigen::VectorXi::Constant(source->Sm,source->eigenSparseMemoryAllocForH));//overestimating the number of non-zero coefficients per HH_s row (different number for 1st,2nd order derivative etc)
   for(int i=0;i<source->H.tri.size();i++){  HH_s.insert(source->H.tri[i].i,source->H.tri[i].j) = source->H.tri[i].v;  }
 
-  if( this->likeModel->reg_s_type == "identity" || this->likeModel->reg_s_type == "gradient" || this->likeModel->reg_s_type == "curvature" ){
-    // Calculate the lambda*HtH product
-    Eigen::SparseMatrix<double> HtH_s(source->Sm,source->Sm);
-    Eigen::SparseMatrix<double> HHt_s(source->Sm,source->Sm);
-    HHt_s = HH_s.transpose();
-    HtH_s = (HHt_s * HH_s);
-    this->HtH_s = HtH_s;
-    HHt_s.resize(0,0);
-    HtH_s.resize(0,0);
-  } else {
-    // Calculate the inverse of the source covariance matrix stored in H, and store it in C_s
-    Eigen::Matrix<double,Eigen::Dynamic,Eigen::Dynamic> inv_s(source->Sm,source->Sm);
-    Eigen::SimplicialLDLT<Eigen::SparseMatrix<double> > solver_s;
-    solver_s.compute(HH_s);
-    Eigen::VectorXd idc_s(HH_s.cols()),c_s(HH_s.cols());
-    for(int i=0;i<source->Sm;i++){
-      for(int j=0;j<idc_s.size();j++){
-	idc_s[j] = 0;
-      }
-      idc_s[i] = 1;
-      //this needs to be done in two steps, otherwise it does not work when using LU
-      c_s = solver_s.solve(idc_s);
-      inv_s.col(i) = c_s;
-    }
-    this->C_s = inv_s.sparseView();
-    inv_s.resize(0,0);
-    HH_s.resize(0,0); 
-  }
-
+  Eigen::SparseMatrix<double> Cs(source->Sm,source->Sm);
+  double detCs = 0.0;
+  this->setAlgebraField(source,HH_s,Cs,detCs);
+  this->likeModel->terms["detCs"] = detCs/2.0;
+  this->Cs = Cs;
+  Cs.resize(0,0);
+  HH_s.resize(0,0);
 
   // Read perturbations regularization matrix
   Eigen::SparseMatrix<double> HH_dpsi(pert_mass_model->dpsi->Sm,pert_mass_model->dpsi->Sm);
   HH_dpsi.reserve(Eigen::VectorXi::Constant(pert_mass_model->dpsi->Sm,pert_mass_model->dpsi->eigenSparseMemoryAllocForH));//overestimating the number of non-zero coefficients per HH_dpsi row (different number for 1st,2nd order derivative etc)
   for(int i=0;i<pert_mass_model->dpsi->H.tri.size();i++){  HH_dpsi.insert(pert_mass_model->dpsi->H.tri[i].i,pert_mass_model->dpsi->H.tri[i].j) = pert_mass_model->dpsi->H.tri[i].v;  }
 
-  if( this->likeModel->reg_dpsi_type == "identity" || this->likeModel->reg_dpsi_type == "gradient" || this->likeModel->reg_dpsi_type == "curvature" ){
-    // Calculate the lambda*HtH product
-    Eigen::SparseMatrix<double> HtH_dpsi(pert_mass_model->dpsi->Sm,pert_mass_model->dpsi->Sm);
-    Eigen::SparseMatrix<double> HHt_dpsi(pert_mass_model->dpsi->Sm,pert_mass_model->dpsi->Sm);
-    HHt_dpsi = HH_dpsi.transpose();
-    HtH_dpsi = (HHt_dpsi * HH_dpsi);
-    this->HtH_dpsi = HtH_dpsi;
-    HHt_dpsi.resize(0,0);
-    HtH_dpsi.resize(0,0);
-  } else {
-    // Calculate the inverse of the perturbations covariance matrix stored in H, and store it in C_dpsi
-    Eigen::Matrix<double,Eigen::Dynamic,Eigen::Dynamic> inv_dpsi(pert_mass_model->dpsi->Sm,pert_mass_model->dpsi->Sm);
-    Eigen::SimplicialLDLT<Eigen::SparseMatrix<double> > solver_dpsi;
-    solver_dpsi.compute(HH_dpsi);
-    Eigen::VectorXd idc_dpsi(HH_dpsi.cols()),c_dpsi(HH_dpsi.cols());
-    for(int i=0;i<pert_mass_model->dpsi->Sm;i++){
-      for(int j=0;j<idc_dpsi.size();j++){
-	idc_dpsi[j] = 0;
-      }
-      idc_dpsi[i] = 1;
-      //this needs to be done in two steps, otherwise it does not work when using LU
-      c_dpsi = solver_dpsi.solve(idc_dpsi);
-      inv_dpsi.col(i) = c_dpsi;
-    }
-    this->C_dpsi = inv_dpsi.sparseView();
-    inv_dpsi.resize(0,0);
-    HH_dpsi.resize(0,0);
-  }
-  
+  Eigen::SparseMatrix<double> Cp(pert_mass_model->dpsi->Sm,pert_mass_model->dpsi->Sm);
+  double detCp = 0.0;
+  this->setAlgebraField(source,HH_dpsi,Cp,detCp);
+  this->likeModel->terms["detCp"] = detCp/2.0;
+  this->Cp = Cp;
+  Cp.resize(0,0);
+  HH_dpsi.resize(0,0);
+
 
   // Create DsDpsi sparse matrix directly based on source->Ds (varying at each call) and image->crosses (fixed at initialization)
   Eigen::SparseMatrix<double> DsDpsi(likeModel->smooth_like->image->Nm,pert_mass_model->dpsi->Sm);
@@ -440,6 +311,11 @@ void PertAlgebra::setAlgebraInit(BaseSourcePlane* source,Pert* pert_mass_model){
   }
   this->DsDpsi = DsDpsi;
   DsDpsi.resize(0,0);
+
+
+  this->likeModel->terms["Nslogls"] = source->Sm*log10(Nlpar::getValueByName("lambda_s",this->likeModel->reg_s))/2.0;
+  this->likeModel->terms["Nploglp"] = pert_mass_model->dpsi->Sm*log10(Nlpar::getValueByName("lambda_dpsi",this->likeModel->reg_dpsi))/2.0;
+  this->likeModel->terms["Nilog2p"] = -(likeModel->smooth_like->image->lookup.size()*log10(2*M_PI)/2.0); // for some reason i need the outer parenthsis here, otherwise there is a memory problem
 }
 
 
@@ -472,22 +348,12 @@ void PertAlgebra::setAlgebraRuntime(BaseSourcePlane* source,Pert* pert_mass_mode
     HH_s.reserve(Eigen::VectorXi::Constant(source->Sm,source->eigenSparseMemoryAllocForH));//overestimating the number of non-zero coefficients per HH_s row (different number for 1st,2nd order derivative etc)
     for(int i=0;i<source->H.tri.size();i++){  HH_s.insert(source->H.tri[i].i,source->H.tri[i].j) = source->H.tri[i].v;  }
     
-    // Calculate the inverse of the source covariance matrix stored in H, and store it in C_s
-    Eigen::Matrix<double,Eigen::Dynamic,Eigen::Dynamic> inv_s(source->Sm,source->Sm);
-    Eigen::SimplicialLDLT<Eigen::SparseMatrix<double> > solver_s;
-    solver_s.compute(HH_s);
-    Eigen::VectorXd idc_s(HH_s.cols()),c_s(HH_s.cols());
-    for(int i=0;i<source->Sm;i++){
-      for(int j=0;j<idc_s.size();j++){
-	idc_s[j] = 0;
-      }
-      idc_s[i] = 1;
-      //this needs to be done in two steps, otherwise it does not work when using LU
-      c_s = solver_s.solve(idc_s);
-      inv_s.col(i) = c_s;
-    }
-    this->C_s = inv_s.sparseView();
-    inv_s.resize(0,0);
+    Eigen::SparseMatrix<double> Cs(source->Sm,source->Sm);
+    double detCs = 0.0;
+    this->setAlgebraField(source,HH_s,Cs,detCs);
+    this->likeModel->terms["detCs"] = detCs/2.0;
+    this->Cs = Cs;
+    Cs.resize(0,0);
     HH_s.resize(0,0);
   }
   
@@ -498,93 +364,64 @@ void PertAlgebra::setAlgebraRuntime(BaseSourcePlane* source,Pert* pert_mass_mode
     Eigen::SparseMatrix<double> HH_dpsi(pert_mass_model->dpsi->Sm,pert_mass_model->dpsi->Sm);
     HH_dpsi.reserve(Eigen::VectorXi::Constant(pert_mass_model->dpsi->Sm,pert_mass_model->dpsi->eigenSparseMemoryAllocForH));//overestimating the number of non-zero coefficients per HH_dpsi row (different number for 1st,2nd order derivative etc)
     for(int i=0;i<pert_mass_model->dpsi->H.tri.size();i++){  HH_dpsi.insert(pert_mass_model->dpsi->H.tri[i].i,pert_mass_model->dpsi->H.tri[i].j) = pert_mass_model->dpsi->H.tri[i].v;  }
-    
-    // Calculate the inverse of the perturbations covariance matrix stored in H, and store it in C_dpsi
-    Eigen::Matrix<double,Eigen::Dynamic,Eigen::Dynamic> inv_dpsi(pert_mass_model->dpsi->Sm,pert_mass_model->dpsi->Sm);
-    Eigen::SimplicialLDLT<Eigen::SparseMatrix<double> > solver_dpsi;
-    solver_dpsi.compute(HH_dpsi);
-    Eigen::VectorXd idc_dpsi(HH_dpsi.cols()),c_dpsi(HH_dpsi.cols());
-    for(int i=0;i<pert_mass_model->dpsi->Sm;i++){
-      for(int j=0;j<idc_dpsi.size();j++){
-	idc_dpsi[j] = 0;
-      }
-      idc_dpsi[i] = 1;
-      //this needs to be done in two steps, otherwise it does not work when using LU
-      c_dpsi = solver_dpsi.solve(idc_dpsi);
-      inv_dpsi.col(i) = c_dpsi;
-    }
-    this->C_dpsi = inv_dpsi.sparseView();
-    inv_dpsi.resize(0,0);
+
+    Eigen::SparseMatrix<double> Cp(pert_mass_model->dpsi->Sm,pert_mass_model->dpsi->Sm);
+    double detCp = 0.0;
+    this->setAlgebraField(source,HH_dpsi,Cp,detCp);
+    this->likeModel->terms["detCp"] = detCp/2.0;
+    this->Cp = Cp;
+    Cp.resize(0,0);
     HH_dpsi.resize(0,0);
   }
   
 
   // Calculate RtR
-  Eigen::SparseMatrix<double> RtR(source->Sm+pert_mass_model->dpsi->Sm,source->Sm+pert_mass_model->dpsi->Sm);
-  if( this->likeModel->reg_dpsi_type == "covariance" ){
-    for(int k=0;k<this->C_s.outerSize();++k){
-      for(Eigen::SparseMatrix<double>::InnerIterator it(this->C_s,k);it;++it){
-	RtR.insert(it.row(),it.col()) = it.value();
-      }
-    }
-  } else {
-    double lambda_s = Nlpar::getValueByName("lambda_s",this->likeModel->reg_s);
-    for(int k=0;k<this->HtH_s.outerSize();++k){
-      for(Eigen::SparseMatrix<double>::InnerIterator it(this->HtH_s,k);it;++it){
-	RtR.insert(it.row(),it.col()) = lambda_s * it.value();
-      }
-    }
-  }    
-
-  if( this->likeModel->reg_dpsi_type == "covariance" ){
-    for(int k=0;k<this->C_dpsi.outerSize();++k){
-      for(Eigen::SparseMatrix<double>::InnerIterator it(this->C_dpsi,k);it;++it){
-	RtR.insert(source->Sm+it.row(),source->Sm+it.col()) = it.value();
-      }
-    }
-  } else {
-    double lambda_dpsi = Nlpar::getValueByName("lambda_dpsi",this->likeModel->reg_dpsi);
-    for(int k=0;k<this->HtH_dpsi.outerSize();++k){
-      for(Eigen::SparseMatrix<double>::InnerIterator it(this->HtH_dpsi,k);it;++it){
-	RtR.insert(source->Sm+it.row(),source->Sm+it.col()) = lambda_dpsi * it.value();
-      }
+  Eigen::SparseMatrix<double> RtR_dum(source->Sm+pert_mass_model->dpsi->Sm,source->Sm+pert_mass_model->dpsi->Sm);
+  double lambda_s = Nlpar::getValueByName("lambda_s",this->likeModel->reg_s);
+  for(int k=0;k<this->Cs.outerSize();++k){
+    for(Eigen::SparseMatrix<double>::InnerIterator it(this->Cs,k);it;++it){
+      RtR_dum.insert(it.row(),it.col()) = lambda_s * it.value();
     }
   }
-
+  double lambda_dpsi = Nlpar::getValueByName("lambda_dpsi",this->likeModel->reg_dpsi);
+  for(int k=0;k<this->Cp.outerSize();++k){
+    for(Eigen::SparseMatrix<double>::InnerIterator it(this->Cp,k);it;++it){
+      RtR_dum.insert(source->Sm+it.row(),source->Sm+it.col()) = lambda_dpsi * it.value();
+    }
+  }
+  this->RtR = RtR_dum;
 
   Eigen::SparseMatrix<double> A_r_dum(smooth_like->image->Nm,pert_mass_model->dpsi->Sm+source->Sm);
-  A_r_dum = this->Mt_r*smooth_like->algebra->C*this->M_r + RtR;
+  A_r_dum = this->Mt_r*smooth_like->algebra->C*this->M_r + this->RtR;
   this->A_r = A_r_dum;
 
-  RtR.resize(0,0);
+  RtR_dum.resize(0,0);
   A_r_dum.resize(0,0);
 }
 
 
 void PertAlgebra::solveSourcePert(BaseSourcePlane* source,Pert* pert_mass_model,SmoothLikelihood* smooth_like){
-  Eigen::SparseMatrix<double> A(source->Sm+pert_mass_model->dpsi->Sm,source->Sm+pert_mass_model->dpsi->Sm);
-  A = this->A_r;
-  Eigen::Matrix<double,Eigen::Dynamic,Eigen::Dynamic> inv(source->Sm+pert_mass_model->dpsi->Sm,source->Sm+pert_mass_model->dpsi->Sm);
-  
-  
-  //Get the inverse
-  Eigen::SimplicialLDLT<Eigen::SparseMatrix<double> > solver;
-  solver.compute(A);
-  Eigen::VectorXd idc(A.cols()),c(A.cols());
-  for(int i=0;i<source->Sm+pert_mass_model->dpsi->Sm;i++){
-    for(int j=0;j<idc.size();j++){
-      idc[j] = 0;
-    }
-    idc[i] = 1;
-    //this needs to be done in two steps, otherwise it does not work when using LU
-    c = solver.solve(idc);
-    inv.col(i) = c;
-  }
-
+  // Get the inverse and det of A_r
+  Eigen::SparseMatrix<double> inv(source->Sm+pert_mass_model->dpsi->Sm,source->Sm+pert_mass_model->dpsi->Sm);
+  double detA = 0.0;
+  this->getInverseAndDet(this->A_r,inv,detA);
+  this->likeModel->terms["detA"] = -detA/2.0;
   
   //Get the Most Probable solution for the source and potential
   Eigen::VectorXd r(source->Sm+pert_mass_model->dpsi->Sm);
   r = inv*(this->Mt_r*this->likeModel->smooth_like->algebra->C*this->likeModel->smooth_like->algebra->d);
+  inv.resize(0,0);
+
+  //Get the chi-squared term
+  Eigen::VectorXd y  = this->likeModel->smooth_like->algebra->d - (this->M_r*r);
+  Eigen::VectorXd yt = y.transpose();
+  double chi2        = yt.dot(this->likeModel->smooth_like->algebra->StCS*y);
+  this->likeModel->terms["chi2"] = -chi2/2.0;
+
+  // Get the regularization term
+  Eigen::VectorXd rt = r.transpose();
+  double reg         = rt.dot(this->RtR*r);
+  this->likeModel->terms["reg"] = -reg/2.0;  
 
   //  Eigen::Map<Eigen::VectorXd>(source->src,source->Sm) = r;
   //  Eigen::Map<Eigen::VectorXd>(pert_mass_model->dpsi->src,dpsi.size()) = dpsi;
@@ -594,522 +431,5 @@ void PertAlgebra::solveSourcePert(BaseSourcePlane* source,Pert* pert_mass_model,
   for(int i=0;i<pert_mass_model->dpsi->Sm;i++){
     pert_mass_model->dpsi->src[i] = r[source->Sm+i];
   }
-
-  inv.resize(0,0);
-  A.resize(0,0);
 }
 
-
-
-
-
-
-
-
-
-
-// Class: PertIterationAlgebra
-//===============================================================================================================
-PertIterationAlgebra::PertIterationAlgebra(PertIterationLikelihood* a){
-  this->likeModel = a;
-}
-
-void PertIterationAlgebra::setAlgebraInit(BaseSourcePlane* source,Pert* pert_mass_model){
-  // Read source regularization matrix
-  Eigen::SparseMatrix<double> HH_s(source->Sm,source->Sm);
-  HH_s.reserve(Eigen::VectorXi::Constant(source->Sm,source->eigenSparseMemoryAllocForH));//overestimating the number of non-zero coefficients per HH_s row (different number for 1st,2nd order derivative etc)
-  for(int i=0;i<source->H.tri.size();i++){  HH_s.insert(source->H.tri[i].i,source->H.tri[i].j) = source->H.tri[i].v;  }
-
-  if( this->likeModel->reg_s_type == "identity" || this->likeModel->reg_s_type == "gradient" || this->likeModel->reg_s_type == "curvature" ){
-    // Calculate the lambda*HtH product
-    Eigen::SparseMatrix<double> HtH_s(source->Sm,source->Sm);
-    Eigen::SparseMatrix<double> HHt_s(source->Sm,source->Sm);
-    HHt_s = HH_s.transpose();
-    HtH_s = (HHt_s * HH_s);
-    this->HtH_s = HtH_s;
-    HHt_s.resize(0,0);
-    HtH_s.resize(0,0);
-  } else {
-    // Calculate the inverse of the source covariance matrix stored in H, and store it in C_s
-    Eigen::Matrix<double,Eigen::Dynamic,Eigen::Dynamic> inv_s(source->Sm,source->Sm);
-    Eigen::SimplicialLDLT<Eigen::SparseMatrix<double> > solver_s;
-    solver_s.compute(HH_s);
-    Eigen::VectorXd idc_s(HH_s.cols()),c_s(HH_s.cols());
-    for(int i=0;i<source->Sm;i++){
-      for(int j=0;j<idc_s.size();j++){
-	idc_s[j] = 0;
-      }
-      idc_s[i] = 1;
-      //this needs to be done in two steps, otherwise it does not work when using LU
-      c_s = solver_s.solve(idc_s);
-      inv_s.col(i) = c_s;
-    }
-    this->C_s = inv_s.sparseView();
-    inv_s.resize(0,0);
-    HH_s.resize(0,0); 
-  }
-
-
-  // Read perturbations regularization matrix
-  Eigen::SparseMatrix<double> HH_dpsi(pert_mass_model->dpsi->Sm,pert_mass_model->dpsi->Sm);
-  HH_dpsi.reserve(Eigen::VectorXi::Constant(pert_mass_model->dpsi->Sm,pert_mass_model->dpsi->eigenSparseMemoryAllocForH));//overestimating the number of non-zero coefficients per HH_dpsi row (different number for 1st,2nd order derivative etc)
-  for(int i=0;i<pert_mass_model->dpsi->H.tri.size();i++){  HH_dpsi.insert(pert_mass_model->dpsi->H.tri[i].i,pert_mass_model->dpsi->H.tri[i].j) = pert_mass_model->dpsi->H.tri[i].v;  }
-
-  if( this->likeModel->reg_dpsi_type == "identity" || this->likeModel->reg_dpsi_type == "gradient" || this->likeModel->reg_dpsi_type == "curvature" ){
-    // Calculate the lambda*HtH product
-    Eigen::SparseMatrix<double> HtH_dpsi(pert_mass_model->dpsi->Sm,pert_mass_model->dpsi->Sm);
-    Eigen::SparseMatrix<double> HHt_dpsi(pert_mass_model->dpsi->Sm,pert_mass_model->dpsi->Sm);
-    HHt_dpsi = HH_dpsi.transpose();
-    HtH_dpsi = (HHt_dpsi * HH_dpsi);
-    this->HtH_dpsi = HtH_dpsi;
-    HHt_dpsi.resize(0,0);
-    HtH_dpsi.resize(0,0);
-  } else {
-    // Calculate the inverse of the perturbations covariance matrix stored in H, and store it in C_dpsi
-    Eigen::Matrix<double,Eigen::Dynamic,Eigen::Dynamic> inv_dpsi(pert_mass_model->dpsi->Sm,pert_mass_model->dpsi->Sm);
-    Eigen::SimplicialLDLT<Eigen::SparseMatrix<double> > solver_dpsi;
-    solver_dpsi.compute(HH_dpsi);
-    Eigen::VectorXd idc_dpsi(HH_dpsi.cols()),c_dpsi(HH_dpsi.cols());
-    for(int i=0;i<pert_mass_model->dpsi->Sm;i++){
-      for(int j=0;j<idc_dpsi.size();j++){
-	idc_dpsi[j] = 0;
-      }
-      idc_dpsi[i] = 1;
-      //this needs to be done in two steps, otherwise it does not work when using LU
-      c_dpsi = solver_dpsi.solve(idc_dpsi);
-      inv_dpsi.col(i) = c_dpsi;
-    }
-    this->C_dpsi = inv_dpsi.sparseView();
-    inv_dpsi.resize(0,0);
-    HH_dpsi.resize(0,0);
-  }
-  
-
-  // Create DsDpsi sparse matrix directly based on source->Ds (varying at each call) and image->crosses (fixed at initialization)
-  Eigen::SparseMatrix<double> DsDpsi(likeModel->smooth_like->image->Nm,pert_mass_model->dpsi->Sm);
-  DsDpsi.reserve(Eigen::VectorXi::Constant(pert_mass_model->dpsi->Sm,12));
-  int i0,j0,j_index;
-  double dsx,dsy;
-  int rel_i[12] = {-1,-1,0,0,0,0,1,1,1,1,2,2};
-  int rel_j[12] = {0,1,-1,0,1,2,-1,0,1,2,0,1};
-  double coeffs[12] = {0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0};
-
-  for(int h=0;h<likeModel->smooth_like->image->Nm;h++){
-    dsx = likeModel->smooth_like->source->Ds.tri[2*h].v;
-    dsy = likeModel->smooth_like->source->Ds.tri[2*h+1].v;
-
-    i0 = likeModel->smooth_like->image->crosses[h]->i0;
-    j0 = likeModel->smooth_like->image->crosses[h]->j0;
-
-    coeffs[0]  = likeModel->smooth_like->image->crosses[h]->coeff_y[0]*dsy;
-    coeffs[1]  = likeModel->smooth_like->image->crosses[h]->coeff_y[4]*dsy;
-    coeffs[2]  = likeModel->smooth_like->image->crosses[h]->coeff_x[0]*dsx;
-    coeffs[3]  = likeModel->smooth_like->image->crosses[h]->coeff_y[1]*dsy + likeModel->smooth_like->image->crosses[h]->coeff_x[1]*dsx;
-    coeffs[4]  = likeModel->smooth_like->image->crosses[h]->coeff_y[5]*dsy + likeModel->smooth_like->image->crosses[h]->coeff_x[2]*dsx;
-    coeffs[5]  = likeModel->smooth_like->image->crosses[h]->coeff_x[3]*dsx;
-    coeffs[6]  = likeModel->smooth_like->image->crosses[h]->coeff_x[4]*dsx;
-    coeffs[7]  = likeModel->smooth_like->image->crosses[h]->coeff_y[2]*dsy + likeModel->smooth_like->image->crosses[h]->coeff_x[5]*dsx;
-    coeffs[8]  = likeModel->smooth_like->image->crosses[h]->coeff_y[6]*dsy + likeModel->smooth_like->image->crosses[h]->coeff_x[6]*dsx;
-    coeffs[9]  = likeModel->smooth_like->image->crosses[h]->coeff_x[7]*dsx;
-    coeffs[10] = likeModel->smooth_like->image->crosses[h]->coeff_y[3]*dsy;
-    coeffs[11] = likeModel->smooth_like->image->crosses[h]->coeff_y[7]*dsy;
-
-    for(int q=0;q<12;q++){
-      if( coeffs[q] != 0.0 ){
-	j_index = (i0 + rel_i[q])*pert_mass_model->dpsi->Sj + (j0 + rel_j[q]);
-	DsDpsi.insert( h, j_index) = coeffs[q];
-      }
-      coeffs[q] = 0.0; // need to reset the vector "coeffs"
-    }
-  }
-  this->DsDpsi = DsDpsi;
-  DsDpsi.resize(0,0);
-}
-
-
-void PertIterationAlgebra::setAlgebraRuntime(BaseSourcePlane* source,Pert* pert_mass_model,SmoothLikelihood* smooth_like){
-  Eigen::SparseMatrix<double> M_r_dum(smooth_like->image->Nm,pert_mass_model->dpsi->Sm+source->Sm);
-  Eigen::SparseMatrix<double> Mt_r_dum(smooth_like->image->Nm,pert_mass_model->dpsi->Sm+source->Sm);
-
-  Eigen::SparseMatrix<double> block(smooth_like->image->Nm,pert_mass_model->dpsi->Sm+source->Sm);
-  block.reserve(Eigen::VectorXi::Constant(smooth_like->image->Nm,30));//overestimating the number of non-zero coefficients per HH row (different number for 1st,2nd order derivative etc)
-  for(int i=0;i<source->L.tri.size();i++){  block.insert(source->L.tri[i].i,source->L.tri[i].j) = source->L.tri[i].v;  }
-  for(int k=0;k<this->DsDpsi.outerSize();++k){
-    for(Eigen::SparseMatrix<double>::InnerIterator it(this->DsDpsi,k);it;++it){
-      block.insert(it.row(),source->Sm+it.col()) = it.value();
-    }
-  }
-  M_r_dum  = (-smooth_like->algebra->B) * block;
-  Mt_r_dum = M_r_dum.transpose();
-  this->M_r = M_r_dum;
-  this->Mt_r = Mt_r_dum;
-  block.resize(0,0);
-  M_r_dum.resize(0,0);
-  Mt_r_dum.resize(0,0);
-
-
-  // The following steps are needed to calculate RtR for covariance based regularizations
-  // Calculate source regularization
-  if( source->sample_reg && this->likeModel->reg_s_type == "covariance" ){
-    // Read updated source regularization matrix
-    Eigen::SparseMatrix<double> HH_s(source->Sm,source->Sm);
-    HH_s.reserve(Eigen::VectorXi::Constant(source->Sm,source->eigenSparseMemoryAllocForH));//overestimating the number of non-zero coefficients per HH_s row (different number for 1st,2nd order derivative etc)
-    for(int i=0;i<source->H.tri.size();i++){  HH_s.insert(source->H.tri[i].i,source->H.tri[i].j) = source->H.tri[i].v;  }
-    
-    // Calculate the inverse of the source covariance matrix stored in H, and store it in C_s
-    Eigen::Matrix<double,Eigen::Dynamic,Eigen::Dynamic> inv_s(source->Sm,source->Sm);
-    Eigen::SimplicialLDLT<Eigen::SparseMatrix<double> > solver_s;
-    solver_s.compute(HH_s);
-    Eigen::VectorXd idc_s(HH_s.cols()),c_s(HH_s.cols());
-    for(int i=0;i<source->Sm;i++){
-      for(int j=0;j<idc_s.size();j++){
-	idc_s[j] = 0;
-      }
-      idc_s[i] = 1;
-      //this needs to be done in two steps, otherwise it does not work when using LU
-      c_s = solver_s.solve(idc_s);
-      inv_s.col(i) = c_s;
-    }
-    this->C_s = inv_s.sparseView();
-    inv_s.resize(0,0);
-    HH_s.resize(0,0);
-  }
-  
-  
-  // Calculate perturbation regularization
-  if( pert_mass_model->dpsi->sample_reg && this->likeModel->reg_dpsi_type == "covariance" ){
-    // Read updated perturbations regularization matrix
-    Eigen::SparseMatrix<double> HH_dpsi(pert_mass_model->dpsi->Sm,pert_mass_model->dpsi->Sm);
-    HH_dpsi.reserve(Eigen::VectorXi::Constant(pert_mass_model->dpsi->Sm,pert_mass_model->dpsi->eigenSparseMemoryAllocForH));//overestimating the number of non-zero coefficients per HH_dpsi row (different number for 1st,2nd order derivative etc)
-    for(int i=0;i<pert_mass_model->dpsi->H.tri.size();i++){  HH_dpsi.insert(pert_mass_model->dpsi->H.tri[i].i,pert_mass_model->dpsi->H.tri[i].j) = pert_mass_model->dpsi->H.tri[i].v;  }
-    
-    // Calculate the inverse of the perturbations covariance matrix stored in H, and store it in C_dpsi
-    Eigen::Matrix<double,Eigen::Dynamic,Eigen::Dynamic> inv_dpsi(pert_mass_model->dpsi->Sm,pert_mass_model->dpsi->Sm);
-    Eigen::SimplicialLDLT<Eigen::SparseMatrix<double> > solver_dpsi;
-    solver_dpsi.compute(HH_dpsi);
-    Eigen::VectorXd idc_dpsi(HH_dpsi.cols()),c_dpsi(HH_dpsi.cols());
-    for(int i=0;i<pert_mass_model->dpsi->Sm;i++){
-      for(int j=0;j<idc_dpsi.size();j++){
-	idc_dpsi[j] = 0;
-      }
-      idc_dpsi[i] = 1;
-      //this needs to be done in two steps, otherwise it does not work when using LU
-      c_dpsi = solver_dpsi.solve(idc_dpsi);
-      inv_dpsi.col(i) = c_dpsi;
-    }
-    this->C_dpsi = inv_dpsi.sparseView();
-    inv_dpsi.resize(0,0);
-    HH_dpsi.resize(0,0);
-  }
-  
-
-  // Calculate RtR
-  Eigen::SparseMatrix<double> RtR(source->Sm+pert_mass_model->dpsi->Sm,source->Sm+pert_mass_model->dpsi->Sm);
-  if( this->likeModel->reg_dpsi_type == "covariance" ){
-    for(int k=0;k<this->C_s.outerSize();++k){
-      for(Eigen::SparseMatrix<double>::InnerIterator it(this->C_s,k);it;++it){
-	RtR.insert(it.row(),it.col()) = it.value();
-      }
-    }
-  } else {
-    double lambda_s = Nlpar::getValueByName("lambda_s",this->likeModel->reg_s);
-    for(int k=0;k<this->HtH_s.outerSize();++k){
-      for(Eigen::SparseMatrix<double>::InnerIterator it(this->HtH_s,k);it;++it){
-	RtR.insert(it.row(),it.col()) = lambda_s * it.value();
-      }
-    }
-  }    
-
-  if( this->likeModel->reg_dpsi_type == "covariance" ){
-    for(int k=0;k<this->C_dpsi.outerSize();++k){
-      for(Eigen::SparseMatrix<double>::InnerIterator it(this->C_dpsi,k);it;++it){
-	RtR.insert(source->Sm+it.row(),source->Sm+it.col()) = it.value();
-      }
-    }
-  } else {
-    double lambda_dpsi = Nlpar::getValueByName("lambda_dpsi",this->likeModel->reg_dpsi);
-    for(int k=0;k<this->HtH_dpsi.outerSize();++k){
-      for(Eigen::SparseMatrix<double>::InnerIterator it(this->HtH_dpsi,k);it;++it){
-	RtR.insert(source->Sm+it.row(),source->Sm+it.col()) = lambda_dpsi * it.value();
-      }
-    }
-  }
-
-
-  Eigen::SparseMatrix<double> A_r_dum(smooth_like->image->Nm,pert_mass_model->dpsi->Sm+source->Sm);
-  A_r_dum = this->Mt_r*smooth_like->algebra->C*this->M_r + RtR;
-  this->A_r = A_r_dum;
-
-  RtR.resize(0,0);
-  A_r_dum.resize(0,0);
-}
-
-
-void PertIterationAlgebra::solveSourcePert(BaseSourcePlane* source,Pert* pert_mass_model,SmoothLikelihood* smooth_like){
-  Eigen::SparseMatrix<double> A(source->Sm+pert_mass_model->dpsi->Sm,source->Sm+pert_mass_model->dpsi->Sm);
-  A = this->A_r;
-  Eigen::Matrix<double,Eigen::Dynamic,Eigen::Dynamic> inv(source->Sm+pert_mass_model->dpsi->Sm,source->Sm+pert_mass_model->dpsi->Sm);
-  
-  
-  //Get the inverse
-  Eigen::SimplicialLDLT<Eigen::SparseMatrix<double> > solver;
-  solver.compute(A);
-  Eigen::VectorXd idc(A.cols()),c(A.cols());
-  for(int i=0;i<source->Sm+pert_mass_model->dpsi->Sm;i++){
-    for(int j=0;j<idc.size();j++){
-      idc[j] = 0;
-    }
-    idc[i] = 1;
-    //this needs to be done in two steps, otherwise it does not work when using LU
-    c = solver.solve(idc);
-    inv.col(i) = c;
-  }
-
-  
-  //Get the Most Probable solution for the source and potential
-  Eigen::VectorXd r(source->Sm+pert_mass_model->dpsi->Sm);
-  r = inv*(this->Mt_r*this->likeModel->smooth_like->algebra->C*this->likeModel->smooth_like->algebra->d);
-
-  //  Eigen::Map<Eigen::VectorXd>(source->src,source->Sm) = r;
-  //  Eigen::Map<Eigen::VectorXd>(pert_mass_model->dpsi->src,dpsi.size()) = dpsi;
-  for(int i=0;i<source->Sm;i++){
-    source->src[i] = r[i];
-  }
-  for(int i=0;i<pert_mass_model->dpsi->Sm;i++){
-    pert_mass_model->dpsi->src[i] = r[source->Sm+i];
-  }
-
-  inv.resize(0,0);
-  A.resize(0,0);
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-/*
-// Class: PertSmoothAlgebra
-//===============================================================================================================
-PertSmoothAlgebra::PertSmoothAlgebra(PertSmoothLikelihood* a){
-  this->likeModel = a;
-}
-
-void PertSmoothAlgebra::setAlgebraInit(ImagePlane* image,Pert* pert_mass_model,double* res){
-  Eigen::Map<Eigen::VectorXd> dd(res,image->Nm);
-
-  
-  //Eigen::SparseMatrix<double> AA(pert_mass_model->Aint.Ti,pert_mass_model->Aint.Tj);
-  //AA.reserve(Eigen::VectorXi::Constant(pert_mass_model->Aint.Ti,4));//setting the non-zero coefficients per row of the interpolation matrix (4 for bi-linear interpolation scheme, etc)
-  //for(int i=0;i<pert_mass_model->Aint.tri.size();i++){  AA.insert(pert_mass_model->Aint.tri[i].i,pert_mass_model->Aint.tri[i].j) = pert_mass_model->Aint.tri[i].v;  }
-  
-  //Eigen::SparseMatrix<double> TT(pert_mass_model->Bdev.Ti,pert_mass_model->Bdev.Tj);
-  //TT.reserve(Eigen::VectorXi::Constant(pert_mass_model->Bdev.Ti,2));//setting the non-zero coefficients per row of the derivative matrix (2 for first order gradient, etc)
-  //for(int i=0;i<pert_mass_model->Bdev.tri.size();i++){  TT.insert(pert_mass_model->Bdev.tri[i].i,pert_mass_model->Bdev.tri[i].j) = pert_mass_model->Bdev.tri[i].v;  }
-  
-
-  Eigen::SparseMatrix<double> HH(pert_mass_model->dpsi->Sm,pert_mass_model->dpsi->Sm);
-  HH.reserve(Eigen::VectorXi::Constant(pert_mass_model->dpsi->Sm,pert_mass_model->dpsi->eigenSparseMemoryAllocForH));//overestimating the number of non-zero coefficients per HH row (different number for 1st,2nd order derivative etc)
-  for(int i=0;i<pert_mass_model->dpsi->H.tri.size();i++){  HH.insert(pert_mass_model->dpsi->H.tri[i].i,pert_mass_model->dpsi->H.tri[i].j) = pert_mass_model->dpsi->H.tri[i].v;  }
-
-
-  // Calculate HtH
-  Eigen::SparseMatrix<double> HtH(pert_mass_model->dpsi->Sm,pert_mass_model->dpsi->Sm);
-  if( pert_mass_model->dpsi->reg == "covariance_kernel" ){
-    // calculate the inverse of the source covariance matrix stored in H, and store it in HtH
-    Eigen::Matrix<double,Eigen::Dynamic,Eigen::Dynamic> inv(pert_mass_model->dpsi->Sm,pert_mass_model->dpsi->Sm);
-    Eigen::SimplicialLDLT<Eigen::SparseMatrix<double> > solver;
-    solver.compute(HH);
-    Eigen::VectorXd idc(HH.cols()),c(HH.cols());
-    for(int i=0;i<pert_mass_model->dpsi->Sm;i++){
-      for(int j=0;j<idc.size();j++){
-	idc[j] = 0;
-      }
-      idc[i] = 1;
-      //this needs to be done in two steps, otherwise it does not work when using LU
-      c = solver.solve(idc);
-      inv.col(i) = c;
-    }
-    HtH = inv.sparseView();
-    
-    inv.resize(0,0);
-  } else {
-    // calculate the product HtH of a derivative based H matrix
-    Eigen::SparseMatrix<double> HHt(pert_mass_model->dpsi->Sm,pert_mass_model->dpsi->Sm);
-    HHt = HH.transpose();
-    HtH = (HHt * HH);    
-    HHt.resize(0,0);
-  }
-
-    
-  //Eigen::SparseMatrix<double> Dpsi(2*image->Nm,pert_mass_model->dpsi->Sm);
-  //Dpsi = (AA * TT);
-  //
-  //for(int k=0;k<Dpsi.outerSize();k++){
-  //  for(Eigen::SparseMatrix<double>::InnerIterator it(Dpsi,k);it;++it){
-  //    printf("%4d %4d %8.4f\n",it.row(),it.col(),it.value());
-  //  }
-  //}
-  
-
-  this->dd       = dd;
-  //  this->Dpsi     = Dpsi;
-  this->HtH_pert = HtH;
-
-  HtH.resize(0,0);
-  //  AA.resize(0,0);
-  //  TT.resize(0,0);
-}
-
-void PertSmoothAlgebra::setAlgebraRuntime(ImagePlane* image,BaseSourcePlane* source,Pert* pert_mass_model,BaseLikelihoodModel* smooth_like,double lambda){
-  
-  //Eigen::SparseMatrix<double> Ds(source->Ds.Ti,source->Ds.Tj);
-  //Ds.reserve(Eigen::VectorXi::Constant(source->Ds.Tj,4));//setting the non-zero coefficients per row of the lensing matrix (4 for bi-linear interpolation scheme, etc)
-  //for(int i=0;i<source->Ds.tri.size();i++){  Ds.insert(source->Ds.tri[i].i,source->Ds.tri[i].j) = source->Ds.tri[i].v;  }
-  
-
-  // Create DsDpsi sparse matrix directly based on source->Ds (varying at each call) and image->crosses (fixed at initialization)
-  Eigen::SparseMatrix<double> DsDpsi(image->Nm,pert_mass_model->dpsi->Sm);
-  DsDpsi.reserve(Eigen::VectorXi::Constant(pert_mass_model->dpsi->Sm,12));
-  int i0,j0,j_index;
-  double dsx,dsy;
-  int rel_i[12] = {-1,-1,0,0,0,0,1,1,1,1,2,2};
-  int rel_j[12] = {0,1,-1,0,1,2,-1,0,1,2,0,1};
-  double coeffs[12] = {0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0};
-
-  for(int h=0;h<image->Nm;h++){
-    dsx = source->Ds.tri[2*h].v;
-    dsy = source->Ds.tri[2*h+1].v;
-
-    i0 = image->crosses[h]->i0;
-    j0 = image->crosses[h]->j0;
-
-    coeffs[0]  = image->crosses[h]->coeff_y[0]*dsy;
-    coeffs[1]  = image->crosses[h]->coeff_y[4]*dsy;
-    coeffs[2]  = image->crosses[h]->coeff_x[0]*dsx;
-    coeffs[3]  = image->crosses[h]->coeff_y[1]*dsy + image->crosses[h]->coeff_x[1]*dsx;
-    coeffs[4]  = image->crosses[h]->coeff_y[5]*dsy + image->crosses[h]->coeff_x[2]*dsx;
-    coeffs[5]  = image->crosses[h]->coeff_x[3]*dsx;
-    coeffs[6]  = image->crosses[h]->coeff_x[4]*dsx;
-    coeffs[7]  = image->crosses[h]->coeff_y[2]*dsy + image->crosses[h]->coeff_x[5]*dsx;
-    coeffs[8]  = image->crosses[h]->coeff_y[6]*dsy + image->crosses[h]->coeff_x[6]*dsx;
-    coeffs[9]  = image->crosses[h]->coeff_x[7]*dsx;
-    coeffs[10] = image->crosses[h]->coeff_y[3]*dsy;
-    coeffs[11] = image->crosses[h]->coeff_y[7]*dsy;
-
-    for(int q=0;q<12;q++){
-      if( coeffs[q] != 0.0 ){
-	j_index = (i0 + rel_i[q])*pert_mass_model->dpsi->Sj + (j0 + rel_j[q]);
-	DsDpsi.insert( h, j_index) = coeffs[q];
-      }
-      coeffs[q] = 0.0; // need to reset the vector "coeffs"
-    }
-  }
-
-  //  image->printCross(1*image->Nj+1,source->Ds);
-  //  image->printCross(1*image->Nj+image->Nj-2,source->Ds);
-  //  image->printCross((image->Ni-1)*image->Nj+1,source->Ds);
-  //  image->printCross((image->Ni-1)*image->Nj+image->Nj-2,source->Ds);
-
-  Eigen::SparseMatrix<double> M_pert(image->Nm,pert_mass_model->dpsi->Sm);
-  Eigen::SparseMatrix<double> Mt_pert(pert_mass_model->dpsi->Sm,image->Nm);
-  SmoothLikelihood* specific_pointer = dynamic_cast<SmoothLikelihood*>(smooth_like);
-
-  //  M_pert        = (-specific_pointer->algebra->B) * Ds * this->Dpsi;
-  M_pert        = (-specific_pointer->algebra->B) * DsDpsi;
-  //  M_pert        = -DsDpsi;
-  Mt_pert       = M_pert.transpose();
-  this->M_pert  = M_pert;
-  this->Mt_pert = Mt_pert;
-
-
-
-  //for(int k=0;k<DsDpsi.outerSize();k++){
-  //  for(Eigen::SparseMatrix<double>::InnerIterator it(DsDpsi,k);it;++it){
-  //    printf("%4d %4d %8.4f\n",it.row(),it.col(),it.value());
-  //  }
-  //}
-  
-  
-  //I need also to calculate HtH, and detHtH for an adaptive source
-  if( pert_mass_model->dpsi->sample_reg ){
-    Eigen::SparseMatrix<double> HH(pert_mass_model->dpsi->Sm,pert_mass_model->dpsi->Sm);
-    HH.reserve(Eigen::VectorXi::Constant(pert_mass_model->dpsi->Sm,pert_mass_model->dpsi->eigenSparseMemoryAllocForH));//overestimating the number of non-zero coefficients per HH row (different number for 1st,2nd order derivative etc)
-    for(int i=0;i<pert_mass_model->dpsi->H.tri.size();i++){  HH.insert(pert_mass_model->dpsi->H.tri[i].i,pert_mass_model->dpsi->H.tri[i].j) = pert_mass_model->dpsi->H.tri[i].v;  }
-    Eigen::SparseMatrix<double> HtH(pert_mass_model->dpsi->Sm,pert_mass_model->dpsi->Sm);
-
-    // calculate the inverse of the source covariance matrix stored in H, and store it in HtH
-    Eigen::Matrix<double,Eigen::Dynamic,Eigen::Dynamic> inv(pert_mass_model->dpsi->Sm,pert_mass_model->dpsi->Sm);
-    Eigen::SimplicialLDLT<Eigen::SparseMatrix<double> > solver;
-    solver.compute(HH);
-    Eigen::VectorXd idc(HH.cols()),c(HH.cols());
-    for(int i=0;i<pert_mass_model->dpsi->Sm;i++){
-      for(int j=0;j<idc.size();j++){
-	idc[j] = 0;
-      }
-      idc[i] = 1;
-      //this needs to be done in two steps, otherwise it does not work when using LU
-      c = solver.solve(idc);
-      inv.col(i) = c;
-    }
-    HtH = inv.sparseView();
-      
-    this->HtH_pert = HtH;
-    
-    inv.resize(0,0);
-    HH.resize(0,0);
-    HtH.resize(0,0);
-  }
-
-  Eigen::SparseMatrix<double> A_pert(pert_mass_model->dpsi->Sm,pert_mass_model->dpsi->Sm);
-  if( pert_mass_model->dpsi->reg == "covariance_kernel" ){
-    A_pert = this->Mt_pert*specific_pointer->algebra->C*this->M_pert + this->HtH_pert;
-  } else {
-    A_pert = this->Mt_pert*specific_pointer->algebra->C*this->M_pert + lambda*this->HtH_pert;
-  }
-  this->A_pert = A_pert;
-  
-  DsDpsi.resize(0,0);
-  M_pert.resize(0,0);
-  Mt_pert.resize(0,0);
-  A_pert.resize(0,0);
-}
-
-void PertSmoothAlgebra::solvePert(ImagePlane* image,Pert* pert_mass_model,BaseLikelihoodModel* smooth_like){
-  int Sm = pert_mass_model->dpsi->Sm;
-
-  Eigen::SparseMatrix<double> A(Sm,Sm);
-  A = this->A_pert;
-  Eigen::Matrix<double,Eigen::Dynamic,Eigen::Dynamic> inv(Sm,Sm);
-  
-  //Get the inverse
-  Eigen::SimplicialLDLT<Eigen::SparseMatrix<double> > solver;
-  solver.compute(A);
-  Eigen::VectorXd idc(A.cols()),c(A.cols());
-  for(int i=0;i<Sm;i++){
-    for(int j=0;j<idc.size();j++){
-      idc[j] = 0;
-    }
-    idc[i] = 1;
-    //this needs to be done in two steps, otherwise it does not work when using LU
-    c = solver.solve(idc);
-    inv.col(i) = c;
-  }
-
-  //Get the Most Probable solution for the source
-  Eigen::VectorXd dpsi(Sm);
-  SmoothLikelihood* specific_pointer = dynamic_cast<SmoothLikelihood*>(smooth_like);
-  dpsi = inv*(this->Mt_pert*specific_pointer->algebra->C*this->dd);
-  Eigen::Map<Eigen::VectorXd>(pert_mass_model->dpsi->src,dpsi.size()) = dpsi;
-
-  inv.resize(0,0);
-  A.resize(0,0);
-}
-*/

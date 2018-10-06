@@ -105,7 +105,7 @@ SmoothLikelihood::SmoothLikelihood(std::vector<Nlpar*> a,std::vector<Nlpar*> b,s
   terms["Nilog2p"] = 0.0;
   terms["Nslogl"]  = 0.0;
   terms["detC"]    = 0.0;
-  terms["detHtH"]  = 0.0;
+  terms["detCs"]   = 0.0;
   terms["detA"]    = 0.0;
   terms["like"]    = 0.0;
 }
@@ -148,7 +148,7 @@ void SmoothLikelihood::getResidual(){
 }
 
 
-//virtual
+//virtual,
 std::vector<Nlpar*> SmoothLikelihood::getPhysicalPars(){
   return this->physical;
 }
@@ -286,6 +286,7 @@ void SmoothLikelihood::initializeAlgebra(){
 
 //virtual
 void SmoothLikelihood::updateLikelihoodModel(){
+  // Set the new smooth lens, physical, and source covariance parameters (lambda is set in SmoothLikelihood->reg)
   for(int i=0;i<this->collection->models.size();i++){
     if( this->collection->models[i]->type != "pert" ){
       this->collection->models[i]->setMassPars(this->lenses[i]);
@@ -296,32 +297,42 @@ void SmoothLikelihood::updateLikelihoodModel(){
     this->source->kernel->setParameters(this->reg);
   }
 
+  // Deflect the rays in the updated mass model
   this->collection->all_defl(this->image);
 
+  // Set the adaptive source in the updated mass model
   if( this->source->type == "adaptive" ){
     AdaptiveSource* ada = dynamic_cast<AdaptiveSource*>(this->source);
     ada->createAdaGrid(this->image,this->collection);
     ada->createDelaunay();
   }
+
+  // Get the new interpolation weights of the rays in the source grid and construct the lensing matrix
   this->source->createInterpolationWeights(this->image);
   this->source->constructL(this->image);
+
+  // Re-construct the source regularization matrix
   if( this->source->sample_reg || this->source->type == "adaptive" ){
     this->source->constructH();
   }
 
-  this->algebra->setAlgebraRuntime(this->image,this->source,Nlpar::getValueByName("lambda",this->reg));
-  this->algebra->solveLinearSparseS(this->image,this->source);
+  // If lambda is allowed to vary then update the lambda term
+  Nlpar* lambda = Nlpar::getParByName("lambda",this->reg);
+  if( lambda->fix == 0 ){
+    this->terms["Nslogl"] = source->Sm*log10(lambda->val)/2.0;
+  }
+
+  // Update all the needed algebraic tables, e.g. M, Mt, Mt*Cd*M + l*Cs, Cs and detCs (if needed)
+  this->algebra->setAlgebraRuntime(this->image,this->source);
+
+  // Solve for the source, calculate the chi2, reg, and detA terms
+  this->algebra->solveSource(this->source);
 }
 
 //virtual
 double SmoothLikelihood::getLogLike(){
-  double pi  = 3.14159265358979323846;
-
-  this->terms["Nilog2p"] = -(this->image->lookup.size()*log10(2*pi)/2.0); // for some reason i need the outer parenthsis here, otherwise there is a memory problem
-  this->terms["Nslogl"]  = this->source->Sm*log10(Nlpar::getValueByName("lambda",this->reg))/2.0;
-  double val = terms["chi2"] + Nlpar::getValueByName("lambda",this->reg)*terms["reg"] + terms["Nilog2p"] + terms["Nslogl"] + terms["detC"] + terms["detHtH"] + terms["detA"];
+  double val = terms["chi2"] + terms["reg"] + terms["Nilog2p"] + terms["Nslogl"] + terms["detC"] + terms["detCs"] + terms["detA"];
   this->terms["like"] = val;
-
   return val;
 }
 
@@ -372,9 +383,6 @@ void SmoothLikelihood::outputLikelihoodModel(std::string output){
   this->getResidual();
   this->res->writeImage(output + "vkl_residual.fits");
   
-
-
-
   // Output various quantities in json format
   Json::Value json_output;
   
@@ -400,9 +408,6 @@ void SmoothLikelihood::outputLikelihoodModel(std::string output){
   Json::Value json_active = this->getActiveNamesValues();
   json_output["json_active"] = json_active;
 
-
-
-
   // Write generic parameters
   Json::Value other;
   other["Nsource"] = this->source->Sm;
@@ -410,7 +415,6 @@ void SmoothLikelihood::outputLikelihoodModel(std::string output){
   other["Nmask"]   = static_cast<int>( this->image->lookup.size() );
   other["Psize"]   = this->image->width/this->image->Ni;
   json_output["generic"] = other;
-
 
   // Write likelihood terms
   Json::Value terms;
@@ -420,7 +424,6 @@ void SmoothLikelihood::outputLikelihoodModel(std::string output){
   }
   json_output["terms"] = terms;
 
-
   std::ofstream jsonfile(output+"vkl_output.json");
   jsonfile << json_output;
   jsonfile.close();
@@ -428,25 +431,6 @@ void SmoothLikelihood::outputLikelihoodModel(std::string output){
 
 
 
-//Derived class from BaseLikelihoodModel: SourceCovarianceKernel
-//===============================================================================================================
-
-// void  SourceCovarianceKernel::updateLikelihoodModel(ImagePlane* image,BaseSourcePlane* source,CollectionMassModels* mycollection){
-//
-//   SAME AS SmoothLikelihood
-//
-//}
-
-//virtual
-double SourceCovarianceKernel::getLogLike(){
-  double pi  = 3.14159265358979323846;
-
-  this->terms["Nilog2p"] = -(this->image->lookup.size()*log10(2*pi)/2.0); // for some reason i need the outer parenthsis here, otherwise there is a memory problem
-  double val = terms["chi2"] + terms["reg"] + terms["Nilog2p"] + terms["detC"] + terms["detHtH"] + terms["detA"];
-  this->terms["like"] = val;
-
-  return val;
-}
 
 
 
@@ -473,10 +457,16 @@ PertLikelihood::PertLikelihood(std::vector<Nlpar*> reg_s,std::vector<Nlpar*> reg
     }
   }
 
-  // dum likelihood terms for the moment
-  terms["A"] = 0.0;
-  terms["B"] = 0.0;
-  terms["C"] = 0.0;
+  terms["chi2"]    = 0.0; // (Mr*r-d)^T C_d^-1 (Mr*r-d)/2
+  terms["reg"]     = 0.0; // r^T (R^T R) r /2
+  terms["Nilog2p"] = 0.0; // -Nd*log(2pi)/2
+  terms["Nslogls"] = 0.0; // Ns*log(l_s)/2
+  terms["Nploglp"] = 0.0; // Npsi*log(l_psi)/2
+  terms["detCd"]   = 0.0; // log(det C_d^-1)/2
+  terms["detCs"]   = 0.0; // log(det C_s^-1)/2
+  terms["detCp"]   = 0.0; // log(det C_dpsi^-1)/2
+  terms["detA"]    = 0.0; // -log(detA)/2
+  terms["like"]    = 0.0; // evidence
 }
 
 PertLikelihood::~PertLikelihood(){
@@ -506,29 +496,44 @@ void PertLikelihood::initializeAlgebra(){
 
 //virtual
 void PertLikelihood::updateLikelihoodModel(){
-  
-  // Update covariance kernel for the source.
-  // For identity,gradient, and curvature, H stays the same at every call and lambda values are accessed in setAlgebraRuntime
-  if( this->source->sample_reg && this->source->reg == "covariance" ){
+  // Update covariance kernel for the source (f needed)
+  // For identity,gradient, and curvature, (no sampling of the regularization by definition) H stays the same at every call and lambda values are accessed in setAlgebraRuntime
+  if( this->source->sample_reg ){
     this->source->kernel->setParameters(this->reg_s);
     this->source->constructH();
   }
 
-  // Update covariance kernel for the perturbations
-  // For identity,gradient, and curvature, H stays the same at every call and lambda values are accessed in setAlgebraRuntime
-  if( this->pert_mass_model->dpsi->sample_reg && this->pert_mass_model->dpsi->reg == "covariance" ){
+  // Update covariance kernel for the perturbations (if needed)
+  // For identity,gradient, and curvature, (no sampling of the regularization by definition) H stays the same at every call and lambda values are accessed in setAlgebraRuntime
+  if( this->pert_mass_model->dpsi->sample_reg ){
     this->pert_mass_model->dpsi->kernel->setParameters(this->reg_dpsi);
     this->pert_mass_model->dpsi->constructH();
   }
+
+  // If lambda is allowed to vary then update the lambda term for the source
+  Nlpar* lambda_s = Nlpar::getParByName("lambda_s",this->reg_s);
+  if( lambda_s->fix == 0 ){
+    this->terms["Nslogls"] = this->source->Sm*log10(lambda_s->val)/2.0;
+  }  
   
+  // If lambda is allowed to vary then update the lambda term for the potential corrections
+  Nlpar* lambda_dpsi = Nlpar::getParByName("lambda_dpsi",this->reg_dpsi);
+  if( lambda_dpsi->fix == 0 ){
+    this->terms["Nploglp"] = this->pert_mass_model->dpsi->Sm*log10(lambda_dpsi->val)/2.0;
+  }
+
+  // Update all the needed algebraic tables, e.g. M_r, Mt_r, Mt_r*Cd*M_r + RtR, Cs and detCs (if needed), Cp and detCp (if needed)
   this->algebra->setAlgebraRuntime(this->source,this->pert_mass_model,this->smooth_like);
+
+  // Solve for the source and perturbations (r), calculate the chi2, reg, and detA terms
   this->algebra->solveSourcePert(this->source,this->pert_mass_model,this->smooth_like);
 }
 
 //virtual
 double PertLikelihood::getLogLike(){
-  double like = 0.0;
-  return like;
+  double val = terms["chi2"] + terms["reg"] + terms["Nilog2p"] + terms["Nslogls"] + terms["Nploglp"] + terms["detCd"] + terms["detCs"] + terms["detCp"] + terms["detA"];
+  this->terms["like"] = val;
+  return val;
 }
 
 //virtual
@@ -539,7 +544,6 @@ void PertLikelihood::initialOutputLikelihoodModel(std::string output){
 void PertLikelihood::outputLikelihoodModel(std::string output){
   // Output reconstructed source
   this->source->outputSource(output + "pert_");
-
 
   // Replace source pointer in the smooth model with the new perturbed source
   BaseSourcePlane* dum_source = this->smooth_like->source;
@@ -555,7 +559,6 @@ void PertLikelihood::outputLikelihoodModel(std::string output){
   
   // Replace source pointer in the smooth model with the previous source
   this->smooth_like->source = dum_source;
-
   
   // Output perturbations
   this->pert_mass_model->dpsi->outputSource(output + "perturbations_");
@@ -584,35 +587,8 @@ void PertLikelihood::outputLikelihoodModel(std::string output){
 
 //Derived class from BaseLikelihoodModel: PertIterationLikelihood
 //===============================================================================================================
-PertIterationLikelihood::PertIterationLikelihood(std::vector<Nlpar*> reg_s,std::vector<Nlpar*> reg_dpsi,std::string a,std::string b,BaseSourcePlane* c,Pert* d,CollectionMassModels* e){
-  this->reg_s = reg_s;
-  this->reg_dpsi = reg_dpsi;
-  this->reg_s_type = a;
-  this->reg_dpsi_type = b;
-  this->source = c; // copy the source here
-  this->source->reg = reg_s_type;
-  this->pert_mass_model = d;
+PertIterationLikelihood::PertIterationLikelihood(std::vector<Nlpar*> reg_s,std::vector<Nlpar*> reg_dpsi,std::string a,std::string b,BaseSourcePlane* c,Pert* d,CollectionMassModels* e) : PertLikelihood(reg_s,reg_dpsi,a,b,c,d) {
   this->collection = e;
-  this->algebra = new PertIterationAlgebra(this);
-
-  for(int i=0;i<this->reg_s.size();i++){
-    if( this->reg_s[i]->getActive() ){
-      active.push_back( this->reg_s[i] );
-    }
-  }
-  for(int i=0;i<this->reg_dpsi.size();i++){
-    if( this->reg_dpsi[i]->getActive() ){
-      active.push_back( this->reg_dpsi[i] );
-    }
-  }
-
-  terms["A"] = 0.0;
-  terms["B"] = 0.0;
-  terms["C"] = 0.0;
-}
-
-PertIterationLikelihood::~PertIterationLikelihood(){
-  delete(algebra);
 }
 
 //non-virtual
@@ -625,10 +601,8 @@ void PertIterationLikelihood::initializePert(SmoothLikelihood* smooth_like){
   this->smooth_like->source->constructH();
 
   // Initialize Pert
-  //  this->pert_mass_model->createAint(this->image);
   this->pert_mass_model->createCrosses(this->smooth_like->image);
   this->pert_mass_model->dpsi->constructH();
-
   
   // Add additive perturbations to the mass collection
   Pert* additive_pert = new Pert(this->pert_mass_model->dpsi->Si,this->pert_mass_model->dpsi->Sj,this->pert_mass_model->dpsi->width,this->pert_mass_model->dpsi->height,"identity");
@@ -649,7 +623,6 @@ void PertIterationLikelihood::initializeAlgebra(){
 
 //virtual
 void PertIterationLikelihood::updateLikelihoodModel(){
-
   // Mass model has been updated in the previous step, so I need to deflect the rays and calculcate a new grid for an adaptive source
   this->collection->all_defl(this->smooth_like->image);
   if( this->source->type == "adaptive" ){
@@ -660,36 +633,59 @@ void PertIterationLikelihood::updateLikelihoodModel(){
   this->source->createInterpolationWeights(this->smooth_like->image);
   this->source->constructL(this->smooth_like->image);
   
-  // Update covariance matrix for the source if needed
-  if( this->source->sample_reg && this->source->reg == "covariance" ){
+  // Update covariance kernel for the source (f needed)
+  if( this->source->sample_reg ){
     this->source->kernel->setParameters(this->reg_s);
   }
+
   // Construct a new H for the source if needed
-  if( this->source->type == "adaptive" || (this->source->sample_reg && this->source->reg == "covariance") ){
+  if( this->source->type == "adaptive" || this->source->sample_reg ){
     this->source->constructH();
   }
-  
-  // Update covariance kernel for the perturbations
-  // For identity,gradient, and curvature, H stays the same at every call and lambda values are accessed in setAlgebraRuntime
-  if( this->pert_mass_model->dpsi->sample_reg && this->pert_mass_model->dpsi->reg == "covariance" ){
+
+  // Update covariance kernel for the perturbations (if needed)
+  // For identity,gradient, and curvature, (no sampling of the regularization by definition) H stays the same at every call and lambda values are accessed in setAlgebraRuntime
+  if( this->pert_mass_model->dpsi->sample_reg ){
     this->pert_mass_model->dpsi->kernel->setParameters(this->reg_dpsi);
     this->pert_mass_model->dpsi->constructH();
   }
+
+  // If lambda is allowed to vary then update the lambda term for the source
+  Nlpar* lambda_s = Nlpar::getParByName("lambda_s",this->reg_s);
+  if( lambda_s->fix == 0 ){
+    this->terms["Nslogls"] = this->source->Sm*log10(lambda_s->val)/2.0;
+  }  
   
+  // If lambda is allowed to vary then update the lambda term for the potential corrections
+  Nlpar* lambda_dpsi = Nlpar::getParByName("lambda_dpsi",this->reg_dpsi);
+  if( lambda_dpsi->fix == 0 ){
+    this->terms["Nploglp"] = this->pert_mass_model->dpsi->Sm*log10(lambda_dpsi->val)/2.0;
+  }
+  std::cout << "skata" << std::endl;
+
+  // Update all the needed algebraic tables, e.g. M_r, Mt_r, Mt_r*Cd*M_r + RtR, Cs and detCs (if needed), Cp and detCp (if needed)
   this->algebra->setAlgebraRuntime(this->source,this->pert_mass_model,this->smooth_like);
+
+  // Solve for the source and perturbations (r), calculate the chi2, reg, and detA terms
   this->algebra->solveSourcePert(this->source,this->pert_mass_model,this->smooth_like);
   
   // Update perturbations in mass model collection
+  /*
   Pert* pert_pointer = dynamic_cast<Pert*>(this->collection->models.back());
   pert_pointer->addDpsi(this->pert_mass_model->dpsi->src);
   pert_pointer->updatePert();
+  */
 }
 
 //virtual
 double PertIterationLikelihood::getLogLike(){
-  double like = 0.0;
-  return like;
+  double val = terms["chi2"] + terms["reg"] + terms["Nilog2p"] + terms["Nslogls"] + terms["Nploglp"] + terms["detCd"] + terms["detCs"] + terms["detCp"] + terms["detA"];
+  this->terms["like"] = val;
+  return val;
 }
+
+
+
 
 //virtual
 void PertIterationLikelihood::initialOutputLikelihoodModel(std::string output){
@@ -699,7 +695,6 @@ void PertIterationLikelihood::initialOutputLikelihoodModel(std::string output){
 void PertIterationLikelihood::outputLikelihoodModel(std::string output){
   // Output reconstructed source
   this->source->outputSource(output + "pert_");
-
   
   // Replace source pointer in the smooth model with the new perturbed source
   BaseSourcePlane* dum_source = this->smooth_like->source;
@@ -715,7 +710,6 @@ void PertIterationLikelihood::outputLikelihoodModel(std::string output){
   
   // Replace source pointer in the smooth model with the previous source
   this->smooth_like->source = dum_source;
-
 
   // Output perturbations
   Pert* pert_pointer = dynamic_cast<Pert*>(this->collection->models.back());

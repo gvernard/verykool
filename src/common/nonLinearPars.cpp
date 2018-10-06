@@ -68,6 +68,15 @@ double Nlpar::getValueByName(std::string nam,std::vector<Nlpar*> pars){
     }
   }
 }
+
+Nlpar* Nlpar::getParByName(std::string name,std::vector<Nlpar*> pars){
+  for(int i=0;i<pars.size();i++){
+    if( pars[i]->nam == name ){
+      return pars[i];
+    }
+  }
+  return NULL;
+}
 //===============================================================================================================
 
 

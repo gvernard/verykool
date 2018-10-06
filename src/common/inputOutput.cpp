@@ -71,8 +71,8 @@ void Initialization::initialize_program(std::string path,std::string run,Initial
     ada->createDelaunay();
   }
   if( init->source["reg"] == "covariance_kernel" ){
-    SourceCovarianceKernel* mycovpars = dynamic_cast<SourceCovarianceKernel*>(smooth_like);
-    std::vector<Nlpar*> covreg = mycovpars->getRegPars();
+    SmoothLikelihood* regpars = dynamic_cast<SmoothLikelihood*>(smooth_like);
+    std::vector<Nlpar*> covreg = regpars->getRegPars();
     mysource->kernel = FactoryCovKernel::getInstance()->createCovKernel(init->source["kernel"],covreg);
     for(int i=0;i<covreg.size();i++){
       if( covreg[i]->fix == 0 ){

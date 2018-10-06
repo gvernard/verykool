@@ -58,7 +58,7 @@ double myMinuitFCN::operator()(const std::vector<double>& pars) const {
   std::cout << " 3 " << std::endl;
   setAlgebraRuntime(this->image,this->source,other["lambda"]->val,this->matrices,this->pcomp);
   std::cout << " 4 " << std::endl;
-  solveLinearSparseS(this->image,this->source,this->pcomp);
+  solveSource(this->image,this->source,this->pcomp);
   std::cout << " 5 " << std::endl;
   double logL = myLogLike(this->image,this->source,other["lambda"]->val,this->pcomp,this->nlpars);
   

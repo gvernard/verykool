@@ -30,12 +30,11 @@ public:
   double getCovarianceSelf();
   void setParameters(std::vector<Nlpar*> pars);
 private:
-  double fac = 0.39894228; // 1/sqrt(2*pi)
+ double fac;
 };
 
 class ModGaussKernel: public BaseCovKernel {
 public:
-  double ampl;
   double sdev;
 
   ModGaussKernel(std::vector<Nlpar*> pars);
@@ -44,15 +43,17 @@ public:
   void setParameters(std::vector<Nlpar*> pars);
 };
 
-class PowerLawKernel: public BaseCovKernel {
+class ExpGaussKernel: public BaseCovKernel {
 public:
-  double ampl;
-  double slope;
+  double expo;
+  double sdev;
 
-  PowerLawKernel(std::vector<Nlpar*> pars);
+  ExpGaussKernel(std::vector<Nlpar*> pars);
   double getCovariance(double r);
   double getCovarianceSelf();
   void setParameters(std::vector<Nlpar*> pars);
+private:
+  double fac;
 };
 
 class FactoryCovKernel {//This is a singleton class.
@@ -70,8 +71,8 @@ public:
       return new ModGaussKernel(pars);
     } else if( kernel_type == "gauss" ){
       return new GaussKernel(pars);
-    } else if( kernel_type == "power_law" ){
-      return new PowerLawKernel(pars);
+    } else if( kernel_type == "expgauss" ){
+      return new ExpGaussKernel(pars);
     } else {
       return NULL;
     }
