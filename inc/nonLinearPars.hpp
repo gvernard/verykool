@@ -41,6 +41,7 @@ public:
   static std::vector<int> getVectorActive(std::vector<Nlpar*> pars);
   static double getValueByName(std::string nam,std::vector<Nlpar*> pars);
   static Nlpar* getParByName(std::string nam,std::vector<Nlpar*> pars);
+  static bool getSampleReg(std::vector<Nlpar*> pars);
 };
 
 

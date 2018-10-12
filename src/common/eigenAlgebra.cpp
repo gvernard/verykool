@@ -258,6 +258,7 @@ void PertAlgebra::setAlgebraInit(BaseSourcePlane* source,Pert* pert_mass_model){
   Cs.resize(0,0);
   HH_s.resize(0,0);
 
+
   // Read perturbations regularization matrix
   Eigen::SparseMatrix<double> HH_dpsi(pert_mass_model->dpsi->Sm,pert_mass_model->dpsi->Sm);
   HH_dpsi.reserve(Eigen::VectorXi::Constant(pert_mass_model->dpsi->Sm,pert_mass_model->dpsi->eigenSparseMemoryAllocForH));//overestimating the number of non-zero coefficients per HH_dpsi row (different number for 1st,2nd order derivative etc)
@@ -271,10 +272,18 @@ void PertAlgebra::setAlgebraInit(BaseSourcePlane* source,Pert* pert_mass_model){
   Cp.resize(0,0);
   HH_dpsi.resize(0,0);
 
-
   // Create DsDpsi sparse matrix directly based on source->Ds (varying at each call) and image->crosses (fixed at initialization)
-  Eigen::SparseMatrix<double> DsDpsi(likeModel->smooth_like->image->Nm,pert_mass_model->dpsi->Sm);
-  DsDpsi.reserve(Eigen::VectorXi::Constant(pert_mass_model->dpsi->Sm,12));
+  this->constructDsDpsi(source,pert_mass_model);
+
+  this->likeModel->terms["detCd"]   = this->likeModel->smooth_like->terms["detC"];
+  this->likeModel->terms["Nslogls"] = source->Sm*log10(Nlpar::getValueByName("lambda_s",this->likeModel->reg_s))/2.0;
+  this->likeModel->terms["Nploglp"] = pert_mass_model->dpsi->Sm*log10(Nlpar::getValueByName("lambda_dpsi",this->likeModel->reg_dpsi))/2.0;
+  this->likeModel->terms["Nilog2p"] = -(this->likeModel->smooth_like->image->lookup.size()*log10(2*M_PI)/2.0); // for some reason i need the outer parenthsis here, otherwise there is a memory problem
+}
+
+void PertAlgebra::constructDsDpsi(BaseSourcePlane* source,Pert* pert_mass_model){
+  Eigen::SparseMatrix<double> DsDpsi_dum(likeModel->smooth_like->image->Nm,pert_mass_model->dpsi->Sm);
+  DsDpsi_dum.reserve(Eigen::VectorXi::Constant(pert_mass_model->dpsi->Sm,12));
   int i0,j0,j_index;
   double dsx,dsy;
   int rel_i[12] = {-1,-1,0,0,0,0,1,1,1,1,2,2};
@@ -282,8 +291,8 @@ void PertAlgebra::setAlgebraInit(BaseSourcePlane* source,Pert* pert_mass_model){
   double coeffs[12] = {0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0};
 
   for(int h=0;h<likeModel->smooth_like->image->Nm;h++){
-    dsx = likeModel->smooth_like->source->Ds.tri[2*h].v;
-    dsy = likeModel->smooth_like->source->Ds.tri[2*h+1].v;
+    dsx = source->Ds.tri[2*h].v;
+    dsy = source->Ds.tri[2*h+1].v;
 
     i0 = likeModel->smooth_like->image->crosses[h]->i0;
     j0 = likeModel->smooth_like->image->crosses[h]->j0;
@@ -304,22 +313,22 @@ void PertAlgebra::setAlgebraInit(BaseSourcePlane* source,Pert* pert_mass_model){
     for(int q=0;q<12;q++){
       if( coeffs[q] != 0.0 ){
 	j_index = (i0 + rel_i[q])*pert_mass_model->dpsi->Sj + (j0 + rel_j[q]);
-	DsDpsi.insert( h, j_index) = coeffs[q];
+	DsDpsi_dum.insert( h, j_index) = coeffs[q];
       }
       coeffs[q] = 0.0; // need to reset the vector "coeffs"
     }
   }
-  this->DsDpsi = DsDpsi;
-  DsDpsi.resize(0,0);
-
-
-  this->likeModel->terms["Nslogls"] = source->Sm*log10(Nlpar::getValueByName("lambda_s",this->likeModel->reg_s))/2.0;
-  this->likeModel->terms["Nploglp"] = pert_mass_model->dpsi->Sm*log10(Nlpar::getValueByName("lambda_dpsi",this->likeModel->reg_dpsi))/2.0;
-  this->likeModel->terms["Nilog2p"] = -(likeModel->smooth_like->image->lookup.size()*log10(2*M_PI)/2.0); // for some reason i need the outer parenthsis here, otherwise there is a memory problem
+  this->DsDpsi = DsDpsi_dum;
+  DsDpsi_dum.resize(0,0);
 }
 
 
 void PertAlgebra::setAlgebraRuntime(BaseSourcePlane* source,Pert* pert_mass_model,SmoothLikelihood* smooth_like){
+  // required before constructing M_r
+  if( likeModel->name == "pert_iter" ){
+    this->constructDsDpsi(source,pert_mass_model);
+  }
+
   Eigen::SparseMatrix<double> M_r_dum(smooth_like->image->Nm,pert_mass_model->dpsi->Sm+source->Sm);
   Eigen::SparseMatrix<double> Mt_r_dum(smooth_like->image->Nm,pert_mass_model->dpsi->Sm+source->Sm);
 
@@ -331,7 +340,8 @@ void PertAlgebra::setAlgebraRuntime(BaseSourcePlane* source,Pert* pert_mass_mode
       block.insert(it.row(),source->Sm+it.col()) = it.value();
     }
   }
-  M_r_dum  = (-smooth_like->algebra->B) * block;
+  //M_r_dum  = (-smooth_like->algebra->B) * block;
+  M_r_dum  = (smooth_like->algebra->B) * block;
   Mt_r_dum = M_r_dum.transpose();
   this->M_r = M_r_dum;
   this->Mt_r = Mt_r_dum;
@@ -342,7 +352,7 @@ void PertAlgebra::setAlgebraRuntime(BaseSourcePlane* source,Pert* pert_mass_mode
 
   // The following steps are needed to calculate RtR for covariance based regularizations
   // Calculate source regularization
-  if( source->sample_reg && this->likeModel->reg_s_type == "covariance" ){
+  if( source->sample_reg && this->likeModel->reg_s_type == "covariance_kernel" ){
     // Read updated source regularization matrix
     Eigen::SparseMatrix<double> HH_s(source->Sm,source->Sm);
     HH_s.reserve(Eigen::VectorXi::Constant(source->Sm,source->eigenSparseMemoryAllocForH));//overestimating the number of non-zero coefficients per HH_s row (different number for 1st,2nd order derivative etc)
@@ -359,7 +369,7 @@ void PertAlgebra::setAlgebraRuntime(BaseSourcePlane* source,Pert* pert_mass_mode
   
   
   // Calculate perturbation regularization
-  if( pert_mass_model->dpsi->sample_reg && this->likeModel->reg_dpsi_type == "covariance" ){
+  if( pert_mass_model->dpsi->sample_reg && this->likeModel->reg_dpsi_type == "covariance_kernel" ){
     // Read updated perturbations regularization matrix
     Eigen::SparseMatrix<double> HH_dpsi(pert_mass_model->dpsi->Sm,pert_mass_model->dpsi->Sm);
     HH_dpsi.reserve(Eigen::VectorXi::Constant(pert_mass_model->dpsi->Sm,pert_mass_model->dpsi->eigenSparseMemoryAllocForH));//overestimating the number of non-zero coefficients per HH_dpsi row (different number for 1st,2nd order derivative etc)
@@ -377,6 +387,7 @@ void PertAlgebra::setAlgebraRuntime(BaseSourcePlane* source,Pert* pert_mass_mode
 
   // Calculate RtR
   Eigen::SparseMatrix<double> RtR_dum(source->Sm+pert_mass_model->dpsi->Sm,source->Sm+pert_mass_model->dpsi->Sm);
+
   double lambda_s = Nlpar::getValueByName("lambda_s",this->likeModel->reg_s);
   for(int k=0;k<this->Cs.outerSize();++k){
     for(Eigen::SparseMatrix<double>::InnerIterator it(this->Cs,k);it;++it){
@@ -390,12 +401,13 @@ void PertAlgebra::setAlgebraRuntime(BaseSourcePlane* source,Pert* pert_mass_mode
     }
   }
   this->RtR = RtR_dum;
+  RtR_dum.resize(0,0);
+
 
   Eigen::SparseMatrix<double> A_r_dum(smooth_like->image->Nm,pert_mass_model->dpsi->Sm+source->Sm);
   A_r_dum = this->Mt_r*smooth_like->algebra->C*this->M_r + this->RtR;
   this->A_r = A_r_dum;
 
-  RtR_dum.resize(0,0);
   A_r_dum.resize(0,0);
 }
 
@@ -410,7 +422,22 @@ void PertAlgebra::solveSourcePert(BaseSourcePlane* source,Pert* pert_mass_model,
   //Get the Most Probable solution for the source and potential
   Eigen::VectorXd r(source->Sm+pert_mass_model->dpsi->Sm);
   r = inv*(this->Mt_r*this->likeModel->smooth_like->algebra->C*this->likeModel->smooth_like->algebra->d);
+  //  std::cout << r << std::endl;
   inv.resize(0,0);
+
+  /*
+  double* dum = (double*) calloc(source->Sm+pert_mass_model->dpsi->Sm,sizeof(double));
+  Eigen::Map<Eigen::VectorXd>(dum,r.size()) = r;
+  for(int i=0;i<source->Sm;i++){
+    std::cout << " " << dum[i];
+  }
+  std::cout << std::endl;
+  for(int i=0;i<pert_mass_model->dpsi->Sm;i++){
+    std::cout << " " << dum[source->Sm+i];
+  }
+  std::cout << std::endl;
+  free(dum);
+  */
 
   //Get the chi-squared term
   Eigen::VectorXd y  = this->likeModel->smooth_like->algebra->d - (this->M_r*r);
@@ -421,12 +448,13 @@ void PertAlgebra::solveSourcePert(BaseSourcePlane* source,Pert* pert_mass_model,
   // Get the regularization term
   Eigen::VectorXd rt = r.transpose();
   double reg         = rt.dot(this->RtR*r);
-  this->likeModel->terms["reg"] = -reg/2.0;  
+  this->likeModel->terms["reg"] = -reg/2.0;
 
   //  Eigen::Map<Eigen::VectorXd>(source->src,source->Sm) = r;
   //  Eigen::Map<Eigen::VectorXd>(pert_mass_model->dpsi->src,dpsi.size()) = dpsi;
   for(int i=0;i<source->Sm;i++){
     source->src[i] = r[i];
+    //source->src[i] = -r[i];
   }
   for(int i=0;i<pert_mass_model->dpsi->Sm;i++){
     pert_mass_model->dpsi->src[i] = r[source->Sm+i];

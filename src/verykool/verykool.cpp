@@ -100,7 +100,7 @@ int main(int argc,char* argv[]){
 
   // Finalize output etc
   if( myrank == 0 ){
-    Initialization::finalize_smooth(init->output,smooth_like);
+    Initialization::finalizeLikelihoodModel(init->output,smooth_like);
     //myminimizer->output();
   }
 
@@ -160,7 +160,7 @@ int main(int argc,char* argv[]){
 
     
     if( myrank == 0 ){
-      Initialization::finalize_pert(init->output,pert_like);
+      Initialization::finalizeLikelihoodModel(init->output,pert_like);
       //myminimizer->output();
     }
     

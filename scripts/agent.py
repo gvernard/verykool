@@ -72,7 +72,7 @@ def main():
         mode = "cosmosis"
         
     mpi_flag = False
-    if options["minimizer"]["nproc"] > 1:
+    if options["nproc"] > 1:
         mpi_flag = True
             
         
@@ -90,13 +90,13 @@ def main():
     ##############################################################################################
     if mode == "original":
         msg = "Executing original code, good luck:"
-        cmd = "mpirun -np " + str(options["minimizer"]["nproc"]) + " " + vkl_dir + "bin/verykool " + path + " " + run
+        cmd = "mpirun -np " + str(options["nproc"]) + " " + vkl_dir + "bin/verykool " + path + " " + run
         #cmd = "valgrind --track-origins=yes " + vkl_dir + "bin/verykool " + path + " " + run
         #cmd = vkl_dir + "bin/verykool " + path + " " + run
     else:
         msg = "Executing cosmosis code, good luck:"
         if mpi_flag:
-            exe_command = "mpirun -n " + str(options["minimizer"]["nproc"]) + " cosmosis --mpi"
+            exe_command = "mpirun -n " + str(options["nproc"]) + " cosmosis --mpi"
         else:
             exe_command = "cosmosis"
         create_bash_script(path,run,options,cosmo_lib_dir,conda_env,vkl_dir,exe_command)

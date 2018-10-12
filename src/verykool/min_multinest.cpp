@@ -14,7 +14,6 @@
 //Functions related to the calculation of the Bayesian evidence and parameter estimation using MultiNest
 //==============================================================================================================================
 void MultiNest::minimize(std::map<std::string,std::string> opt,BaseLikelihoodModel* pars,const std::string output){
-
   int myndims = pars->active.size();
   
   int IS         = 0;				// do Nested Importance Sampling?
@@ -43,7 +42,6 @@ void MultiNest::minimize(std::map<std::string,std::string> opt,BaseLikelihoodMod
 
   //  std::cout << strroot << std::endl;
   //  std::cout << root << std::endl;
-
 
   int seed       = stoi(opt["seed"]);		// random no. generator seed, if < 0 then take the seed from system clock
   int fb         = 1;				// need feedback on standard output?
@@ -180,15 +178,11 @@ void MultiNestDumper(int& nSamples,int& nlive,int& nPar,double** physLive,double
 
 
   // map_pars holds the maximum a-posteriori parameters and has the same structure as nlpars
-  double* means = (double*) calloc(nPar,sizeof(double));
-  double* sdevs = (double*) calloc(nPar,sizeof(double));
-  double* bests = (double*) calloc(nPar,sizeof(double));
-  double* maps  = (double*) calloc(nPar,sizeof(double));
   for(int i=0;i<nPar;i++){
-    means[i] = e->pars->active[i]->pri->fromUnitCube( paramConstr[0][i] );
-    sdevs[i] = paramConstr[0][nPar+i] * e->pars->active[i]->ran;
-    bests[i] = e->pars->active[i]->pri->fromUnitCube( paramConstr[0][i] );
-    maps[i]  = e->pars->active[i]->pri->fromUnitCube( paramConstr[0][i] );
+    e->pars->means[i] = e->pars->active[i]->pri->fromUnitCube( paramConstr[0][i] );
+    e->pars->sdevs[i] = paramConstr[0][nPar+i] * e->pars->active[i]->ran;
+    e->pars->bests[i] = e->pars->active[i]->pri->fromUnitCube( paramConstr[0][i] );
+    e->pars->maps[i]  = e->pars->active[i]->pri->fromUnitCube( paramConstr[0][i] );
   }
 
   /*
@@ -209,19 +203,9 @@ void MultiNestDumper(int& nSamples,int& nlive,int& nPar,double** physLive,double
   // File with the mean, sdev, best-fit, and MAP parameters
   fh = fopen( (e->output+"vkl_stats.txt").c_str() ,"w");
   for(int i=0;i<nPar;i++){
-    fprintf(fh,"%25s %25.18e %25.18e %25.18e %25.18e\n",e->pars->active[i]->nam.c_str(),means[i],sdevs[i],bests[i],maps[i]);
+    fprintf(fh,"%25s %25.18e %25.18e %25.18e %25.18e\n",e->pars->active[i]->nam.c_str(),e->pars->means[i],e->pars->sdevs[i],e->pars->bests[i],e->pars->maps[i]);
   }
   fclose(fh);
-
-
-
-
-
-
-  free(means);
-  free(sdevs);
-  free(bests);
-  free(maps);
 }
 
 

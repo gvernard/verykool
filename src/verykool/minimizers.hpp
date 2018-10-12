@@ -8,11 +8,11 @@
 #include "multinest.h"
 //#include "simplex.hpp"
 
-class BaseLikelihoodModel;
+
 class ImagePlane;
 class BaseSourcePlane;
 class CollectionMassModels;
-
+class BaseLikelihoodModel;
 
 
 // BaseMinimizer parent/base class
@@ -137,7 +137,7 @@ public:
     return &dum;
   }
 
-  BaseMinimizer* createMinimizer(std::map<std::string,std::string> minimizer,BaseLikelihoodModel* pars,const std::string output){
+  BaseMinimizer* createMinimizer(std::map<std::string,std::string> minimizer,BaseLikelihoodModel* likeModel,const std::string output){
 
     if( minimizer["type"] == "test" ){
       printf("%-25s","using given parameters");

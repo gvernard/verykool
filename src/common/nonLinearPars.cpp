@@ -77,6 +77,15 @@ Nlpar* Nlpar::getParByName(std::string name,std::vector<Nlpar*> pars){
   }
   return NULL;
 }
+
+bool Nlpar::getSampleReg(std::vector<Nlpar*> pars){
+  for(int i=0;i<pars.size();i++){
+    if( pars[i]->fix == 0 && pars[i]->nam.substr(0,6) != "lambda" ){
+      return true;
+    }
+  }
+  return false;
+}
 //===============================================================================================================
 
 

@@ -16,7 +16,6 @@
 
 
 
-
 void Initialization::initialize_program(std::string path,std::string run,Initialization*& init,BaseLikelihoodModel*& smooth_like,ImagePlane*& mydata,CollectionMassModels*& mycollection,BaseSourcePlane*& mysource,BaseLikelihoodModel*& pert_like,Pert*& pert_mass_model){
   printf("%-50s","Starting initialization");
   fflush(stdout);
@@ -71,14 +70,9 @@ void Initialization::initialize_program(std::string path,std::string run,Initial
     ada->createDelaunay();
   }
   if( init->source["reg"] == "covariance_kernel" ){
-    SmoothLikelihood* regpars = dynamic_cast<SmoothLikelihood*>(smooth_like);
-    std::vector<Nlpar*> covreg = regpars->getRegPars();
-    mysource->kernel = FactoryCovKernel::getInstance()->createCovKernel(init->source["kernel"],covreg);
-    for(int i=0;i<covreg.size();i++){
-      if( covreg[i]->fix == 0 ){
-	mysource->sample_reg = true;
-      }
-    }
+    SmoothLikelihood* specific_pointer = dynamic_cast<SmoothLikelihood*>(smooth_like);
+    mysource->sample_reg = Nlpar::getSampleReg(specific_pointer->reg);
+    mysource->kernel = FactoryCovKernel::getInstance()->createCovKernel(init->source["kernel"],specific_pointer->reg);
   }
   mysource->constructH();
 
@@ -94,6 +88,19 @@ void Initialization::initialize_program(std::string path,std::string run,Initial
   if( init->perturbations.size() > 0 ){
     pert_mass_model = new Pert(std::stoi(init->perturbations["pix_x"]),std::stoi(init->perturbations["pix_y"]),mydata,init->perturbations["reg_dpsi"]);
     pert_like = FactoryLikelihoodModel::getInstance()->createLikelihoodModel(path,run,init->pert_like,mydata,mysource,mycollection,pert_mass_model);
+
+    // Set kernel and sample_reg for source
+    PertLikelihood* specific_pointer = dynamic_cast<PertLikelihood*>(pert_like);
+    if( init->perturbations["reg_s"] == "covariance_kernel" ){
+      specific_pointer->source->sample_reg = Nlpar::getSampleReg(specific_pointer->reg_s);
+      specific_pointer->source->kernel = FactoryCovKernel::getInstance()->createCovKernel(init->perturbations["kernel_s"],specific_pointer->reg_s);
+    }   
+
+    // Set kernel and sample_reg for perturbations
+    if( init->perturbations["reg_dpsi"] == "covariance_kernel" ){
+      specific_pointer->pert_mass_model->dpsi->sample_reg = Nlpar::getSampleReg(specific_pointer->reg_dpsi);
+      specific_pointer->pert_mass_model->dpsi->kernel = FactoryCovKernel::getInstance()->createCovKernel(init->perturbations["kernel_dpsi"],specific_pointer->reg_dpsi);
+    }
   }
 
 
@@ -139,12 +146,12 @@ void Initialization::parseInputJSON(std::string path,std::string run){
 
     this->perturbations["reg_s"] = root["perturbations"]["reg_s"]["type"].asString();
     if( this->perturbations["reg_s"] == "covariance_kernel" ){
-      this->perturbations["kernel"] = root["perturbations"]["reg_s"]["subtype"].asString();
+      this->perturbations["kernel_s"] = root["perturbations"]["reg_s"]["subtype"].asString();
     }
 
     this->perturbations["reg_dpsi"] = root["perturbations"]["reg_dpsi"]["type"].asString();
     if( this->perturbations["reg_dpsi"] == "covariance_kernel" ){
-      this->perturbations["kernel"] = root["perturbations"]["reg_dpsi"]["subtype"].asString();
+      this->perturbations["kernel_dpsi"] = root["perturbations"]["reg_dpsi"]["subtype"].asString();
     }
   }
 
@@ -216,36 +223,25 @@ void Initialization::parseInputJSON(std::string path,std::string run){
 
 
 
-void Initialization::finalize_smooth(std::string output,BaseLikelihoodModel* smooth_like){
-  printf("%-25s\n","Starting output smooth");
+void Initialization::finalizeLikelihoodModel(std::string output,BaseLikelihoodModel* likeModel){
+  printf("%-16s%20s\n","Starting output ",likeModel->name.c_str());
   fflush(stdout);
   
-  smooth_like->updateLikelihoodModel();
-  smooth_like->getLogLike();
-  smooth_like->printActive();
-  smooth_like->printTerms();
+  // update active with MAP parameters
+  for(int i=0;i<likeModel->active.size();i++){
+    likeModel->active[i]->val = likeModel->maps[i];
+  }
+
+  likeModel->updateLikelihoodModel();
+  likeModel->getLogLike();
+  likeModel->printActive();
+  likeModel->printTerms();
   printf("\n");
-  smooth_like->outputLikelihoodModel(output);
+  likeModel->outputLikelihoodModel(output);
   
   printf("%+7s\n","...done");
   std::cout << std::string(200,'=') << std::endl;
   fflush(stdout);  
 }
 
-
-void Initialization::finalize_pert(std::string output,BaseLikelihoodModel* pert_like){
-  printf("%-25s\n","Starting output perturbations");
-  fflush(stdout);
-  
-  pert_like->updateLikelihoodModel();
-  pert_like->getLogLike();
-  pert_like->printActive();
-  pert_like->printTerms();
-  printf("\n");
-  pert_like->outputLikelihoodModel(output);
-  
-  printf("%+7s\n","...done");
-  std::cout << std::string(200,'=') << std::endl;
-  fflush(stdout);
-}
 

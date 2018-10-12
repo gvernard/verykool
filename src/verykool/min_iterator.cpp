@@ -12,6 +12,9 @@ void Iterator::minimize(std::map<std::string,std::string> opt,BaseLikelihoodMode
   for(int i=0;i<maxiter;i++){
     std::cout << i << std::endl;
     like_model->updateLikelihoodModel();
+    //    like_model->printActive();
+    like_model->getLogLike();
+    like_model->printTerms();
 
     // Output the potential corrections at each step
     //    PerturbationsLikelihood* specific_pointer = dynamic_cast<PerturbationsLikelihood*>(like_model);

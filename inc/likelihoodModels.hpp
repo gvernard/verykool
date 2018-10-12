@@ -20,11 +20,21 @@ class Pert;
 
 class BaseLikelihoodModel {
 public:
+  std::string name;
   std::vector<Nlpar*> active;
   std::map<std::string,double> terms;
+  double* means = NULL;
+  double* sdevs = NULL;
+  double* bests = NULL;
+  double* maps  = NULL;
 
   BaseLikelihoodModel(){};
-  ~BaseLikelihoodModel(){};
+  ~BaseLikelihoodModel(){
+    free(means);
+    free(sdevs);
+    free(bests);
+    free(maps);
+  };
 
   std::vector<double> getActiveValues();
   std::vector<std::string> getActiveNames();
@@ -60,7 +70,7 @@ public:
   ImagePlane* model;
   ImagePlane* res;
 
-  SmoothLikelihood(std::vector<Nlpar*> a,std::vector<Nlpar*> b,std::vector< std::vector<Nlpar*> > c,std::vector<std::string> d,ImagePlane* e,BaseSourcePlane* f,CollectionMassModels* g);
+  SmoothLikelihood(std::vector<Nlpar*> a,std::vector<Nlpar*> b,std::vector< std::vector<Nlpar*> > d,std::vector<std::string> e,ImagePlane* f,BaseSourcePlane* g,CollectionMassModels* h);
   ~SmoothLikelihood();
 
   //non-virtual

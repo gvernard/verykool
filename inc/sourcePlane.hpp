@@ -18,8 +18,6 @@ BOOST_GEOMETRY_REGISTER_BOOST_TUPLE_CS(cs::cartesian)
 #include "covKernels.hpp"
 #include "tableDefinition.hpp"
 
-typedef std::map<int,double>::iterator it_int_double;
-
 class Nlpar;
 class ImagePlane;
 class CollectionMassModels;
@@ -62,6 +60,7 @@ public:
 
 
   //virtual members
+  virtual BaseSourcePlane* clone() = 0;
   virtual void constructH() = 0;
   virtual void outputSource(const std::string path) = 0;
   virtual void outputSourceErrors(double* errors,const std::string path) = 0;
@@ -78,19 +77,20 @@ public:
 
 class FixedSource: public BaseSourcePlane {
 public:
-
-  //virtual members
   FixedSource(int source_i,int source_j,double size,std::string reg_scheme);
   FixedSource(int i,int j,double width,double height,std::string reg_scheme);
   FixedSource(int i,int j,double xmin,double xmax,double ymin,double ymax,std::string reg_scheme);
-  FixedSource(const FixedSource& source);
-  void createInterpolationWeights(ImagePlane* image);
-  void constructH();
-  void constructDs(ImagePlane* image){};
-  void outputSource(const std::string path);
-  void outputSourceErrors(double* errors,const std::string path);
+  FixedSource(const FixedSource& source) : BaseSourcePlane(source) {};
+  virtual FixedSource* clone(){
+    return new FixedSource(*this);
+  };
 
-  //non-virtual members
+  virtual void createInterpolationWeights(ImagePlane* image);
+  virtual void constructH();
+  virtual void constructDs(ImagePlane* image){};
+  virtual void outputSource(const std::string path);
+  virtual void outputSourceErrors(double* errors,const std::string path);
+
   void setGridRect(double width,double height);
   void setGridRect(double xmin,double xmax,double ymin,double ymax);
   void boundPolygon();
@@ -132,18 +132,20 @@ public:
 
 class AdaptiveSource: public BaseSourcePlane {
 public:
-
-  //virtual members
   AdaptiveSource(int Sm,std::string reg_scheme);
   AdaptiveSource(std::string mode,int Sm,int spacing,std::string reg_scheme);
+  AdaptiveSource(const AdaptiveSource& source);
+  virtual AdaptiveSource* clone(){
+    return new AdaptiveSource(*this);
+  };
   ~AdaptiveSource();
-  void createInterpolationWeights(ImagePlane* image);
-  void constructH();
-  void constructDs(ImagePlane* image);
-  void outputSource(const std::string path);
-  void outputSourceErrors(double* errors,const std::string path);
 
-  //non-virtual members
+  virtual void createInterpolationWeights(ImagePlane* image);
+  virtual void constructH();
+  virtual void constructDs(ImagePlane* image);
+  virtual void outputSource(const std::string path);
+  virtual void outputSourceErrors(double* errors,const std::string path);
+
   void createAdaGrid(ImagePlane* image,CollectionMassModels* mycollection);
   void createDelaunay();
   void writeTriangles();

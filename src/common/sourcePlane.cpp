@@ -21,6 +21,9 @@
 #include "massModels.hpp"
 #include "tableDefinition.hpp"
 
+typedef std::map<int,double>::iterator it_int_double;
+
+
 
 
 //Abstract class: BaseSourcePlane
@@ -33,7 +36,8 @@ BaseSourcePlane::BaseSourcePlane(const BaseSourcePlane& other){
   reg = other.reg;
   eigenSparseMemoryAllocForH = other.eigenSparseMemoryAllocForH;
   sample_reg = other.sample_reg;
-  
+  // need to make a copy of the covariance kernel, using a "new" call
+
   src  = (double*) calloc(Sm,sizeof(double));
   x    = (double*) calloc(Sm,sizeof(double));
   y    = (double*) calloc(Sm,sizeof(double));
@@ -47,6 +51,13 @@ BaseSourcePlane::BaseSourcePlane(const BaseSourcePlane& other){
     s_dx[i] = other.s_dx[i];
     s_dy[i] = other.s_dy[i];
   }
+
+  L.Ti = other.L.Ti;
+  L.Tj = other.L.Tj;
+  H.Ti = other.H.Ti;
+  H.Tj = other.H.Tj;
+  Ds.Ti = other.Ds.Ti;
+  Ds.Tj = other.Ds.Tj;
 }
 
 void BaseSourcePlane::normalize(){
@@ -152,6 +163,7 @@ FixedSource::FixedSource(int i,int j,double xmin,double xmax,double ymin,double 
   this->boundPolygon();
 }
 
+/*
 FixedSource::FixedSource(const FixedSource& source){
   type = "fixed";
   reg = source.reg;
@@ -173,6 +185,7 @@ FixedSource::FixedSource(const FixedSource& source){
   this->setGridRect(width,height);
   this->boundPolygon();
 }
+*/
 
 //non-virtual
 void FixedSource::setGridRect(double width,double height){
@@ -753,6 +766,24 @@ AdaptiveSource::AdaptiveSource(std::string m,int a,int b,std::string reg_scheme)
   }
 }
 
+AdaptiveSource::AdaptiveSource(const AdaptiveSource& other) : BaseSourcePlane(other) {
+  this->mode = other.mode;
+  this->spacing = other.spacing;
+  this->n_triangles = other.n_triangles;
+
+  this->triangles.resize( other.triangles.size() );
+  for(int i=0;i<this->triangles.size();i++){
+    this->triangles[i].a = other.triangles[i].a;
+    this->triangles[i].b = other.triangles[i].b;
+    this->triangles[i].c = other.triangles[i].c;
+  }
+  
+  this->opposite_edges_per_vertex.resize( other.opposite_edges_per_vertex.size() );
+  for(int i=0;i<this->opposite_edges_per_vertex.size();i++){
+    copy(other.opposite_edges_per_vertex[i].begin(),other.opposite_edges_per_vertex[i].end(),back_inserter(this->opposite_edges_per_vertex[i])); 
+  }
+}
+
 AdaptiveSource::~AdaptiveSource(){
   std::vector<a_triangle> ().swap(triangles);
 }
@@ -1274,6 +1305,7 @@ void AdaptiveSource::constructDs(ImagePlane* image){
 	xypoint p1 = {this->x[indices[j]],this->y[indices[j]]};
 	xypoint p2 = {this->x[indices[j+1]],this->y[indices[j+1]]};
 	
+
 	//Smoothing in the x-direction
 	if( p1.y > p2.y ){
 	  ymax = p1.y;
@@ -1311,7 +1343,7 @@ void AdaptiveSource::constructDs(ImagePlane* image){
 	}
 	
       }
-      
+
       if( dev_x_coord[0] > dev_x_coord[1] ){
 	this->s_dx[i] = (dev_x_val[0] - dev_x_val[1])/(dev_x_coord[0] - dev_x_coord[1]);
       } else {

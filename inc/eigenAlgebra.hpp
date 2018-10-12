@@ -62,6 +62,7 @@ public:
   void setAlgebraInit(BaseSourcePlane* source,Pert* pert_mass_model);
   void setAlgebraRuntime(BaseSourcePlane* source,Pert* pert_mass_model,SmoothLikelihood* smooth_like);
   void solveSourcePert(BaseSourcePlane* source,Pert* pert_mass_model,SmoothLikelihood* smooth_like);
+  void constructDsDpsi(BaseSourcePlane* source,Pert* pert_mass_model);
 
   PertLikelihood* likeModel;
   Eigen::SparseMatrix<double> DsDpsi;
