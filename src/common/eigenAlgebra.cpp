@@ -337,10 +337,9 @@ void PertAlgebra::setAlgebraRuntime(BaseSourcePlane* source,Pert* pert_mass_mode
   for(int i=0;i<source->L.tri.size();i++){  block.insert(source->L.tri[i].i,source->L.tri[i].j) = source->L.tri[i].v;  }
   for(int k=0;k<this->DsDpsi.outerSize();++k){
     for(Eigen::SparseMatrix<double>::InnerIterator it(this->DsDpsi,k);it;++it){
-      block.insert(it.row(),source->Sm+it.col()) = it.value();
+      block.insert(it.row(),source->Sm+it.col()) = -it.value();
     }
   }
-  //M_r_dum  = (-smooth_like->algebra->B) * block;
   M_r_dum  = (smooth_like->algebra->B) * block;
   Mt_r_dum = M_r_dum.transpose();
   this->M_r = M_r_dum;
