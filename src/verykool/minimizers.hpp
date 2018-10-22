@@ -5,7 +5,6 @@
 #include <vector>
 #include <map>
 
-#include "multinest.h"
 //#include "simplex.hpp"
 
 

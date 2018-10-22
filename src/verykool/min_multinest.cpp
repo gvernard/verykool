@@ -5,6 +5,8 @@
 #include <cmath>
 #include <fstream>
 
+#include "multinest.h"
+
 #include "nonLinearPars.hpp"
 #include "likelihoodModels.hpp"
 

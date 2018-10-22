@@ -14,6 +14,11 @@ VERYKOOL_SRC   = src/verykool
 VERYKOOL_LIBS  = -lmultinest_mpi -lsimplex -lMinuit2 
 VERYKOOL_FLAGS = -fopenmp -g -frounding-math
 
+# Same for test version (no MPI)
+VERYKOOL_SRC   = src/verykool
+VERYKOOL_TEST_LIBS  = -lmultinest_mpi -lsimplex
+VERYKOOL_TEST_FLAGS = -g -frounding-math
+
 # Setting up cosmosis variables
 COSMOSIS_SRC   = src/cosmosis
 COSMOSIS_FLAGS = -fPIC -shared -g -frounding-math
@@ -48,12 +53,13 @@ $(OBJ_DIR)/min_multinest.o: $(VERYKOOL_SRC)/min_multinest.cpp
 $(OBJ_DIR)/min_simplex.o: $(VERYKOOL_SRC)/min_simplex.cpp
 	$(GPP) $(COMMON_FLAGS) $(VERYKOOL_FLAGS) -I inc -c -o $@ $<
 $(OBJ_DIR)/min_test.o: $(VERYKOOL_SRC)/min_test.cpp
-	$(GPP) $(COMMON_FLAGS) $(VERYKOOL_FLAGS) -I inc -c -o $@ $<
+	$(GPP) $(COMMON_FLAGS) $(VERYKOOL_TEST_FLAGS) -I inc -c -o $@ $<
 $(OBJ_DIR)/min_iterator.o: $(VERYKOOL_SRC)/min_iterator.cpp
-	$(GPP) $(COMMON_FLAGS) $(VERYKOOL_FLAGS) -I inc -c -o $@ $<
+	$(GPP) $(COMMON_FLAGS) $(VERYKOOL_TEST_FLAGS) -I inc -c -o $@ $<
 $(OBJ_DIR)/verykool.o: $(VERYKOOL_SRC)/verykool.cpp
 	$(MPICC) $(COMMON_FLAGS) $(VERYKOOL_FLAGS) -I inc -c -o $@ $<
-
+$(OBJ_DIR)/verykool_test.o: $(VERYKOOL_SRC)/verykool_test.cpp
+	$(GPP) $(COMMON_FLAGS) $(VERYKOOL_TEST_FLAGS) -I inc -c -o $@ $<
 
 # Compiling comsosis code
 $(OBJ_DIR)/min_cosmosis.o: $(COSMOSIS_SRC)/min_cosmosis.cpp
@@ -80,13 +86,16 @@ cosmosis: common $(OBJ_DIR)/min_cosmosis.o
 	@echo ""
 
 
-#verykool: common $(OBJ_DIR)/verykool.o $(OBJ_DIR)/min_multinest.o $(OBJ_DIR)/min_simplex.o $(VERYKOOL_SRC)/minimizers.hpp
 verykool: common $(OBJ_DIR)/verykool.o $(OBJ_DIR)/min_multinest.o $(OBJ_DIR)/min_test.o $(OBJ_DIR)/min_iterator.o $(VERYKOOL_SRC)/minimizers.hpp
 	@echo ""
 #	$(MPICC) $(VERYKOOL_FLAGS) -I inc -o $(BIN_DIR)/$@ $(COMMON_OBJ) $(OBJ_DIR)/verykool.o $(OBJ_DIR)/min_multinest.o $(OBJ_DIR)/min_simplex.o $(COMMON_LIBS) $(VERYKOOL_LIBS)
 	$(MPICC) $(VERYKOOL_FLAGS) -I inc -o $(BIN_DIR)/$@ $(COMMON_OBJ) $(OBJ_DIR)/verykool.o $(OBJ_DIR)/min_multinest.o $(OBJ_DIR)/min_test.o $(OBJ_DIR)/min_iterator.o $(COMMON_LIBS) $(VERYKOOL_LIBS)
 	@echo ""
 
+verykool_test: common $(OBJ_DIR)/verykool_test.o $(OBJ_DIR)/min_multinest.o $(OBJ_DIR)/min_test.o $(OBJ_DIR)/min_iterator.o $(VERYKOOL_SRC)/minimizers.hpp
+	@echo ""
+	$(GPP) $(VERYKOOL_TEST_FLAGS) -I inc -o $(BIN_DIR)/$@ $(COMMON_OBJ) $(OBJ_DIR)/verykool_test.o $(OBJ_DIR)/min_multinest.o $(OBJ_DIR)/min_test.o $(OBJ_DIR)/min_iterator.o $(COMMON_LIBS) $(VERYKOOL_TEST_LIBS)
+	@echo ""
 
 other: common $(OBJ_DIR)/createCosmosisValuesPriorsIni.o $(OBJ_DIR)/createEmceeStart.o
 	@echo ""
