@@ -63,6 +63,7 @@ public:
   void setAlgebraRuntime(BaseSourcePlane* source,Pert* pert_mass_model,SmoothLikelihood* smooth_like);
   void solveSourcePert(BaseSourcePlane* source,Pert* pert_mass_model,SmoothLikelihood* smooth_like);
   void constructDsDpsi(BaseSourcePlane* source,Pert* pert_mass_model);
+  void constructNormalizingJmatrix(BaseSourcePlane* source,Pert* pert_mass_model,Eigen::SparseMatrix<double>& J_out,double lambda_s,double lambda_dpsi);
 
   PertLikelihood* likeModel;
   Eigen::SparseMatrix<double> DsDpsi;
@@ -72,6 +73,7 @@ public:
   Eigen::SparseMatrix<double> A_r;
   Eigen::SparseMatrix<double> Cs;
   Eigen::SparseMatrix<double> Cp;
+  Eigen::SparseMatrix<double> J;
 };
 
 

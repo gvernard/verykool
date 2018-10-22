@@ -19,7 +19,7 @@ double ModGaussKernel::getCovarianceSelf(){
   return cov;
 }
 void ModGaussKernel::setParameters(std::vector<Nlpar*> pars){
-  this->rmax = Nlpar::getValueByName("rmax",pars);
+  this->cmax = Nlpar::getValueByName("cmax",pars);
   this->sdev = Nlpar::getValueByName("sdev",pars);
 }
 
@@ -38,7 +38,7 @@ double GaussKernel::getCovarianceSelf(){
   return cov;
 }
 void GaussKernel::setParameters(std::vector<Nlpar*> pars){
-  this->rmax = Nlpar::getValueByName("rmax",pars);
+  this->cmax = Nlpar::getValueByName("cmax",pars);
   this->sdev = Nlpar::getValueByName("sdev",pars);
   this->fac  = 1.0/(this->sdev*sqrt(2*M_PI));
 }
@@ -58,7 +58,7 @@ double ExpGaussKernel::getCovarianceSelf(){
   return cov;
 }
 void ExpGaussKernel::setParameters(std::vector<Nlpar*> pars){
-  this->rmax = Nlpar::getValueByName("rmax",pars);
+  this->cmax = Nlpar::getValueByName("cmax",pars);
   this->expo = Nlpar::getValueByName("expo",pars);
   this->sdev = Nlpar::getValueByName("sdev",pars);
   this->fac  = 1.0/(this->sdev*sqrt(2*M_PI));

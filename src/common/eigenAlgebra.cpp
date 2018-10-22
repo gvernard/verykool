@@ -250,12 +250,12 @@ void PertAlgebra::setAlgebraInit(BaseSourcePlane* source,Pert* pert_mass_model){
   HH_s.reserve(Eigen::VectorXi::Constant(source->Sm,source->eigenSparseMemoryAllocForH));//overestimating the number of non-zero coefficients per HH_s row (different number for 1st,2nd order derivative etc)
   for(int i=0;i<source->H.tri.size();i++){  HH_s.insert(source->H.tri[i].i,source->H.tri[i].j) = source->H.tri[i].v;  }
 
-  Eigen::SparseMatrix<double> Cs(source->Sm,source->Sm);
+  Eigen::SparseMatrix<double> Cs_dum(source->Sm,source->Sm);
   double detCs = 0.0;
-  this->setAlgebraField(source,HH_s,Cs,detCs);
+  this->setAlgebraField(source,HH_s,Cs_dum,detCs);
   this->likeModel->terms["detCs"] = detCs/2.0;
-  this->Cs = Cs;
-  Cs.resize(0,0);
+  this->Cs = Cs_dum;
+  Cs_dum.resize(0,0);
   HH_s.resize(0,0);
 
 
@@ -264,13 +264,20 @@ void PertAlgebra::setAlgebraInit(BaseSourcePlane* source,Pert* pert_mass_model){
   HH_dpsi.reserve(Eigen::VectorXi::Constant(pert_mass_model->dpsi->Sm,pert_mass_model->dpsi->eigenSparseMemoryAllocForH));//overestimating the number of non-zero coefficients per HH_dpsi row (different number for 1st,2nd order derivative etc)
   for(int i=0;i<pert_mass_model->dpsi->H.tri.size();i++){  HH_dpsi.insert(pert_mass_model->dpsi->H.tri[i].i,pert_mass_model->dpsi->H.tri[i].j) = pert_mass_model->dpsi->H.tri[i].v;  }
 
-  Eigen::SparseMatrix<double> Cp(pert_mass_model->dpsi->Sm,pert_mass_model->dpsi->Sm);
+  Eigen::SparseMatrix<double> Cp_dum(pert_mass_model->dpsi->Sm,pert_mass_model->dpsi->Sm);
   double detCp = 0.0;
-  this->setAlgebraField(source,HH_dpsi,Cp,detCp);
+  this->setAlgebraField(source,HH_dpsi,Cp_dum,detCp);
   this->likeModel->terms["detCp"] = detCp/2.0;
-  this->Cp = Cp;
-  Cp.resize(0,0);
+  this->Cp = Cp_dum;
+  Cp_dum.resize(0,0);
   HH_dpsi.resize(0,0);
+
+
+  // Create J "normalizing" matrix and its inverse
+  Eigen::SparseMatrix<double> J_dum(source->Sm+pert_mass_model->dpsi->Sm,source->Sm+pert_mass_model->dpsi->Sm);
+  constructNormalizingJmatrix(source,pert_mass_model,J_dum,Nlpar::getValueByName("lambda_s",this->likeModel->reg_s),Nlpar::getValueByName("lambda_dpsi",this->likeModel->reg_dpsi));
+  this->J = J_dum;
+  J_dum.resize(0,0);
 
   // Create DsDpsi sparse matrix directly based on source->Ds (varying at each call) and image->crosses (fixed at initialization)
   this->constructDsDpsi(source,pert_mass_model);
@@ -279,6 +286,45 @@ void PertAlgebra::setAlgebraInit(BaseSourcePlane* source,Pert* pert_mass_model){
   this->likeModel->terms["Nslogls"] = source->Sm*log10(Nlpar::getValueByName("lambda_s",this->likeModel->reg_s))/2.0;
   this->likeModel->terms["Nploglp"] = pert_mass_model->dpsi->Sm*log10(Nlpar::getValueByName("lambda_dpsi",this->likeModel->reg_dpsi))/2.0;
   this->likeModel->terms["Nilog2p"] = -(this->likeModel->smooth_like->image->lookup.size()*log10(2*M_PI)/2.0); // for some reason i need the outer parenthsis here, otherwise there is a memory problem
+}
+
+void PertAlgebra::constructNormalizingJmatrix(BaseSourcePlane* source,Pert* pert_mass_model,Eigen::SparseMatrix<double>& J_out,double lambda_s,double lambda_dpsi){
+  Eigen::SparseMatrix<double> J_dum(source->Sm+pert_mass_model->dpsi->Sm,source->Sm+pert_mass_model->dpsi->Sm);
+
+  for(int i=0;i<source->Sm;i++){
+    J_dum.insert(i,i) = 1.0;
+  }
+  double factor = lambda_s/lambda_dpsi;
+
+  for(int i=0;i<pert_mass_model->dpsi->Sm;i++){
+    J_dum.insert(source->Sm+i,source->Sm+i) = factor;
+  }
+
+  /*
+  int Si = pert_mass_model->dpsi->Si;
+  int Sj = pert_mass_model->dpsi->Sj;
+  for(int j=0;j<Sj;j++){
+    J_dum.insert( source->Sm+j, source->Sm+j ) = 1.0;
+  }
+  for(int i=1;i<Si-1;i++){
+    //First pixel of each image row: unity
+    J_dum.insert( source->Sm+i*Sj, source->Sm+i*Sj ) = 1.0;
+   
+    //central 2nd derivative in both X and Y directions
+    for(int j=1;j<Sj-1;j++){
+      J_dum.insert( source->Sm+i*Sj+j, source->Sm+i*Sj+j ) = factor;
+    }
+    
+    //Last pixel of each image row: unity
+    J_dum.insert( source->Sm+i*Sj+Sj-1, source->Sm+i*Sj+Sj-1 ) = 1.0;
+  }
+  for(int j=0;j<Sj;j++){
+    J_dum.insert( source->Sm+(Si-1)*Sj+j, source->Sm+(Si-1)*Sj+j ) = 1.0;
+  }
+  */  
+
+  J_out = J_dum;
+  J_dum.resize(0,0);
 }
 
 void PertAlgebra::constructDsDpsi(BaseSourcePlane* source,Pert* pert_mass_model){
@@ -386,7 +432,6 @@ void PertAlgebra::setAlgebraRuntime(BaseSourcePlane* source,Pert* pert_mass_mode
 
   // Calculate RtR
   Eigen::SparseMatrix<double> RtR_dum(source->Sm+pert_mass_model->dpsi->Sm,source->Sm+pert_mass_model->dpsi->Sm);
-
   double lambda_s = Nlpar::getValueByName("lambda_s",this->likeModel->reg_s);
   for(int k=0;k<this->Cs.outerSize();++k){
     for(Eigen::SparseMatrix<double>::InnerIterator it(this->Cs,k);it;++it){
@@ -403,8 +448,19 @@ void PertAlgebra::setAlgebraRuntime(BaseSourcePlane* source,Pert* pert_mass_mode
   RtR_dum.resize(0,0);
 
 
+  // Calculate J matrix
+  Eigen::SparseMatrix<double> J_dum(source->Sm+pert_mass_model->dpsi->Sm,source->Sm+pert_mass_model->dpsi->Sm);
+  constructNormalizingJmatrix(source,pert_mass_model,J_dum,lambda_s,lambda_dpsi);
+  this->J = J_dum;
+  J_dum.resize(0,0);
+
+
+  //  std::cout << this->RtR << std::endl;
+  //std::cout << this->RtR*this->J << std::endl;
+
+
   Eigen::SparseMatrix<double> A_r_dum(smooth_like->image->Nm,pert_mass_model->dpsi->Sm+source->Sm);
-  A_r_dum = this->Mt_r*smooth_like->algebra->C*this->M_r + this->RtR;
+  A_r_dum = this->J*(this->Mt_r*smooth_like->algebra->C*this->M_r) + this->J*this->RtR;
   this->A_r = A_r_dum;
 
   A_r_dum.resize(0,0);
@@ -416,11 +472,13 @@ void PertAlgebra::solveSourcePert(BaseSourcePlane* source,Pert* pert_mass_model,
   Eigen::SparseMatrix<double> inv(source->Sm+pert_mass_model->dpsi->Sm,source->Sm+pert_mass_model->dpsi->Sm);
   double detA = 0.0;
   this->getInverseAndDet(this->A_r,inv,detA);
-  this->likeModel->terms["detA"] = -detA/2.0;
+  double lambda_s    = Nlpar::getValueByName("lambda_s",this->likeModel->reg_s);
+  double lambda_dpsi = Nlpar::getValueByName("lambda_dpsi",this->likeModel->reg_dpsi);
+  this->likeModel->terms["detA"] = -(pert_mass_model->dpsi->Sm*log10(lambda_dpsi/lambda_s) + detA)/2.0;
   
   //Get the Most Probable solution for the source and potential
   Eigen::VectorXd r(source->Sm+pert_mass_model->dpsi->Sm);
-  r = inv*(this->Mt_r*this->likeModel->smooth_like->algebra->C*this->likeModel->smooth_like->algebra->d);
+  r = (inv*this->J)*(this->Mt_r*this->likeModel->smooth_like->algebra->C*this->likeModel->smooth_like->algebra->d);
   //  std::cout << r << std::endl;
   inv.resize(0,0);
 

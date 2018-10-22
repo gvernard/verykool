@@ -10,7 +10,7 @@ class Nlpar;
 class BaseCovKernel {
 public:
   std::string type;
-  double rmax;
+  double cmax;
   
   BaseCovKernel(){};
   ~BaseCovKernel(){};
