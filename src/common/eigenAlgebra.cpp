@@ -58,7 +58,6 @@ void BaseAlgebra::getInverseAndDet(Eigen::SparseMatrix<double> mat_in,Eigen::Spa
     //    }
   }
 
-
   det_out = det;
   mat_out = inv.sparseView();
   inv.resize(0,0);
@@ -74,11 +73,14 @@ double BaseAlgebra::getDeterminant(Eigen::SparseMatrix<double> mat){
   solver.factorize(mat);
   diag = solver.vectorD();
   for(int i=0;i<diag.size();i++){
-    dum = *(diag.data()+i);
-    if( dum > 1.e-20 ){
-      det += log10( dum );
-    }
+    //    std::cout << " " << *(diag.data()+i);
+    det += log10( *(diag.data()+i) );
+    //    dum = *(diag.data()+i);
+    //    if( dum > 1.e-20 ){
+    //      det += log10( dum );
+    //    }
   }
+  //  std::cout << std::endl << std::endl;
 
   return det;
 }
@@ -272,12 +274,13 @@ void PertAlgebra::setAlgebraInit(BaseSourcePlane* source,Pert* pert_mass_model){
   Cp_dum.resize(0,0);
   HH_dpsi.resize(0,0);
 
-
+  /*
   // Create J "normalizing" matrix and its inverse
   Eigen::SparseMatrix<double> J_dum(source->Sm+pert_mass_model->dpsi->Sm,source->Sm+pert_mass_model->dpsi->Sm);
   constructNormalizingJmatrix(source,pert_mass_model,J_dum,Nlpar::getValueByName("lambda_s",this->likeModel->reg_s),Nlpar::getValueByName("lambda_dpsi",this->likeModel->reg_dpsi));
   this->J = J_dum;
   J_dum.resize(0,0);
+  */
 
   // Create DsDpsi sparse matrix directly based on source->Ds (varying at each call) and image->crosses (fixed at initialization)
   this->constructDsDpsi(source,pert_mass_model);
@@ -294,10 +297,12 @@ void PertAlgebra::constructNormalizingJmatrix(BaseSourcePlane* source,Pert* pert
   for(int i=0;i<source->Sm;i++){
     J_dum.insert(i,i) = 1.0;
   }
-  double factor = lambda_s/lambda_dpsi;
+  //  double factor = lambda_s/lambda_dpsi;
+  double factor = 1.0/lambda_dpsi;
 
   for(int i=0;i<pert_mass_model->dpsi->Sm;i++){
     J_dum.insert(source->Sm+i,source->Sm+i) = factor;
+    //J_dum.insert(source->Sm+i,source->Sm+i) = 1.0;
   }
 
   /*
@@ -447,20 +452,21 @@ void PertAlgebra::setAlgebraRuntime(BaseSourcePlane* source,Pert* pert_mass_mode
   this->RtR = RtR_dum;
   RtR_dum.resize(0,0);
 
-
+  /*
   // Calculate J matrix
   Eigen::SparseMatrix<double> J_dum(source->Sm+pert_mass_model->dpsi->Sm,source->Sm+pert_mass_model->dpsi->Sm);
   constructNormalizingJmatrix(source,pert_mass_model,J_dum,lambda_s,lambda_dpsi);
   this->J = J_dum;
   J_dum.resize(0,0);
+  */
 
-
-  //  std::cout << this->RtR << std::endl;
-  //std::cout << this->RtR*this->J << std::endl;
+  //std::cout << this->RtR << std::endl;
+  //std::cout << this->J*this->RtR << std::endl;
 
 
   Eigen::SparseMatrix<double> A_r_dum(smooth_like->image->Nm,pert_mass_model->dpsi->Sm+source->Sm);
-  A_r_dum = this->J*(this->Mt_r*smooth_like->algebra->C*this->M_r) + this->J*this->RtR;
+  //A_r_dum = this->J*(this->Mt_r*smooth_like->algebra->C*this->M_r + this->RtR);
+  A_r_dum = this->Mt_r*smooth_like->algebra->C*this->M_r + this->RtR;
   this->A_r = A_r_dum;
 
   A_r_dum.resize(0,0);
@@ -474,12 +480,15 @@ void PertAlgebra::solveSourcePert(BaseSourcePlane* source,Pert* pert_mass_model,
   this->getInverseAndDet(this->A_r,inv,detA);
   double lambda_s    = Nlpar::getValueByName("lambda_s",this->likeModel->reg_s);
   double lambda_dpsi = Nlpar::getValueByName("lambda_dpsi",this->likeModel->reg_dpsi);
-  this->likeModel->terms["detA"] = -(pert_mass_model->dpsi->Sm*log10(lambda_dpsi/lambda_s) + detA)/2.0;
+  //this->likeModel->terms["detA"] = -(detA - pert_mass_model->dpsi->Sm*log10(1.0/lambda_dpsi) )/2.0;
+  this->likeModel->terms["detA"] = -detA/2.0;
   
   //Get the Most Probable solution for the source and potential
   Eigen::VectorXd r(source->Sm+pert_mass_model->dpsi->Sm);
-  r = (inv*this->J)*(this->Mt_r*this->likeModel->smooth_like->algebra->C*this->likeModel->smooth_like->algebra->d);
-  //  std::cout << r << std::endl;
+  
+  //r = (inv*this->J)*(this->Mt_r*this->likeModel->smooth_like->algebra->C*this->likeModel->smooth_like->algebra->d);
+  r = inv*(this->Mt_r*this->likeModel->smooth_like->algebra->C*this->likeModel->smooth_like->algebra->d);
+  //std::cout << r << std::endl;
   inv.resize(0,0);
 
   /*

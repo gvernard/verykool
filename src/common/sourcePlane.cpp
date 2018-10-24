@@ -317,6 +317,10 @@ void FixedSource::constructH(){
 
   } else if ( this->reg == "gradient" ){//-------------------> first order
     
+    // This is a combination of Tikhonov and gradient regularization.
+    // Apart from the edge pixels that have a unit weight, there is also the central pixel of each row that has a unit weight.
+    // For gradient regularization only (of any accuracy) the weight of the central pixel is zero.
+
     this->eigenSparseMemoryAllocForH = 8;
     int Si = this->Si;
     int Sj = this->Sj;
@@ -325,6 +329,7 @@ void FixedSource::constructH(){
     double ddx =  1.0/dx;
     double ddy =  1.0/dy;
 
+    /*
     //First pixel of first image row:  forward 1st derivative in X, forward 1st derivative in Y
     tmp.push_back({  0,    0,      -ddx - ddy   });
     tmp.push_back({  0,    1,             ddx   });
@@ -340,38 +345,44 @@ void FixedSource::constructH(){
     tmp.push_back({  Sj-1,    Sj-2,             -ddx   });
     tmp.push_back({  Sj-1,    Sj-1,        ddx - ddy   });
     tmp.push_back({  Sj-1,    1*Sj+Sj-1,         ddy   });
+    */    
     //Set all first-row pixels to unity
-    //    for(int j=0;j<Sj;j++){
-    //      tmp.push_back({         j,       j,               1.0   });
-    //    }
+    for(int j=0;j<Sj;j++){
+      tmp.push_back({         j,       j,               1.0   });
+    }
 
 
     for(int i=1;i<Si-1;i++){
+      /*
       //First pixel of each image row: forward 1st derivative in X-direction, central 1st derivative in Y
       tmp.push_back({  i*Sj,    (i-1)*Sj,          -0.5*ddy   });
       tmp.push_back({  i*Sj,        i*Sj,              -ddx   });
       tmp.push_back({  i*Sj,      i*Sj+1,               ddx   });
       tmp.push_back({  i*Sj,    (i+1)*Sj,           0.5*ddy   });
+      */
       //First pixel of each image row: unity
-      //      tmp.push_back({  i*Sj,        i*Sj,               1.0   });
+      tmp.push_back({  i*Sj,        i*Sj,               1.0   });
 
       //central 2nd derivative in both X and Y directions
       for(int j=1;j<Sj-1;j++){
 	tmp.push_back({  i*Sj+j,    (i-1)*Sj+j,    -0.5*ddy   });
 	tmp.push_back({  i*Sj+j,      i*Sj+j-1,    -0.5*ddx   });
+	tmp.push_back({  i*Sj+j,        i*Sj+j,     1.0       });
 	tmp.push_back({  i*Sj+j,      i*Sj+j+1,     0.5*ddx   });
 	tmp.push_back({  i*Sj+j,    (i+1)*Sj+j,     0.5*ddy   });
       }
-
+      /*
       //Last pixel of each image row: backward 1st derivative in X-direction, central 1st derivative in Y
       tmp.push_back({  i*Sj+Sj-1,    (i-1)*Sj+Sj-1,          -0.5*ddy   });
       tmp.push_back({  i*Sj+Sj-1,        i*Sj+Sj-2,              -ddx   });
       tmp.push_back({  i*Sj+Sj-1,        i*Sj+Sj-1,               ddx   });
       tmp.push_back({  i*Sj+Sj-1,    (i+1)*Sj+Sj-1,           0.5*ddy   });
+      */
       //Last pixel of each image row: unity
-      //      tmp.push_back({  i*Sj+Sj-1,        i*Sj+Sj-1,     1.0   });
+      tmp.push_back({  i*Sj+Sj-1,        i*Sj+Sj-1,     1.0   });
     }
 
+    /*
     //First pixel of last image row:  forward 1st derivative in X, backward 1st derivative in Y
     tmp.push_back({  (Si-1)*Sj,     (Si-2)*Sj,         -ddy   });
     tmp.push_back({  (Si-1)*Sj,     (Si-1)*Sj,   -ddx + ddy   });
@@ -387,10 +398,11 @@ void FixedSource::constructH(){
     tmp.push_back({  (Si-1)*Sj+Sj-1,   (Si-2)*Sj+Sj-1,        -ddy   });
     tmp.push_back({  (Si-1)*Sj+Sj-1,   (Si-1)*Sj+Sj-2,        -ddx   });
     tmp.push_back({  (Si-1)*Sj+Sj-1,   (Si-1)*Sj+Sj-1,   ddx + ddy   });
-    //Set all first-row pixels to unity
-    //    for(int j=0;j<Sj;j++){
-    //      tmp.push_back({  (Si-1)*Sj+j,    (Si-1)*Sj+j,     1.0   });
-    //    }
+    */    
+    //Set all last-row pixels to unity
+    for(int j=0;j<Sj;j++){
+      tmp.push_back({  (Si-1)*Sj+j,    (Si-1)*Sj+j,     1.0   });
+    }
 
   } else if ( this->reg == "curvature" ){//-------------------> second order
 
@@ -402,7 +414,7 @@ void FixedSource::constructH(){
     double ddx2 =  1.0/(dx*dx);
     double ddy2 =  1.0/(dy*dy);
 
-
+    /*
     //First pixel of first image row:  forward 2nd derivative in X, forward 2nd derivative in Y
     tmp.push_back({  0,    0,      ddx2 + ddy2   });
     tmp.push_back({  0,    1,        -2.0*ddx2   });
@@ -423,21 +435,24 @@ void FixedSource::constructH(){
     tmp.push_back({  Sj-1,    Sj-1,       ddx2 + ddy2   });
     tmp.push_back({  Sj-1,    1*Sj+Sj-1,    -2.0*ddy2   });
     tmp.push_back({  Sj-1,    2*Sj+Sj-1,         ddy2   });
+    */
     //Set all first-row pixels to unity
-    //    for(int j=0;j<Sj;j++){
-    //      tmp.push_back({  j,    j,      1.0   });
-    //    }
+    for(int j=0;j<Sj;j++){
+      tmp.push_back({  j,    j,      1.0   });
+    }
 
     for(int i=1;i<Si-1;i++){
 
       //First pixel of each image row: forward 2nd derivative in X-direction, central 2nd derivative in Y
+      /*
       tmp.push_back({  i*Sj,    (i-1)*Sj,              ddy2   });
       tmp.push_back({  i*Sj,        i*Sj,   ddx2 - 2.0*ddy2   });
       tmp.push_back({  i*Sj,      i*Sj+1,         -2.0*ddx2   });
       tmp.push_back({  i*Sj,      i*Sj+2,              ddx2   });
       tmp.push_back({  i*Sj,    (i+1)*Sj,              ddy2   });
+      */
       //First pixel of each image row: unity
-      //      tmp.push_back({  i*Sj,        i*Sj,               1.0   });
+      tmp.push_back({  i*Sj,        i*Sj,               1.0   });
 
       //central 2nd derivative in both X and Y directions
       for(int j=1;j<Sj-1;j++){
@@ -449,17 +464,19 @@ void FixedSource::constructH(){
       }
 
       //Last pixel of each image row: backward 2nd derivative in X-direction, central 2nd derivative in Y
+      /*
       tmp.push_back({  i*Sj+Sj-1,    (i-1)*Sj+Sj-1,              ddy2   });
       tmp.push_back({  i*Sj+Sj-1,        i*Sj+Sj-3,              ddx2   });
       tmp.push_back({  i*Sj+Sj-1,        i*Sj+Sj-2,         -2.0*ddx2   });
       tmp.push_back({  i*Sj+Sj-1,        i*Sj+Sj-1,   ddx2 - 2.0*ddy2   });
       tmp.push_back({  i*Sj+Sj-1,    (i+1)*Sj+Sj-1,              ddy2   });
+      */
       //Last pixel of each image row: unity
-      //      tmp.push_back({  i*Sj+Sj-1,        i*Sj+Sj-1,               1.0   });
+      tmp.push_back({  i*Sj+Sj-1,        i*Sj+Sj-1,               1.0   });
 
     }
 
-
+    /*
     //First pixel of last image row:  forward 2nd derivative in X, backward 2nd derivative in Y
     tmp.push_back({  (Si-1)*Sj,     (Si-3)*Sj,          ddy2   });
     tmp.push_back({  (Si-1)*Sj,     (Si-2)*Sj,     -2.0*ddy2   });
@@ -480,10 +497,11 @@ void FixedSource::constructH(){
     tmp.push_back({  (Si-1)*Sj+Sj-1,   (Si-1)*Sj+Sj-3,          ddx2   });
     tmp.push_back({  (Si-1)*Sj+Sj-1,   (Si-1)*Sj+Sj-2,     -2.0*ddx2   });
     tmp.push_back({  (Si-1)*Sj+Sj-1,   (Si-1)*Sj+Sj-1,   ddx2 + ddy2   });
-    //Set all first-row pixels to unity
-    //    for(int j=0;j<Sj;j++){
-    //      tmp.push_back({  (Si-1)*Sj+j,    (Si-1)*Sj+j,      1.0   });
-    //    }
+    */
+    //Set all last-row pixels to unity
+    for(int j=0;j<Sj;j++){
+      tmp.push_back({  (Si-1)*Sj+j,    (Si-1)*Sj+j,      1.0   });
+    }
 
   } else if ( this->reg == "covariance_kernel" ){//-------------------> covariance matrix
 

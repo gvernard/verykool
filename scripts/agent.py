@@ -93,8 +93,8 @@ def main():
         if mpi_flag:
             cmd = "mpirun -np " + str(options["nproc"]) + " " + vkl_dir + "bin/verykool " + path + " " + run
         else:
-            #cmd = vkl_dir + "bin/verykool_test " + path + " " + run
-            cmd = "valgrind --track-origins=yes " + vkl_dir + "bin/verykool_test " + path + " " + run
+            cmd = vkl_dir + "bin/verykool_test " + path + " " + run
+            #cmd = "valgrind --track-origins=yes " + vkl_dir + "bin/verykool_test " + path + " " + run
             #cmd = vkl_dir + "bin/verykool " + path + " " + run
     else:
         msg = "Executing cosmosis code, good luck:"
