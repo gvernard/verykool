@@ -604,9 +604,6 @@ void PertLikelihood::outputLikelihoodModel(std::string output){
   pert_mass_model->getConvergence(kappa);
   kappa->writeImage(output + "convergence.fits");
   delete(kappa);
-  
-  // Ouput latest corrections
-  pert_mass_model->dpsi->outputSource(output + "perturbations0_");
 }
 
 
@@ -707,18 +704,6 @@ void PertIterationLikelihood::updateLikelihoodModel(){
   }
 
 
-  // If lambda is allowed to vary then update the lambda term for the source
-  Nlpar* lambda_s = Nlpar::getParByName("lambda_s",this->reg_s);
-  if( lambda_s->fix == 0 ){
-    this->terms["Nslogls"] = this->source->Sm*log10(lambda_s->val)/2.0;
-  }  
-  
-  // If lambda is allowed to vary then update the lambda term for the potential corrections
-  Nlpar* lambda_dpsi = Nlpar::getParByName("lambda_dpsi",this->reg_dpsi);
-  if( lambda_dpsi->fix == 0 ){
-    this->terms["Nploglp"] = this->pert_mass_model->dpsi->Sm*log10(lambda_dpsi->val)/2.0;
-  }
-
   // Update all the needed algebraic tables, e.g. M_r, Mt_r, Mt_r*Cd*M_r + RtR, Cs and detCs (if needed), Cp and detCp (if needed)
   this->algebra->setAlgebraRuntime(this->source,this->pert_mass_model,this->smooth_like);
 
@@ -768,8 +753,7 @@ void PertIterationLikelihood::outputLikelihoodModel(std::string output){
 
   // Output perturbations
   Pert* pert_pointer = dynamic_cast<Pert*>(this->collection->models.back());
-  //  Pert* pert_pointer = this->pert_mass_pointer;
-  pert_pointer->dpsi->outputSource(output + "perturbations_");
+  pert_pointer->dpsi->outputSource(output + "added_perturbations_"); // output additive perturbations
   ImagePlane* kappa = new ImagePlane(pert_pointer->dpsi->Si,pert_pointer->dpsi->Sj,pert_pointer->dpsi->width,pert_pointer->dpsi->height);
   for(int i=0;i<kappa->Nm;i++){
     kappa->cells[i] = NULL;
@@ -778,9 +762,6 @@ void PertIterationLikelihood::outputLikelihoodModel(std::string output){
   pert_pointer->getConvergence(kappa);
   kappa->writeImage(output + "convergence.fits");
   delete(kappa);
-
-  // Output additive corrections
-  pert_pointer->dpsi->outputSource(output + "perturbations0_");
 }
 
 

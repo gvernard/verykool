@@ -86,7 +86,7 @@ cosmosis: common $(OBJ_DIR)/min_cosmosis.o
 	@echo ""
 
 
-verykool: common $(OBJ_DIR)/verykool.o $(OBJ_DIR)/min_multinest.o $(OBJ_DIR)/min_test.o $(OBJ_DIR)/min_iterator.o $(VERYKOOL_SRC)/minimizers.hpp
+verykool: common $(OBJ_DIR)/verykool.o $(OBJ_DIR)/min_multinest.o $(OBJ_DIR)/min_test.o $(OBJ_DIR)/min_iterator.o $(VERYKOOL_SRC)/minimizers.hpp verykool_test
 	@echo ""
 #	$(MPICC) $(VERYKOOL_FLAGS) -I inc -o $(BIN_DIR)/$@ $(COMMON_OBJ) $(OBJ_DIR)/verykool.o $(OBJ_DIR)/min_multinest.o $(OBJ_DIR)/min_simplex.o $(COMMON_LIBS) $(VERYKOOL_LIBS)
 	$(MPICC) $(VERYKOOL_FLAGS) -I inc -o $(BIN_DIR)/$@ $(COMMON_OBJ) $(OBJ_DIR)/verykool.o $(OBJ_DIR)/min_multinest.o $(OBJ_DIR)/min_test.o $(OBJ_DIR)/min_iterator.o $(COMMON_LIBS) $(VERYKOOL_LIBS)

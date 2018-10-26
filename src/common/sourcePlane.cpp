@@ -464,7 +464,7 @@ void FixedSource::constructH(){
       }
 
       //Last pixel of each image row: backward 2nd derivative in X-direction, central 2nd derivative in Y
-      /*
+      /*            
       tmp.push_back({  i*Sj+Sj-1,    (i-1)*Sj+Sj-1,              ddy2   });
       tmp.push_back({  i*Sj+Sj-1,        i*Sj+Sj-3,              ddx2   });
       tmp.push_back({  i*Sj+Sj-1,        i*Sj+Sj-2,         -2.0*ddx2   });
@@ -476,7 +476,7 @@ void FixedSource::constructH(){
 
     }
 
-    /*
+    /*     
     //First pixel of last image row:  forward 2nd derivative in X, backward 2nd derivative in Y
     tmp.push_back({  (Si-1)*Sj,     (Si-3)*Sj,          ddy2   });
     tmp.push_back({  (Si-1)*Sj,     (Si-2)*Sj,     -2.0*ddy2   });

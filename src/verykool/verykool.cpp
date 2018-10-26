@@ -139,6 +139,7 @@ int main(int argc,char* argv[]){
     //Initialize perturbations
     SmoothLikelihood* smooth_pointer = dynamic_cast<SmoothLikelihood*>(smooth_like);
 
+    // I need to cast either to 'PetLikelihood' or to 'PertIterationLikelihood'
     if( init->pert_like == "perturbations_standard" ){
       PertLikelihood* pert_pointer   = dynamic_cast<PertLikelihood*>(pert_like);
       pert_pointer->initializePert(smooth_pointer);
