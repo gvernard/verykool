@@ -409,6 +409,59 @@ void Pert::createCrosses(ImagePlane* image){
 
 }
 
+
+/*
+void Pert::createInterpolationWeights(ImagePlane* image){
+  // This function is almost identical to the one that creates the interpolation weights for a source class.
+  // The are two differences: the non-deflected x,y of the image plane are used, and the weights go in the dpsi_cells structure of the image class.
+  double xp,yp;
+  double dx     = this->x[1] - this->x[0];
+  double dy     = this->y[this->Sj] - this->y[0];
+  double norm   = 1.0/(dx*dy);
+  int ic        = 0;
+  int jc        = 0;
+  double g1=0,g2=0,g3=0,g4=0;
+
+  for(int i=0;i<image->Nm;i++){
+    xp = image->x[i] - this->dpsi->xmin;
+    yp = image->y[i] - this->dpsi->ymin;
+    
+    if( this->dpsi->pointInPolygon(xp,yp) ){
+      //Indices corresponding to the bottom left pixel
+      jc = (int) floor(xp/dx);
+      ic = (int) floor(yp/dy);
+      
+      //Now interpolate between neighbouring pixels and add entries to L matrix.
+      //The interpolation function could return an array of column indices in the row of the L matrix, and the corresponding weights.
+      //The following is for bi-linear interpolation:
+      g1 = (ic+1)*dy - yp;
+      g2 = (jc+1)*dx - xp;
+      g3 = yp - ic*dy;
+      g4 = xp - jc*dx;
+      
+      delete(image->dpsi_cells[i]);
+      InterpolationCell* cell = new InterpolationCell(4);
+      cell->ind[0] = (this->Si-2-ic)*this->Sj + jc;
+      cell->ind[1] = (this->Si-2-ic)*this->Sj + jc+1;
+      cell->ind[2] = (this->Si-2-ic+1)*this->Sj + jc;
+      cell->ind[3] = (this->Si-2-ic+1)*this->Sj + jc+1;
+      cell->wei[0] = g1*g2*norm;
+      cell->wei[1] = g1*g4*norm;
+      cell->wei[2] = g3*g2*norm;
+      cell->wei[3] = g3*g4*norm;
+      image->dpsi_cells[i] = cell;
+    } else {
+      delete(image->dpsi_cells[i]);
+      InterpolationCell* cell = new InterpolationCell(1);
+      cell->ind[0] = 0;
+      cell->wei[0] = 0.0;
+      image->dpsi_cells[i] = cell;
+    }
+
+  }
+}
+*/
+
 //private
 void Pert::derivativeDirection(int q,int qmax,double den,int* rel_ind,double* coeff){
   if( q == 0 ){
@@ -439,47 +492,42 @@ void Pert::derivativeDirection(int q,int qmax,double den,int* rel_ind,double* co
 }
 
 void Pert::defl(double xin,double yin,double& xout,double& yout){
-  int j = floor( (xin-this->dpsi->xmin)/dj );
-  int i = floor( (yin-this->dpsi->ymin)/di );  
-
-  if( j == this->dpsi->Sj-1 ){
-    j = j-2;
-  }
-  if( i == this->dpsi->Si-1 ){
-    i = i-2;
-  }
   
-  double den,xa,ya,xb,yb,w00,w10,w01,w11,f00,f10,f01,f11;
+  double xp = xin - this->dpsi->xmin;
+  double yp = this->dpsi->ymax - yin;
 
-  // Be careful: the indices count from top left in the interpolation scheme below
-  ya  = yin - this->dpsi->y[i+1];
-  yb  = this->dpsi->y[i] - yin;
-  xa  = xin - this->dpsi->x[j];
-  xb  = this->dpsi->x[j+1] - xin;
-  den = this->di*this->dj;
+  //Indices corresponding to the top left pixel
+  int jc = (int) floor(xp/this->dj);
+  int ic = (int) floor(yp/this->di);
 
-  w00 = xb*ya;
-  w10 = xb*yb;
-  w01 = xa*ya;
-  w11 = xa*yb;
+  double g1 = yp - ic*this->di;
+  double g2 = (ic+1)*this->di - yp;
+  double g3 = xp - jc*this->dj;
+  double g4 = (jc+1)*this->dj - xp;
+  double norm = 1.0/(this->di*this->dj);
 
-  // Derivative on x
-  f00 = this->dpsi_dx[i*this->dpsi->Sj+j];
-  f10 = this->dpsi_dx[(i+1)*this->dpsi->Sj+j];
-  f01 = this->dpsi_dx[i*this->dpsi->Sj+j+1];
-  f11 = this->dpsi_dx[(i+1)*this->dpsi->Sj+j+1];
-  double ax = (f00*w00 + f10*w10 + f01*w01 + f11*w11)/den;
+  //changing to weights for the top left pixel
+  double w00 = g2*g4;
+  double w01 = g2*g3;
+  double w10 = g1*g4;
+  double w11 = g1*g3;
 
-  // Derivative on y
-  f00 = this->dpsi_dy[i*this->dpsi->Sj+j];
-  f10 = this->dpsi_dy[(i+1)*this->dpsi->Sj+j];
-  f01 = this->dpsi_dy[i*this->dpsi->Sj+j+1];
-  f11 = this->dpsi_dy[(i+1)*this->dpsi->Sj+j+1];
-  double ay = (f00*w00 + f10*w10 + f01*w01 + f11*w11)/den;
+  double f00,f01,f10,f11;
+
+  f00 = this->dpsi_dx[ic*this->dpsi->Sj + jc];
+  f01 = this->dpsi_dx[ic*this->dpsi->Sj + jc+1];
+  f10 = this->dpsi_dx[(ic+1)*this->dpsi->Sj + jc];
+  f11 = this->dpsi_dx[(ic+1)*this->dpsi->Sj + jc+1];
+  double ax = (f00*w00 + f10*w10 + f01*w01 + f11*w11)*norm;
+
+  f00 = this->dpsi_dy[ic*this->dpsi->Sj + jc];
+  f01 = this->dpsi_dy[ic*this->dpsi->Sj + jc+1];
+  f10 = this->dpsi_dy[(ic+1)*this->dpsi->Sj + jc];
+  f11 = this->dpsi_dy[(ic+1)*this->dpsi->Sj + jc+1];
+  double ay = (f00*w00 + f10*w10 + f01*w01 + f11*w11)*norm;
 
   xout = ax;
   yout = ay;
-
 }
 
 void Pert::tableDefl(int Nm,double* xdefl,double* ydefl){

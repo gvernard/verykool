@@ -51,8 +51,9 @@ public:
   double* defl_x;            //deflected x coordinates
   double* defl_y;            //deflected y coordinates
   int* active;               //active image pixels used in the construction of the adaptive grid
-  SourceCell** cells = 0;    //for each image pixel, the corresponding source pixels and interpolation weights
+  InterpolationCell** cells = 0;    //for each image pixel, the corresponding source pixels and interpolation weights
   Cross** crosses = 0;       //array of cross structures for creating the D_s(s_p)*D_psi for reconstructing perturbations
+  InterpolationCell** dpsi_cells = 0; //for each image pixel, the corresponding dpsi pixels and interpolation weights, if applicable
   mytable B;
   mytable C;
   mytable S;

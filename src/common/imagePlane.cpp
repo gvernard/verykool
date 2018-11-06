@@ -36,8 +36,9 @@ ImagePlane::ImagePlane(const std::string filepath,int i,int j,double h,double w)
   defl_x  = (double*) calloc(Nm,sizeof(double));
   defl_y  = (double*) calloc(Nm,sizeof(double));
   active  = (int*) calloc(Nm,sizeof(int));
-  cells   = (SourceCell**) calloc(Nm,sizeof(SourceCell*));
+  cells   = (InterpolationCell**) calloc(Nm,sizeof(InterpolationCell*));
   crosses = (Cross**) malloc(Nm*sizeof(Cross*));
+  dpsi_cells = (InterpolationCell**) calloc(Nm,sizeof(InterpolationCell*));
 
   int i0    = floor(Ni/2);
   int j0    = floor(Nj/2);
@@ -57,8 +58,9 @@ ImagePlane::ImagePlane(const std::string filepath,int i,int j,double h,double w)
       x[i*Nj+j]   =  (j-j0)*dj;
       y[i*Nj+j]   = -(i-i0)*di;//reflect y-axis
       img[i*Nj+j] = contents[i*Nj+j];
-      //      cells[i*Nj+j] = NULL;
-      //      crosses[i*Nj+j] = NULL;
+      cells[i*Nj+j] = NULL;
+      crosses[i*Nj+j] = NULL;
+      dpsi_cells[i*Nj+j] = NULL;
     }
   }
 }
@@ -82,8 +84,9 @@ ImagePlane::ImagePlane(int i,int j,double h,double w){
   defl_x  = (double*) calloc(Nm,sizeof(double));
   defl_y  = (double*) calloc(Nm,sizeof(double));
   active  = (int*) calloc(Nm,sizeof(int));
-  cells   = (SourceCell**) calloc(Nm,sizeof(SourceCell*));
+  cells   = (InterpolationCell**) calloc(Nm,sizeof(InterpolationCell*));
   crosses = (Cross**) malloc(Nm*sizeof(Cross*));
+  dpsi_cells = (InterpolationCell**) calloc(Nm,sizeof(InterpolationCell*));
 
   int i0    = floor(Ni/2);
   int j0    = floor(Nj/2);
@@ -102,8 +105,9 @@ ImagePlane::ImagePlane(int i,int j,double h,double w){
     for(int j=0;j<Nj;j++){
       x[i*Nj+j]   =  (j-j0)*dj;
       y[i*Nj+j]   = -(i-i0)*di;//reflect y-axis
-      //      cells[i*Nj+j] = NULL;
-      //      crosses[i*Nj+j] = NULL;
+      cells[i*Nj+j] = NULL;
+      crosses[i*Nj+j] = NULL;
+      dpsi_cells[i*Nj+j] = NULL;
     }
   }
 }
@@ -127,8 +131,9 @@ ImagePlane::ImagePlane(int i,double w,double h){
   defl_x  = (double*) calloc(Nm,sizeof(double));
   defl_y  = (double*) calloc(Nm,sizeof(double));
   active  = (int*) calloc(Nm,sizeof(int));
-  cells   = (SourceCell**) calloc(Nm,sizeof(SourceCell*));
+  cells   = (InterpolationCell**) calloc(Nm,sizeof(InterpolationCell*));
   crosses = (Cross**) malloc(Nm*sizeof(Cross*));
+  dpsi_cells = (InterpolationCell**) calloc(Nm,sizeof(InterpolationCell*));
 }
 
 ImagePlane::ImagePlane(const ImagePlane& image){
@@ -147,14 +152,16 @@ ImagePlane::ImagePlane(const ImagePlane& image){
   defl_x  = (double*) calloc(Nm,sizeof(double));
   defl_y  = (double*) calloc(Nm,sizeof(double));
   active  = (int*) calloc(Nm,sizeof(int));
-  cells   = (SourceCell**) calloc(Nm,sizeof(SourceCell*));
+  cells   = (InterpolationCell**) calloc(Nm,sizeof(InterpolationCell*));
   crosses = (Cross**) malloc(Nm*sizeof(Cross*));
+  dpsi_cells = (InterpolationCell**) calloc(Nm,sizeof(InterpolationCell*));
   for(int i=0;i<Nm;i++){
     img[i] = image.img[i];
     x[i] = image.x[i];
     y[i] = image.y[i];
-    //    cells[i] = NULL;
-    //    crosses[i] = NULL;
+    cells[i] = NULL;
+    crosses[i] = NULL;
+    dpsi_cells[i] = NULL;
   }
 }
 
@@ -168,9 +175,11 @@ ImagePlane::~ImagePlane(){
   for(int i=0;i<this->Nm;i++){
     delete(cells[i]);
     delete(crosses[i]);
+    delete(dpsi_cells[i]);
   }
   free(cells);
   free(crosses);
+  free(dpsi_cells);
 }
 
 

@@ -22,11 +22,15 @@
 \clearpage
 \pagebreak
 
-\begin{figure}[!htb]
-	\centering
-	\includegraphics[width=\textwidth]{corner.pdf}
-	\caption{Corner plot. \label{fig:corner}}
-\end{figure}
+\IfFileExists{corner.pdf}{
+  \begin{figure}[!htb]
+    \centering
+    \includegraphics[width=\textwidth]{corner.pdf}
+    \caption{Corner plot. \label{fig:corner}}
+  \end{figure}
+}{
+  corner plot not available!
+}
 
 \clearpage
 \pagebreak

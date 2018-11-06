@@ -238,6 +238,38 @@ void SmoothAlgebra::getSourceErrors(int Sm,double* errors){
   }
 }
 
+void SmoothAlgebra::solveDpsi(Pert* pert_mass_model,ImagePlane* image,BaseSourcePlane* source){
+  // ATTENTION!!!  >>>  It seems that solving for the inverse od Dpsi does not work  <<<  ATTENTION!!!
+
+  // Get the inverse of the Dpsi matrix (a gradient regularization matrix)
+  Eigen::SparseMatrix<double> Dpsi(pert_mass_model->dpsi->Sm,pert_mass_model->dpsi->Sm);
+  Dpsi.reserve(Eigen::VectorXi::Constant(pert_mass_model->dpsi->Sm,pert_mass_model->dpsi->eigenSparseMemoryAllocForH));//overestimating the number of non-zero coefficients per HH row (different number for 1st,2nd order derivative etc)
+  for(int i=0;i<pert_mass_model->dpsi->H.tri.size();i++){  Dpsi.insert(pert_mass_model->dpsi->H.tri[i].i,pert_mass_model->dpsi->H.tri[i].j) = pert_mass_model->dpsi->H.tri[i].v;  }
+  
+
+  Eigen::SparseMatrix<double> Dpsi_inv(source->Sm,source->Sm);
+  double det = 0.0;
+  this->getInverseAndDet(Dpsi,Dpsi_inv,det);
+  Dpsi.resize(0,0);
+  
+  // Get the vector of residuals multiplied by the inverse of Ds, which is a diagonal matrix
+  Eigen::VectorXd dd(image->Nm);
+  for(int i=0;i<image->Nm;i++){
+    dd[i] = this->likeModel->res->img[i]/(source->Ds.tri[2*i].v + source->Ds.tri[2*i+1].v);
+  }
+
+  Eigen::VectorXd dpsi(pert_mass_model->dpsi->Sm);
+  dpsi = Dpsi_inv*dd;
+  Eigen::Map<Eigen::VectorXd>(pert_mass_model->dpsi->src,dpsi.size()) = dpsi;
+
+
+  Dpsi_inv.resize(0,0);
+}
+
+
+
+
+
 
 
 // Class: PertAlgebra

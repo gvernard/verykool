@@ -64,9 +64,16 @@ pspecs.append(pspeclist) #Adding the entire powerspectrum to the list
 l_list = np.linspace(lmax/(2.*steps),lmax - lmax/(2.*steps),steps)
 
 
+#--------write the power spectrum-------------------------
+table=np.array([l_list,pspecs[0]]).T
+np.savetxt("ps.dat",table,fmt='%.8e',delimiter=' ',newline='\n')
+
 #--------plot the power spectrum--------------------------
 plt.figure()
 plt.xscale('log')
 plt.yscale('log')
+plt.ylim(0.01,10000)
+
 plt.plot(l_list, pspecs[0])
-plt.show()
+plt.savefig('ps.png',bbox_inches='tight')
+#plt.show()

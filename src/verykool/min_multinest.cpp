@@ -147,6 +147,20 @@ void MultiNestDumper(int& nSamples,int& nlive,int& nPar,double** physLive,double
   */
 
 
+  // Read the mn-resume file and write the number of total samples and replacements
+  int total_samples;
+  int replacements;
+  std::string dum;
+  std::ifstream infile(e->output + "mn-resume.dat");
+  infile >> dum >> replacements >> total_samples;
+  infile.close();
+  fh = fopen( (e->output + std::to_string(e->counter) + "_iterations.dat").c_str() ,"w");
+  fprintf(fh,"%d\n",total_samples);
+  fprintf(fh,"%d\n",replacements);
+  fclose(fh);
+
+
+
   // postdist holds the posterior probability, loglike, and the parameters
   int Ncols = nPar + 2;
   double postdist[nSamples][Ncols];

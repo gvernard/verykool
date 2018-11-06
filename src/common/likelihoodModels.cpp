@@ -433,8 +433,64 @@ void SmoothLikelihood::outputLikelihoodModel(std::string output){
   std::ofstream jsonfile(output+"vkl_output.json");
   jsonfile << json_output;
   jsonfile.close();
+
+
+
+  
+  // Write linear Dpsi
+  Pert* pert_mass_model = new Pert(20,20,image->width,image->height,"gradient");
+  //  Pert* pert_mass_model = new Pert(image->Ni,image->Nj,image,"gradient");
+  ImagePlane* img_grid = new ImagePlane(pert_mass_model->dpsi->Si,pert_mass_model->dpsi->Sj,pert_mass_model->dpsi->width,pert_mass_model->dpsi->height);
+  for(int i=0;i<img_grid->Nm;i++){
+    img_grid->active[i] = -1;
+  }
+  this->collection->all_defl(img_grid);
+  this->source->createInterpolationWeights(img_grid);
+  this->source->constructL(img_grid);
+
+  this->deriveLinearDpsi(pert_mass_model,img_grid);
+  //pert_mass_model->dpsi->outputSource(output + "linear_perturbations_");
+
+
+  FILE* fh = fopen((output + "linear_perturbations_derivatives.dat").c_str(),"w");
+  for(int i=0;i<pert_mass_model->dpsi->Sm;i++){
+    fprintf(fh,"%10.5f\n",pert_mass_model->dpsi_dx[i]);
+  }
+  for(int i=0;i<pert_mass_model->dpsi->Sm;i++){
+    fprintf(fh,"%10.5f\n",pert_mass_model->dpsi_dy[i]);
+  }
+  fclose(fh);
+
+  delete(pert_mass_model);
+  delete(img_grid);
 }
 
+
+void SmoothLikelihood::deriveLinearDpsi(Pert* pert_mass_model,ImagePlane* img_grid){
+  // calculate the residuals (smooth modelling residuals)
+  this->getModel();
+  this->getResidual();
+
+  // calculate the derivative of the source
+  this->source->constructDs(img_grid);
+
+  for(int i=0;i<pert_mass_model->dpsi->Sm;i++){
+    if( source->Ds.tri[2*i].v == 0.0 ){
+      pert_mass_model->dpsi_dx[i] = 0.0;
+    } else {
+      pert_mass_model->dpsi_dx[i] = -0.5*this->res->img[i]/source->Ds.tri[2*i].v;
+    }
+
+    if( source->Ds.tri[2*i+1].v == 0.0 ){
+      pert_mass_model->dpsi_dy[i] = 0.0;
+    } else {
+      pert_mass_model->dpsi_dy[i] = -0.5*this->res->img[i]/source->Ds.tri[2*i+1].v;
+    }
+  }
+
+
+  //  this->algebra->solveDpsi(pert_mass_model,this->image,this->source);
+}
 
 
 
@@ -751,7 +807,10 @@ void PertIterationLikelihood::outputLikelihoodModel(std::string output){
   // Replace source pointer in the smooth model with the previous source
   this->smooth_like->source = dum_source;
 
-  // Output perturbations
+  // Output last perturbations (corrections)
+  this->pert_mass_model->dpsi->outputSource(output + "last_perturbations_");
+
+  // Output added perturbations
   Pert* pert_pointer = dynamic_cast<Pert*>(this->collection->models.back());
   pert_pointer->dpsi->outputSource(output + "added_perturbations_"); // output additive perturbations
   ImagePlane* kappa = new ImagePlane(pert_pointer->dpsi->Si,pert_pointer->dpsi->Sj,pert_pointer->dpsi->width,pert_pointer->dpsi->height);

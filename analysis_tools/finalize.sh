@@ -51,7 +51,9 @@ php get_par_table.php $path $run $step
 
 
 mv all.png $target
-mv corner.pdf $target
+if [ -f corner.pdf ]; then
+    mv corner.pdf $target
+fi
 mv report.pdf $target
 mv table_pars.txt $target/
 

@@ -40,6 +40,7 @@ public:
   void solveSource(BaseSourcePlane* source);
   void getSourceErrors(int Sm,double* errors);
   void getMockData(ImagePlane* mockdata,BaseSourcePlane* source);
+  void solveDpsi(Pert* pert_mass_model,ImagePlane* image,BaseSourcePlane* source);
 
   SmoothLikelihood* likeModel;
   Eigen::VectorXd d;

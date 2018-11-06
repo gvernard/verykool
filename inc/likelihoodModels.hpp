@@ -77,6 +77,7 @@ public:
   std::vector<Nlpar*> getRegPars();
   void getModel();
   void getResidual();
+  void deriveLinearDpsi(Pert* pert_mass_model,ImagePlane* img_grid);
   
   //virtual
   std::vector<std::string> getFullNames();

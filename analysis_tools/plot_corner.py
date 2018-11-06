@@ -14,10 +14,18 @@ path = sys.argv[1]
 run  = sys.argv[2]
 rootdir = path+run+"output/"
 if len(sys.argv) > 3:
-    step = sys.argv[3]
-    copyfile(rootdir+str(step)+"_corner.txt",rootdir+"plt_corner.txt")
+    step = str(sys.argv[3])
 else:
+    step = ''
+    
+
+if os.path.isfile(rootdir+str(step)+"_corner.txt"):
+    copyfile(rootdir+str(step)+"_corner.txt",rootdir+"plt_corner.txt")
+elif os.path.isfile(rootdir+"corner.txt"):
     copyfile(rootdir+"corner.txt",rootdir+"plt_corner.txt")
+else:
+    sys.exit()
+
 
 
 

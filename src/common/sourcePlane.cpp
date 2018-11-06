@@ -265,24 +265,24 @@ void FixedSource::createInterpolationWeights(ImagePlane* image){
   double g1=0,g2=0,g3=0,g4=0;
 
   for(int i=0;i<image->Nm;i++){
-    xp = image->defl_x[i];
-    yp = image->defl_y[i];
+    xp = image->defl_x[i] - this->xmin;
+    yp = image->defl_y[i] - this->ymin;
     
     if( this->pointInPolygon(xp,yp) ){
-      //Indices corresponding to the top left pixel
-      jc = (int) floor((xp - this->xmin)/dx);
-      ic = (int) floor((yp - this->ymin)/dy);
+      //Indices corresponding to the bottom left pixel
+      jc = (int) floor(xp/dx);
+      ic = (int) floor(yp/dy);
       
       //Now interpolate between neighbouring pixels and add entries to L matrix.
       //The interpolation function could return an array of column indices in the row of the L matrix, and the corresponding weights.
       //The following is for bi-linear interpolation:
-      g1 = (ic+1)*dy - (yp - this->ymin);
-      g2 = (jc+1)*dx - (xp - this->xmin);
-      g3 = (yp - this->ymin) - ic*dy;
-      g4 = (xp - this->xmin) - jc*dx;
+      g1 = (ic+1)*dy - yp;
+      g2 = (jc+1)*dx - xp;
+      g3 = yp - ic*dy;
+      g4 = xp - jc*dx;
       
       delete(image->cells[i]);
-      SourceCell* cell = new SourceCell(4);
+      InterpolationCell* cell = new InterpolationCell(4);
       cell->ind[0] = (this->Si-2-ic)*this->Sj + jc;
       cell->ind[1] = (this->Si-2-ic)*this->Sj + jc+1;
       cell->ind[2] = (this->Si-2-ic+1)*this->Sj + jc;
@@ -294,7 +294,7 @@ void FixedSource::createInterpolationWeights(ImagePlane* image){
       image->cells[i] = cell;
     } else {
       delete(image->cells[i]);
-      SourceCell* cell = new SourceCell(1);
+      InterpolationCell* cell = new InterpolationCell(1);
       cell->ind[0] = 0;
       cell->wei[0] = 0.0;
       image->cells[i] = cell;
@@ -675,7 +675,7 @@ void FloatingSource::createInterpolationWeights(ImagePlane* image){
       g4 = (xp - this->xmin) - jc*dx;
       
       delete(image->cells[i]);
-      SourceCell* cell = new SourceCell(4);
+      InterpolationCell* cell = new InterpolationCell(4);
       cell->ind[0] = (this->Si-2-ic)*this->Sj + jc;
       cell->ind[1] = (this->Si-2-ic)*this->Sj + jc+1;
       cell->ind[2] = (this->Si-2-ic+1)*this->Sj + jc;
@@ -687,7 +687,7 @@ void FloatingSource::createInterpolationWeights(ImagePlane* image){
       image->cells[i] = cell;
     } else {
       delete(image->cells[i]);
-      SourceCell* cell = new SourceCell(1);
+      InterpolationCell* cell = new InterpolationCell(1);
       cell->ind[0] = 0;
       cell->wei[0] = 0.0;
       image->cells[i] = cell;
@@ -1083,7 +1083,7 @@ void AdaptiveSource::createInterpolationWeights(ImagePlane* image){
 	if( 0.0 <= wa && wa <= 1.0 && 0.0 <= wb && wb <= 1.0 && 0.0 <= wc && wc <= 1.0 ){
 	  flag = 1;
 	  delete(image->cells[i]);
-	  SourceCell* cell = new SourceCell(3);
+	  InterpolationCell* cell = new InterpolationCell(3);
 	  cell->ind[0] = triangle.a;
 	  cell->ind[1] = triangle.b;
 	  cell->ind[2] = triangle.c;
@@ -1097,7 +1097,7 @@ void AdaptiveSource::createInterpolationWeights(ImagePlane* image){
       
       if( flag == 0 ){
 	delete(image->cells[i]);
-	SourceCell* cell = new SourceCell(1);
+	InterpolationCell* cell = new InterpolationCell(1);
 	cell->ind[0] = 0;
 	cell->wei[0] = 0.0;
 	image->cells[i] = cell;
@@ -1106,7 +1106,7 @@ void AdaptiveSource::createInterpolationWeights(ImagePlane* image){
     } else {
 
       delete(image->cells[i]);
-      SourceCell* cell = new SourceCell(1);
+      InterpolationCell* cell = new InterpolationCell(1);
       cell->ind[0] = image->active[i];
       cell->wei[0] = 1.0;
       image->cells[i] = cell;

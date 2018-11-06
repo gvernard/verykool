@@ -7,6 +7,7 @@ analysis_tools/*.png
 analysis_tools/*.log
 analysis_tools/*.aux
 analysis_tools/*.gif
+analysis_tools/*.fits
 analysis_tools/create_gridded_source
 scripts/report.txt
 *.pyc

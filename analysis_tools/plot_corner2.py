@@ -10,8 +10,8 @@ matplotlib.rc('text', usetex=True)
 
 rootdir = sys.argv[1]
 
-par_names  = np.genfromtxt(rootdir+'output/corner.paramnames',usecols=[0],dtype='str')
-par_ranges = np.genfromtxt(rootdir+'output/corner.ranges',usecols=[1,2])
+par_names  = np.genfromtxt(rootdir+'output/plt_corner.paramnames',usecols=[0],dtype='str')
+par_ranges = np.genfromtxt(rootdir+'output/plt_corner.ranges',usecols=[1,2])
 dum        = np.genfromtxt(rootdir+'output/corner.txt')
 samples = dum[:,2:]
 weights = dum[:,1]

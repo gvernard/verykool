@@ -127,13 +127,16 @@ file_put_contents('table2.tex',$str);
 
 
 // Table of other values of interest
-$fh    = fopen($path . $run . "output/" . "mn-resume.dat","r");
-$line  = fgets($fh);
-$line  = fgets($fh);
-$line  = trim(preg_replace('!\s+!',' ',$line));
-$iters = explode(' ',$line);
-fclose($fh);
-
+if( file_exists($path . $run . "output/" . "mn-resume.dat") ){
+    $fh    = fopen($path . $run . "output/" . "mn-resume.dat","r");
+    $line  = fgets($fh);
+    $line  = fgets($fh);
+    $line  = trim(preg_replace('!\s+!',' ',$line));
+    $iters = explode(' ',$line);
+    fclose($fh);
+} else {
+    $iters = array("n/a","n/a");
+}
 
 
 $str =  '';
@@ -157,7 +160,7 @@ if( $inp['noise_flag'] == 'uniform' ){
 } else if( $inp['noise_flag'] == 'map' ){
     $str .= ' $C_D$        & covariance of the data            & map \\\\ ' . "\n";
 }
-$str .= ' $P_{data}$   & size of data pixels               & ' . $out["generic"]["Psize"] . ' \\\\ ' . "\n";
+$str .= ' $P_{data}$   & size of data pixels               & ' . sprintf("%10.5f",$out["generic"]["Psize"]) . ' \\\\ ' . "\n";
 $str .= ' $N_{iter}$   & number of MultiNest iterations    & ' . $iters[1] . ' \\\\ ' . "\n";
 $str .= ' $N_{repl}$   & number of live point replacements & ' . $iters[0] . ' \\\\ ' . "\n";
 
