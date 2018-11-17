@@ -16,8 +16,10 @@ data2 = fits.getdata(file2,ext=0)
 data2 = data2[::-1,:]
 
 
-diff = np.subtract(data2,data1)
-limit = np.amax(np.amax(diff),abs(np.amin(diff)))
+dum = np.subtract(data1,data2)
+# Also, I need to invert the array on the y-axis to output the correct fits file
+diff = np.flipud(dum)
+limit = np.amax([np.amax(diff),np.abs(np.amin(diff))])
 
 
 hdu = fits.PrimaryHDU(diff)

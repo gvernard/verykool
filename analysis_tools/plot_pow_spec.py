@@ -15,19 +15,27 @@ import matplotlib.pyplot as plt
 
 
 fname = sys.argv[1]
-myfits = fits.getdata(fname,ext=0)
-dum  = myfits[::-1,:]
+image = fits.getdata(fname,ext=0)
+dum  = image[::-1,:]
 #data = np.flipud(dum)
-data=dum
+image=dum
 header = fits.getheader(fname)
-#Lx = header['NAXIS1']
-#Ly = header['NAXIS1']
-Lx = 4.05
-Ly = 4.05
+Lx = header['WIDTH']
+Ly = header['HEIGHT']
+#Lx = 4.05
+#Ly = 4.05
+
+
+if len(sys.argv) == 3:
+        mask = fits.getdata(sys.argv[2],ext=0)
+        data = np.multiply(np.flipud(mask),image)
+else:
+        data = image
 
 
 
-steps = 30 #number of bins in which to determine the power spectra
+
+steps = 50 #number of bins in which to determine the power spectra
 pspecs = []  #The list to be filled with power spectra 
 l_list = []  #The list to be filled with l values	
 
@@ -38,8 +46,14 @@ absval2 = fouriertf.real**2 + fouriertf.imag**2
 nx = np.shape (absval2) [0]
 ny = np.shape (absval2) [1]
 
-steplist = range (steps + 1)
+steplist = range(steps + 1)
+#print len(steplist),steplist
+#dum = np.logspace(1,np.log10(steps),steps)
+#steplist = np.insert(dum,0,0)
+#print len(steplist),steplist
 pspeclist = [] #Array that will be filled with the powerspectrum value at every l in the grid
+pspecerror = [] #Array that will be filled with the error of the powerspectrum value at every l in the grid
+
 
 #Axes in Fourier space
 lxlist = np.arange ((-nx/2.)/Lx,(nx/2.)/Lx, 1./Lx)
@@ -58,14 +72,21 @@ for step in range (steps):
                         if steplist[step]*lmax/steps < l <= steplist [step + 1]*lmax/steps:
                                 bin = np.append(bin, absval2[y][x])
         pspeclist = np.append(pspeclist, np.mean(bin)) #Adding each bin value to pspeclist
+        pspecerror = np.append(pspecerror, np.mean(bin)/np.sqrt(len(bin))) #adding the error: P(k)/Npixels per bin (sample variance)
+        #pspecerror = np.append(pspecerror, np.std(bin)) #adding the error: P(k)/Npixels per bin (sample variance)
+        #print len(bin)
+
+
 pspecs.append(pspeclist) #Adding the entire powerspectrum to the list
-	
+pspecs.append(pspecerror)
+#print pspecerror
+
 #The frequency list with the k-values at the middle of each bin with unit (k/2*pi) arcsec inverse
 l_list = np.linspace(lmax/(2.*steps),lmax - lmax/(2.*steps),steps)
 
 
 #--------write the power spectrum-------------------------
-table=np.array([l_list,pspecs[0]]).T
+table=np.array([l_list,pspecs[0],pspecs[1]]).T
 np.savetxt("ps.dat",table,fmt='%.8e',delimiter=' ',newline='\n')
 
 #--------plot the power spectrum--------------------------
@@ -74,6 +95,9 @@ plt.xscale('log')
 plt.yscale('log')
 plt.ylim(0.01,10000)
 
-plt.plot(l_list, pspecs[0])
+#plt.plot(l_list, pspecs[0])
+errors = np.empty(len(l_list))
+errors.fill(10.1)
+plt.errorbar(l_list, pspecs[0],yerr=pspecs[1])
 plt.savefig('ps.png',bbox_inches='tight')
 #plt.show()

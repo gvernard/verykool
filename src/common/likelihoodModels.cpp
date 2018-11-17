@@ -436,7 +436,7 @@ void SmoothLikelihood::outputLikelihoodModel(std::string output){
 
 
 
-  
+  /*  
   // Write linear Dpsi
   Pert* pert_mass_model = new Pert(20,20,image->width,image->height,"gradient");
   //  Pert* pert_mass_model = new Pert(image->Ni,image->Nj,image,"gradient");
@@ -463,6 +463,7 @@ void SmoothLikelihood::outputLikelihoodModel(std::string output){
 
   delete(pert_mass_model);
   delete(img_grid);
+  */
 }
 
 
@@ -491,7 +492,6 @@ void SmoothLikelihood::deriveLinearDpsi(Pert* pert_mass_model,ImagePlane* img_gr
 
   //  this->algebra->solveDpsi(pert_mass_model,this->image,this->source);
 }
-
 
 
 
@@ -611,10 +611,10 @@ void PertLikelihood::updateLikelihoodModel(){
   }
 
   // Update all the needed algebraic tables, e.g. M_r, Mt_r, Mt_r*Cd*M_r + RtR, Cs and detCs (if needed), Cp and detCp (if needed)
-  this->algebra->setAlgebraRuntime(this->source,this->pert_mass_model,this->smooth_like);
+  this->algebra->setAlgebraRuntime(this->source,this->pert_mass_model);
 
   // Solve for the source and perturbations (r), calculate the chi2, reg, and detA terms
-  this->algebra->solveSourcePert(this->source,this->pert_mass_model,this->smooth_like);
+  this->algebra->solveSourcePert(this->source,this->pert_mass_model);
 }
 
 //virtual
@@ -635,6 +635,8 @@ void PertLikelihood::outputLikelihoodModel(std::string output){
   // Output reconstructed source
   this->source->outputSource(output + "pert_");
 
+
+
   // Replace source pointer in the smooth model with the new perturbed source
   BaseSourcePlane* dum_source = this->smooth_like->source;
   this->smooth_like->source = this->source;
@@ -647,23 +649,30 @@ void PertLikelihood::outputLikelihoodModel(std::string output){
   this->smooth_like->getResidual();
   this->smooth_like->res->writeImage(output + "pert_vkl_residual.fits");
   
+  // Output errors of reconstructed source
+  double* errors = (double*) calloc(this->source->Sm,sizeof(double));
+  this->smooth_like->algebra->getSourceErrors(this->source->Sm,errors);
+  this->smooth_like->source->outputSourceErrors(errors,output);
+  free(errors);
+
   // Replace source pointer in the smooth model with the previous source
   this->smooth_like->source = dum_source;
   
-  // Output perturbations
+  // Output current perturbations correction
   this->pert_mass_model->dpsi->outputSource(output + "perturbations_");
+
+  // Output convergence
   ImagePlane* kappa = new ImagePlane(this->pert_mass_model->dpsi->Si,this->pert_mass_model->dpsi->Sj,this->pert_mass_model->dpsi->width,this->pert_mass_model->dpsi->height);
-  for(int i=0;i<kappa->Nm;i++){
-    kappa->cells[i] = NULL;
-    kappa->crosses[i] = NULL;
-  }
   pert_mass_model->getConvergence(kappa);
   kappa->writeImage(output + "convergence.fits");
   delete(kappa);
 }
 
 
-
+void PertLikelihood::pertResiduals(std::string output,ImagePlane* image,BaseSourcePlane* source,Pert* pert_mass_model){
+  this->algebra->constructDsDpsi(image,source,pert_mass_model);
+  this->algebra->solvePerturbationsResiduals(output,pert_mass_model);
+}
 
 
 
@@ -761,10 +770,10 @@ void PertIterationLikelihood::updateLikelihoodModel(){
 
 
   // Update all the needed algebraic tables, e.g. M_r, Mt_r, Mt_r*Cd*M_r + RtR, Cs and detCs (if needed), Cp and detCp (if needed)
-  this->algebra->setAlgebraRuntime(this->source,this->pert_mass_model,this->smooth_like);
+  this->algebra->setAlgebraRuntime(this->source,this->pert_mass_model);
 
   // Solve for the source and perturbations (r), calculate the chi2, reg, and detA terms
-  this->algebra->solveSourcePert(this->source,this->pert_mass_model,this->smooth_like);
+  this->algebra->solveSourcePert(this->source,this->pert_mass_model);
 
   
   // Update perturbations in mass model collection
@@ -804,22 +813,26 @@ void PertIterationLikelihood::outputLikelihoodModel(std::string output){
   this->smooth_like->getResidual();
   this->smooth_like->res->writeImage(output + "pert_vkl_residual.fits");
   
+  // Output errors of reconstructed source
+  double* errors = (double*) calloc(this->source->Sm,sizeof(double));
+  this->smooth_like->algebra->getSourceErrors(this->source->Sm,errors);
+  this->smooth_like->source->outputSourceErrors(errors,output);
+  free(errors);
+
   // Replace source pointer in the smooth model with the previous source
   this->smooth_like->source = dum_source;
 
   // Output last perturbations (corrections)
-  this->pert_mass_model->dpsi->outputSource(output + "last_perturbations_");
+  this->pert_mass_model->dpsi->outputSource(output + "perturbations_");
 
   // Output added perturbations
   Pert* pert_pointer = dynamic_cast<Pert*>(this->collection->models.back());
   pert_pointer->dpsi->outputSource(output + "added_perturbations_"); // output additive perturbations
+
+  // Output convergence
   ImagePlane* kappa = new ImagePlane(pert_pointer->dpsi->Si,pert_pointer->dpsi->Sj,pert_pointer->dpsi->width,pert_pointer->dpsi->height);
-  for(int i=0;i<kappa->Nm;i++){
-    kappa->cells[i] = NULL;
-    kappa->crosses[i] = NULL;
-  }
   pert_pointer->getConvergence(kappa);
-  kappa->writeImage(output + "convergence.fits");
+  kappa->writeImage(output + "added_convergence.fits");
   delete(kappa);
 }
 

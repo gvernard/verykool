@@ -173,7 +173,8 @@ void SmoothAlgebra::setAlgebraRuntime(ImagePlane* image,BaseSourcePlane* source)
 
   // Calculate the new A matrix
   Eigen::SparseMatrix<double> A(source->Sm,source->Sm);
-  A = this->Mt*this->C*this->M + Nlpar::getValueByName("lambda",this->likeModel->reg)*this->Cs;
+  //  A = this->Mt*this->C*this->M + Nlpar::getValueByName("lambda",this->likeModel->reg)*this->Cs;
+  A = this->Mt*this->StCS*this->M + Nlpar::getValueByName("lambda",this->likeModel->reg)*this->Cs;
   this->A = A;
   A.resize(0,0);
 }
@@ -189,9 +190,31 @@ void SmoothAlgebra::solveSource(BaseSourcePlane* source){
 
   //Get the Most Probable solution for the source
   Eigen::VectorXd s(source->Sm);
-  s = inv*(this->Mt*this->C*this->d);
+  //  s = inv*(this->Mt*this->C*this->d);
+  s = inv*(this->Mt*this->StCS*this->d);
   Eigen::Map<Eigen::VectorXd>(source->src,s.size()) = s;
   inv.resize(0,0);
+
+
+  /*
+  // Read in a matching source
+  FILE* fh2 = fopen("/net/argo/data/users/gvernard/RESULTS/VKL_MODELS/test_modelling_perturbations/test_6_nopert/base_run/output/vkl_source_irregular.dat","r");
+  float dumaa,dumbb,dumcc;
+  for(int i=0;i<source->Sm;i++){
+    fscanf(fh2,"%f%f%f\n",&dumaa,&dumbb,&dumcc);
+    source->src[i] = dumaa;
+  }  
+  fclose(fh2);
+
+  Eigen::Map<Eigen::VectorXd> dum1(source->src,source->Sm);
+  Eigen::VectorXd dum = this->Cs*dum1;
+  //  Eigen::VectorXd dum = dum1;
+  dum[0] = 10.0;
+  s = dum;
+  Eigen::Map<Eigen::VectorXd>(source->src,s.size()) = s;
+  */
+
+
 
   //Get the chi-squared and reg terms
   Eigen::VectorXd st = s.transpose();
@@ -315,7 +338,7 @@ void PertAlgebra::setAlgebraInit(BaseSourcePlane* source,Pert* pert_mass_model){
   */
 
   // Create DsDpsi sparse matrix directly based on source->Ds (varying at each call) and image->crosses (fixed at initialization)
-  this->constructDsDpsi(source,pert_mass_model);
+  this->constructDsDpsi(this->likeModel->smooth_like->image,source,pert_mass_model);
 
   this->likeModel->terms["detCd"]   = this->likeModel->smooth_like->terms["detC"];
   this->likeModel->terms["Nslogls"] = source->Sm*log10(Nlpar::getValueByName("lambda_s",this->likeModel->reg_s))/2.0;
@@ -364,8 +387,8 @@ void PertAlgebra::constructNormalizingJmatrix(BaseSourcePlane* source,Pert* pert
   J_dum.resize(0,0);
 }
 
-void PertAlgebra::constructDsDpsi(BaseSourcePlane* source,Pert* pert_mass_model){
-  Eigen::SparseMatrix<double> DsDpsi_dum(likeModel->smooth_like->image->Nm,pert_mass_model->dpsi->Sm);
+void PertAlgebra::constructDsDpsi(ImagePlane* image,BaseSourcePlane* source,Pert* pert_mass_model){
+  Eigen::SparseMatrix<double> DsDpsi_dum(image->Nm,pert_mass_model->dpsi->Sm);
   DsDpsi_dum.reserve(Eigen::VectorXi::Constant(pert_mass_model->dpsi->Sm,12));
   int i0,j0,j_index;
   double dsx,dsy;
@@ -373,25 +396,25 @@ void PertAlgebra::constructDsDpsi(BaseSourcePlane* source,Pert* pert_mass_model)
   int rel_j[12] = {0,1,-1,0,1,2,-1,0,1,2,0,1};
   double coeffs[12] = {0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0};
 
-  for(int h=0;h<likeModel->smooth_like->image->Nm;h++){
+  for(int h=0;h<image->Nm;h++){
     dsx = source->Ds.tri[2*h].v;
     dsy = source->Ds.tri[2*h+1].v;
 
-    i0 = likeModel->smooth_like->image->crosses[h]->i0;
-    j0 = likeModel->smooth_like->image->crosses[h]->j0;
+    i0 = image->crosses[h]->i0;
+    j0 = image->crosses[h]->j0;
 
-    coeffs[0]  = likeModel->smooth_like->image->crosses[h]->coeff_y[0]*dsy;
-    coeffs[1]  = likeModel->smooth_like->image->crosses[h]->coeff_y[4]*dsy;
-    coeffs[2]  = likeModel->smooth_like->image->crosses[h]->coeff_x[0]*dsx;
-    coeffs[3]  = likeModel->smooth_like->image->crosses[h]->coeff_y[1]*dsy + likeModel->smooth_like->image->crosses[h]->coeff_x[1]*dsx;
-    coeffs[4]  = likeModel->smooth_like->image->crosses[h]->coeff_y[5]*dsy + likeModel->smooth_like->image->crosses[h]->coeff_x[2]*dsx;
-    coeffs[5]  = likeModel->smooth_like->image->crosses[h]->coeff_x[3]*dsx;
-    coeffs[6]  = likeModel->smooth_like->image->crosses[h]->coeff_x[4]*dsx;
-    coeffs[7]  = likeModel->smooth_like->image->crosses[h]->coeff_y[2]*dsy + likeModel->smooth_like->image->crosses[h]->coeff_x[5]*dsx;
-    coeffs[8]  = likeModel->smooth_like->image->crosses[h]->coeff_y[6]*dsy + likeModel->smooth_like->image->crosses[h]->coeff_x[6]*dsx;
-    coeffs[9]  = likeModel->smooth_like->image->crosses[h]->coeff_x[7]*dsx;
-    coeffs[10] = likeModel->smooth_like->image->crosses[h]->coeff_y[3]*dsy;
-    coeffs[11] = likeModel->smooth_like->image->crosses[h]->coeff_y[7]*dsy;
+    coeffs[0]  = image->crosses[h]->coeff_y[0]*dsy;
+    coeffs[1]  = image->crosses[h]->coeff_y[4]*dsy;
+    coeffs[2]  = image->crosses[h]->coeff_x[0]*dsx;
+    coeffs[3]  = image->crosses[h]->coeff_y[1]*dsy + image->crosses[h]->coeff_x[1]*dsx;
+    coeffs[4]  = image->crosses[h]->coeff_y[5]*dsy + image->crosses[h]->coeff_x[2]*dsx;
+    coeffs[5]  = image->crosses[h]->coeff_x[3]*dsx;
+    coeffs[6]  = image->crosses[h]->coeff_x[4]*dsx;
+    coeffs[7]  = image->crosses[h]->coeff_y[2]*dsy + image->crosses[h]->coeff_x[5]*dsx;
+    coeffs[8]  = image->crosses[h]->coeff_y[6]*dsy + image->crosses[h]->coeff_x[6]*dsx;
+    coeffs[9]  = image->crosses[h]->coeff_x[7]*dsx;
+    coeffs[10] = image->crosses[h]->coeff_y[3]*dsy;
+    coeffs[11] = image->crosses[h]->coeff_y[7]*dsy;
 
     for(int q=0;q<12;q++){
       if( coeffs[q] != 0.0 ){
@@ -406,24 +429,24 @@ void PertAlgebra::constructDsDpsi(BaseSourcePlane* source,Pert* pert_mass_model)
 }
 
 
-void PertAlgebra::setAlgebraRuntime(BaseSourcePlane* source,Pert* pert_mass_model,SmoothLikelihood* smooth_like){
+void PertAlgebra::setAlgebraRuntime(BaseSourcePlane* source,Pert* pert_mass_model){
   // required before constructing M_r
   if( likeModel->name == "pert_iter" ){
-    this->constructDsDpsi(source,pert_mass_model);
+    this->constructDsDpsi(this->likeModel->smooth_like->image,source,pert_mass_model);
   }
 
-  Eigen::SparseMatrix<double> M_r_dum(smooth_like->image->Nm,pert_mass_model->dpsi->Sm+source->Sm);
-  Eigen::SparseMatrix<double> Mt_r_dum(smooth_like->image->Nm,pert_mass_model->dpsi->Sm+source->Sm);
+  Eigen::SparseMatrix<double> M_r_dum(this->likeModel->smooth_like->image->Nm,pert_mass_model->dpsi->Sm+source->Sm);
+  Eigen::SparseMatrix<double> Mt_r_dum(this->likeModel->smooth_like->image->Nm,pert_mass_model->dpsi->Sm+source->Sm);
 
-  Eigen::SparseMatrix<double> block(smooth_like->image->Nm,pert_mass_model->dpsi->Sm+source->Sm);
-  block.reserve(Eigen::VectorXi::Constant(smooth_like->image->Nm,30));//overestimating the number of non-zero coefficients per HH row (different number for 1st,2nd order derivative etc)
+  Eigen::SparseMatrix<double> block(this->likeModel->smooth_like->image->Nm,pert_mass_model->dpsi->Sm+source->Sm);
+  block.reserve(Eigen::VectorXi::Constant(this->likeModel->smooth_like->image->Nm,30));//overestimating the number of non-zero coefficients per HH row (different number for 1st,2nd order derivative etc)
   for(int i=0;i<source->L.tri.size();i++){  block.insert(source->L.tri[i].i,source->L.tri[i].j) = source->L.tri[i].v;  }
   for(int k=0;k<this->DsDpsi.outerSize();++k){
     for(Eigen::SparseMatrix<double>::InnerIterator it(this->DsDpsi,k);it;++it){
       block.insert(it.row(),source->Sm+it.col()) = -it.value();
     }
   }
-  M_r_dum  = (smooth_like->algebra->B) * block;
+  M_r_dum  = (this->likeModel->smooth_like->algebra->B) * block;
   Mt_r_dum = M_r_dum.transpose();
   this->M_r = M_r_dum;
   this->Mt_r = Mt_r_dum;
@@ -496,16 +519,17 @@ void PertAlgebra::setAlgebraRuntime(BaseSourcePlane* source,Pert* pert_mass_mode
   //std::cout << this->J*this->RtR << std::endl;
 
 
-  Eigen::SparseMatrix<double> A_r_dum(smooth_like->image->Nm,pert_mass_model->dpsi->Sm+source->Sm);
-  //A_r_dum = this->J*(this->Mt_r*smooth_like->algebra->C*this->M_r + this->RtR);
-  A_r_dum = this->Mt_r*smooth_like->algebra->C*this->M_r + this->RtR;
+  Eigen::SparseMatrix<double> A_r_dum(this->likeModel->smooth_like->image->Nm,pert_mass_model->dpsi->Sm+source->Sm);
+  //A_r_dum = this->J*(this->Mt_r*this->likeModel->smooth_like->algebra->C*this->M_r + this->RtR);
+  //A_r_dum = this->Mt_r*this->likeModel->smooth_like->algebra->C*this->M_r + this->RtR;
+  A_r_dum = this->Mt_r*this->likeModel->smooth_like->algebra->StCS*this->M_r + this->RtR;
   this->A_r = A_r_dum;
 
   A_r_dum.resize(0,0);
 }
 
 
-void PertAlgebra::solveSourcePert(BaseSourcePlane* source,Pert* pert_mass_model,SmoothLikelihood* smooth_like){
+void PertAlgebra::solveSourcePert(BaseSourcePlane* source,Pert* pert_mass_model){
   // Get the inverse and det of A_r
   Eigen::SparseMatrix<double> inv(source->Sm+pert_mass_model->dpsi->Sm,source->Sm+pert_mass_model->dpsi->Sm);
   double detA = 0.0;
@@ -515,13 +539,28 @@ void PertAlgebra::solveSourcePert(BaseSourcePlane* source,Pert* pert_mass_model,
   //this->likeModel->terms["detA"] = -(detA - pert_mass_model->dpsi->Sm*log10(1.0/lambda_dpsi) )/2.0;
   this->likeModel->terms["detA"] = -detA/2.0;
   
-  //Get the Most Probable solution for the source and potential
+  // Get the Most Probable solution for the source and potential
   Eigen::VectorXd r(source->Sm+pert_mass_model->dpsi->Sm);
   
   //r = (inv*this->J)*(this->Mt_r*this->likeModel->smooth_like->algebra->C*this->likeModel->smooth_like->algebra->d);
-  r = inv*(this->Mt_r*this->likeModel->smooth_like->algebra->C*this->likeModel->smooth_like->algebra->d);
+  //r = inv*(this->Mt_r*this->likeModel->smooth_like->algebra->C*this->likeModel->smooth_like->algebra->d);
+  r = inv*(this->Mt_r*this->likeModel->smooth_like->algebra->StCS*this->likeModel->smooth_like->algebra->d);
   //std::cout << r << std::endl;
   inv.resize(0,0);
+
+
+  // Set the edge values of dpsi to zero
+  for(int j=0;j<pert_mass_model->dpsi->Sj;j++){
+    r[source->Sm+j] = 0.0;
+  }
+  for(int i=1;i<pert_mass_model->dpsi->Si-1;i++){
+    r[source->Sm+i*pert_mass_model->dpsi->Sj] = 0.0;
+    r[source->Sm+i*pert_mass_model->dpsi->Sj+pert_mass_model->dpsi->Sj-1] = 0.0;
+  }
+  for(int j=0;j<pert_mass_model->dpsi->Sj;j++){
+    r[source->Sm+(pert_mass_model->dpsi->Si-1)*pert_mass_model->dpsi->Sj+j] = 0.0;
+  }
+
 
   /*
   double* dum = (double*) calloc(source->Sm+pert_mass_model->dpsi->Sm,sizeof(double));
@@ -537,7 +576,7 @@ void PertAlgebra::solveSourcePert(BaseSourcePlane* source,Pert* pert_mass_model,
   free(dum);
   */
 
-  //Get the chi-squared term
+  // Get the chi-squared term
   Eigen::VectorXd y  = this->likeModel->smooth_like->algebra->d - (this->M_r*r);
   Eigen::VectorXd yt = y.transpose();
   double chi2        = yt.dot(this->likeModel->smooth_like->algebra->StCS*y);
@@ -559,3 +598,21 @@ void PertAlgebra::solveSourcePert(BaseSourcePlane* source,Pert* pert_mass_model,
   }
 }
 
+
+void PertAlgebra::solvePerturbationsResiduals(std::string output,Pert* pert_mass_model){
+  Eigen::Map<Eigen::VectorXd> dpsi(pert_mass_model->dpsi->src,pert_mass_model->dpsi->Sm);
+  //  Eigen::VectorXd res = -this->likeModel->smooth_like->algebra->B * this->DsDpsi * dpsi;
+  Eigen::VectorXd res = -this->likeModel->smooth_like->algebra->B * this->DsDpsi * dpsi;
+
+  ImagePlane res_img(this->likeModel->smooth_like->image->Ni,this->likeModel->smooth_like->image->Nj,this->likeModel->smooth_like->image->width,this->likeModel->smooth_like->image->height);
+  
+  for(int i=0;i<res_img.Ni;i++){
+    for(int j=0;j<res_img.Nj;j++){
+      res_img.img[i*res_img.Nj+j] = res[i*res_img.Nj+j];
+      this->likeModel->smooth_like->algebra->d[i*res_img.Nj+j] = res[i*res_img.Nj+j];      
+      this->likeModel->smooth_like->image->img[i*res_img.Nj+j] = res[i*res_img.Nj+j];
+    }
+  }
+
+  res_img.writeImage(output + "res_dpsi.fits");
+}

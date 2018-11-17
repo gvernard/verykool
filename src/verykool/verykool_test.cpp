@@ -67,6 +67,22 @@ int main(int argc,char* argv[]){
 
 
 
+  /*    
+  Pert* tmp_pert_mass_model = new Pert("/net/argo/data/users/gvernard/RESULTS/VKL_MODELS/test_modelling_perturbations/test_4/data/perturbations.fits",mydata->Ni,mydata->Nj,mydata->width,mydata->height,"identity");
+  tmp_pert_mass_model->createCrosses(mydata);
+  mysource->constructDs(mydata);
+
+  BaseLikelihoodModel* tmp_pert_like = FactoryLikelihoodModel::getInstance()->createLikelihoodModel(argv[1],argv[2],"perturbations_standard",mydata,mysource,mycollection,tmp_pert_mass_model);
+  PertLikelihood* pert_pointer = dynamic_cast<PertLikelihood*>(tmp_pert_like);
+  pert_pointer->initializePert(dynamic_cast<SmoothLikelihood*>(smooth_like));
+  pert_pointer->pertResiduals(init->output,mydata,mysource,tmp_pert_mass_model);
+  delete(tmp_pert_like);
+  delete(tmp_pert_mass_model);
+  */  
+  
+  
+
+
   //=============== BEGIN:PERTURBATIONS =========================
   if( init->perturbations.size() > 0 ){
     pert_like->initialOutputLikelihoodModel(init->output);

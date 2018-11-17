@@ -48,10 +48,13 @@ data_path = path+'data/'
 
 if os.path.isfile(data_path+'source.fits'):
     hdulist = fits.open(data_path+'source.fits')
-    srcrange = float(hdulist[0].header['size'])
+    srcwidth = float(hdulist[0].header['size']) # this is the total width of he fits image of the source
+    srcrange = srcwidth/2.0
     hdulist.close()
 else:
     srcrange = 0.5
+
+#srcrange = 2.5
 
 
 
@@ -243,6 +246,7 @@ else:
 col = PatchCollection(polygons,alpha=1.0,cmap=mycmap_div)
 col.set_clim(-limit,limit)
 col.set_edgecolor('face')
+#col.set_edgecolor('black')
 col.set_array(np.array(zvalues))
 
 vkl_src = fig.add_subplot(235)
@@ -316,5 +320,6 @@ plt.colorbar(col,cax=cax,format="%6.4f")
 
 
 plt.tight_layout()
+plt.savefig('all.pdf',bbox_inches='tight')
 plt.savefig('all.png',bbox_inches='tight')
 #plt.show()

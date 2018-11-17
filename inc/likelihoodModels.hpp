@@ -111,6 +111,7 @@ public:
 
   //non-virtual
   void initializePert(SmoothLikelihood* smooth_like);
+  void pertResiduals(std::string output,ImagePlane* image,BaseSourcePlane* source,Pert* pert_mass_model);
 
   //virtual
   std::vector<std::string> getFullNames(){};

@@ -151,6 +151,7 @@ public:
   void writeTriangles();
   void setGrid(std::map<std::string,std::string> pars){};
   bool pointInPolygon(double x,double y){};
+  void writeVertexFaces(int index,std::string output);
   //  void boundPolygon();
 
 private:
@@ -168,6 +169,7 @@ private:
 
   xypoint intersection_point_x(xypoint p0,xypoint p1,xypoint p2);
   xypoint intersection_point_y(xypoint p0,xypoint p1,xypoint p2);
+  double triangleArea(a_triangle triangle);
 
   std::string mode;
   int spacing;

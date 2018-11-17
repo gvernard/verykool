@@ -562,6 +562,8 @@ void Pert::getConvergence(ImagePlane* kappa){
 
 
   // Calculate second derivatives:
+
+  /*
   // first row
   ddx = 1.0*this->dpsi->src[0] - 2.0*this->dpsi->src[1] + 1.0*this->dpsi->src[2];
   ddy = 1.0*this->dpsi->src[0] - 2.0*this->dpsi->src[Nj] + 1.0*this->dpsi->src[2*Nj];
@@ -574,22 +576,37 @@ void Pert::getConvergence(ImagePlane* kappa){
   ddx = 1.0*this->dpsi->src[Nj-3] - 2.0*this->dpsi->src[Nj-2] + 1.0*this->dpsi->src[Nj-1];
   ddy = 1.0*this->dpsi->src[Nj-1] - 2.0*this->dpsi->src[2*Nj-1] + 1.0*this->dpsi->src[3*Nj-1];
   kappa->img[Nj-1] = 0.5*(ddx + ddy);
+  */
+  for(int i=0;i<2;i++){
+    for(int j=0;j<Nj;j++){
+      kappa->img[i*Nj+j] = 0.0;
+    }
+  }
 
   // in-between rows
-  for(int i=1;i<Ni-1;i++){
+  for(int i=2;i<Ni-2;i++){
+    /*
     ddx = 1.0*this->dpsi->src[i*Nj] - 2.0*this->dpsi->src[i*Nj+1] + 1.0*this->dpsi->src[i*Nj+2];
     ddy = 1.0*this->dpsi->src[(i-1)*Nj] - 2.0*this->dpsi->src[i*Nj] + 1.0*this->dpsi->src[(i+1)*Nj];
     kappa->img[i*Nj] = 0.5*(ddx + ddy);
-    for(int j=1;j<Nj-1;j++){
+    */
+    kappa->img[i*Nj] = 0.0;
+    kappa->img[i*Nj+1] = 0.0;
+    for(int j=2;j<Nj-2;j++){
       ddx = 1.0*this->dpsi->src[i*Nj+j-1] - 2.0*this->dpsi->src[i*Nj+j] + 1.0*this->dpsi->src[i*Nj+j+1];
       ddy = 1.0*this->dpsi->src[(i-1)*Nj+j] - 2.0*this->dpsi->src[i*Nj+j] + 1.0*this->dpsi->src[(i+1)*Nj+j];
       kappa->img[i*Nj+j] = 0.5*(ddx + ddy);
     }
+    /*
     ddx = 1.0*this->dpsi->src[i*Nj+Nj-3] - 2.0*this->dpsi->src[i*Nj+Nj-2] + 1.0*this->dpsi->src[i*Nj+Nj-1];
     ddy = 1.0*this->dpsi->src[(i-1)*Nj+Nj-1] - 2.0*this->dpsi->src[i*Nj+Nj-1] + 1.0*this->dpsi->src[(i+1)*Nj+Nj-1];
     kappa->img[i*Nj+Nj-1] = 0.5*(ddx + ddy);
+    */
+    kappa->img[i*Nj+Nj-2] = 0.0;
+    kappa->img[i*Nj+Nj-1] = 0.0;
   }
 
+  /*
   // last row
   ddx = 1.0*this->dpsi->src[(Ni-1)*Nj] - 2.0*this->dpsi->src[(Ni-1)*Nj+1] + 1.0*this->dpsi->src[(Ni-1)*Nj+2];
   ddy = 1.0*this->dpsi->src[(Ni-1)*Nj] - 2.0*this->dpsi->src[(Ni-2)*Nj] + 1.0*this->dpsi->src[(Ni-3)*Nj];
@@ -602,6 +619,13 @@ void Pert::getConvergence(ImagePlane* kappa){
   ddx = 1.0*this->dpsi->src[(Ni-1)*Nj+Nj-3] - 2.0*this->dpsi->src[(Ni-1)*Nj+Nj-2] + 1.0*this->dpsi->src[(Ni-1)*Nj+Nj-1];
   ddy = 1.0*this->dpsi->src[(Ni-1)*Nj+Nj-1] - 2.0*this->dpsi->src[(Ni-2)*Nj+Nj-1] + 1.0*this->dpsi->src[(Ni-3)*Nj+Nj-1];
   kappa->img[(Ni-1)*Nj+Nj-1] = 0.5*(ddx + ddy);
+  */
+  for(int i=Ni-2;i<Ni;i++){
+    for(int j=0;j<Nj;j++){
+      kappa->img[i*Nj+j] = 0.0;
+    }
+  }
+
 
 }
 

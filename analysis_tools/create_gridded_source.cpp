@@ -8,7 +8,7 @@
 #include "sourcePlane.hpp"
 
 #include "sourceProfile.hpp"
-#include "fitsHeader.hpp"
+#include "fitsHeader.hpp" // from FProject
 
 
 int main(int argc,char* argv[]){

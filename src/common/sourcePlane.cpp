@@ -108,7 +108,7 @@ FixedSource::FixedSource(int i,int j,double size,std::string reg_scheme){
   s_dx = (double*) calloc(Sm,sizeof(double));
   s_dy = (double*) calloc(Sm,sizeof(double));
 
-  this->setGridRect(size/2.0,size/2.0);
+  this->setGridRect(size,size);
   this->boundPolygon();
 
   reg = reg_scheme;
@@ -1020,19 +1020,29 @@ void AdaptiveSource::createDelaunay(){
     
     this->triangles[face_id] = triangle;
     face_id++;
+
+    /*    
+    double area = this->triangleArea(triangle);
+    if( area < 0.01 ){
+      nsmall++;
+      std::cout << area << std::endl;
+    } else {
+      std::cout << "normal" << std::endl;
+    }
+    */
   }
 
 
-  //Find which triangle IDs around each vertex. This is zero for the convex-hull vertices (having more than 1 infinite incident faces) 
+  //Find which triangle IDs around each vertex. This is zero for the convex-hull vertices (having 1 or more infinite incident faces) 
   //[constructing this->face_ids_per_vertex]
   Delaunay::Face_circulator fc;
   Delaunay::Vertex_circulator vc;
   Delaunay::Finite_vertices_iterator fvi;
   this->opposite_edges_per_vertex.resize( this->Sm );
+  std::vector<int> opposite_indices;
   for(fvi=triangulation.finite_vertices_begin();fvi!=triangulation.finite_vertices_end();fvi++){
 
     int inf = 0;
-    std::vector<int> opposite_indices;
     fc = triangulation.incident_faces(fvi);
     do{
       //      vertex_face_ids.push_back( fc->info() );
@@ -1045,13 +1055,31 @@ void AdaptiveSource::createDelaunay(){
       }
     }while( ++fc != triangulation.incident_faces(fvi) );
 
-    if( inf > 1 ){
+    if( inf > 0 ){
       opposite_indices.resize(0);
     }
 
     this->opposite_edges_per_vertex[ fvi->info() ] = opposite_indices;
+    opposite_indices.resize(0);
   }
 
+}
+
+//non-virtual
+double AdaptiveSource::triangleArea(a_triangle triangle){
+  double xa = this->x[triangle.a];
+  double ya = this->y[triangle.a];
+  double xb = this->x[triangle.b];
+  double yb = this->y[triangle.b];
+  double xc = this->x[triangle.c];
+  double yc = this->y[triangle.c];
+
+  double ax = (xb - xa);
+  double ay = (yb - ya);
+  double bx = (xc - xa);
+  double by = (yc - ya);
+
+  return (ax*by - ay*bx)/2.0;
 }
 
 //non-virtual
@@ -1128,143 +1156,26 @@ void AdaptiveSource::constructH(){
       tmp.push_back({i,i,1});
     }
 
-  } else if ( this->reg == "gradient" ){//-------------------> first order
+  } else if ( this->reg == "gradient" || this->reg == "curvature" ){
+
+
+
+
+
+
 
 
 
 
     for(int i=0;i<this->Sm;i++){
-      
+
       xypoint p0 = {this->x[i],this->y[i]};
       std::vector<int> indices = this->opposite_edges_per_vertex[i];
       
       if( indices.size() == 0 ){
 
 	//we are on a convex-hull point that has no smoothing
-	tmp.push_back({i,i,1});
-
-      } else {
-	
-	std::map<int,double> weights;
-	std::map<int,double> weights_x;
-	std::map<int,double> weights_y;
-	std::vector<double> points_x;
-	std::vector<double> points_y;
-	  double l0,l1,l2,y20,xm0,x02,ym0,y01,x10,den;
-
-	for(int j=0;j<indices.size();j=j+2){
-	  
-	  xypoint p1 = {this->x[indices[j]],this->y[indices[j]]};
-	  xypoint p2 = {this->x[indices[j+1]],this->y[indices[j+1]]};
-
-	  //Smoothing in the x-direction
-	  double ymin = 0.;
-	  double ymax = 0.;
-	  if( p1.y > p2.y ){
-	    ymax = p1.y;
-	    ymin = p2.y;
-	  } else {
-	    ymax = p2.y;
-	    ymin = p1.y;
-	  }
-	  
-	  //Find intersection point (if it exists), interpolate to get the weights, and add them to <map>weights
-	  if( ymin <= p0.y && p0.y < ymax ){
-	    xypoint pint = intersection_point_x(p0,p1,p2);
-	    points_x.push_back( pint.x );
-
-	    xypoint pmid = {(p0.x+pint.x)/2.,p0.y};
-	    y20 = p2.y    - p0.y;
-	    xm0 = pmid.x  - p0.x;
-	    x02 = p0.x    - p2.x;
-	    ym0 = pmid.y  - p0.y;
-	    y01 = p0.y    - p1.y;
-	    x10 = p1.x    - p0.x;
-	    den = y20*x10 - y01*x02;//to make y10 appear without calculating it again
-	    
-	    l1 = (y20*xm0 + x02*ym0)/den;
-	    l2 = (y01*xm0 + x10*ym0)/den;
-	    l0 = 1. - l1 - l2;
-
-	    weights_x[ i            ] -= l0;
-	    weights_x[ indices[j]   ] += l1;
-	    weights_x[ indices[j+1] ] += l2;
-	  }
-
-
-	  //Smoothing in the y-direction
-	  double xmin = 0.0;
-	  double xmax = 0.0;
-
-	  if( p1.x > p2.x ){
-	    xmax = p1.x;
-	    xmin = p2.x;
-	  } else {
-	    xmax = p2.x;
-	    xmin = p1.x;
-	  }
-
-	  //Find intersection point (if it exists), interpolate to get the weights, and add them to <map>weights
-	  if( xmin <= p0.x && p0.x < xmax ){
-	    xypoint pint = intersection_point_y(p0,p1,p2);
-	    points_y.push_back( pint.y );
-
-	    xypoint pmid = {p0.x,(p0.y+pint.y)/2.};
-	    y20 = p2.y    - p0.y;
-	    xm0 = pmid.x  - p0.x;
-	    x02 = p0.x    - p2.x;
-	    ym0 = pmid.y  - p0.y;
-	    y01 = p0.y    - p1.y;
-	    x10 = p1.x    - p0.x;
-	    den = y20*x10 - y01*x02;//to make y10 appear without calculating it again
-	    
-	    l1 = (y20*xm0 + x02*ym0)/den;
-	    l2 = (y01*xm0 + x10*ym0)/den;
-	    l0 = 1. - l1 - l2;
-
-	    weights_y[ i            ] -= l0;
-	    weights_y[ indices[j]   ] += l1;
-	    weights_y[ indices[j+1] ] += l2;
-	  }
-
-	}
-
-
-	double dx = (points_x[0] + p0.x)/2. - (points_x[1] + p0.x)/2.;
-	for(it_int_double iterator=weights_x.begin();iterator!=weights_x.end();iterator++){
-	  weights[iterator->first] += iterator->second/dx;
-	}
-	weights_x.clear();
-
-	double dy = (points_y[0] + p0.y)/2. - (points_y[1] + p0.y)/2.;
-	for(it_int_double iterator=weights_y.begin();iterator!=weights_y.end();iterator++){
-	  weights[iterator->first] += iterator->second/dy;
-	}
-	weights_y.clear();
-	
-	for(it_int_double iterator=weights.begin();iterator!=weights.end();iterator++){
-	  tmp.push_back({i,iterator->first,iterator->second});
-	}
-	weights.clear();
-
-      }
-
-    }
-
-
-
-
-  } else if ( this->reg == "curvature" ){//-------------------> second order
-
-    for(int i=0;i<this->Sm;i++){
-      
-      xypoint p0 = {this->x[i],this->y[i]};
-      std::vector<int> indices = this->opposite_edges_per_vertex[i];
-      
-      if( indices.size() == 0 ){
-
-	//we are on a convex-hull point that has no smoothing
-	tmp.push_back({i,i,1});
+	tmp.push_back({i,i,1.0});
 
       } else {
 	
@@ -1296,7 +1207,7 @@ void AdaptiveSource::constructH(){
 	    //	    double d12 = pow(p1.x-p2.x,2) + pow(p1.y-p2.y,2);
 	    //	    double di2 = pow(pint.x-p2.x,2) + pow(pint.y-p2.y,2);
 	    //	    double l1 = sqrt(di2/d12);
-	    //	    double l2 = 1. - l1;
+	    //	    double l2 = 1.0 - l1;
 	    double d  = fabs(p0.x-pint.x);
 	    weights[ i            ] -= 1.0/d;
 	    weights[ indices[j]   ] += l1/d;
@@ -1320,7 +1231,7 @@ void AdaptiveSource::constructH(){
 	    //	    double d12 = pow(p1.x-p2.x,2) + pow(p1.y-p2.y,2);
 	    //	    double di2 = pow(pint.x-p2.x,2) + pow(pint.y-p2.y,2);
 	    //	    double l1 = sqrt(di2/d12);
-	    //	    double l2 = 1. - l1;
+	    //	    double l2 = 1.0 - l1;
 	    double d  = fabs(p0.y-pint.y);
 	    weights[ i            ] -= 1.0/d;
 	    weights[ indices[j]   ] += l1/d;
@@ -1332,13 +1243,32 @@ void AdaptiveSource::constructH(){
 	//Loop through weights and add entries to H
 	for(it_int_double iterator=weights.begin();iterator!=weights.end();iterator++){
 	  tmp.push_back({i,iterator->first,iterator->second});
+	  //	  std::cout << i << " " << iterator->first << " " << iterator->second << std::endl;
 	}
+	//	std::cout << i << " " << weights.size() << " " << indices.size()/2.0;
+	//	for(it_int_double iterator=weights.begin();iterator!=weights.end();iterator++){
+	//	  printf("%20.5e",iterator->second);
+	//	}
+	//for(int k=0;k<indices.size();k++){
+	//  std::cout << indices[k] << " ";
+	//}
+	//	std::cout << std::endl;
 	weights.clear();
-
       }
 
+      //      break;
     }
-    
+
+
+
+
+
+
+
+
+
+
+
   } else if ( this->reg == "covariance_kernel" ){//-------------------> covariance matrix
 
     int* nonZeroRow = (int*) calloc(this->Sm,sizeof(int));
@@ -1527,6 +1457,19 @@ void AdaptiveSource::writeTriangles(){
   fclose(fh);
 }
 
+//non-virtual
+void AdaptiveSource::writeVertexFaces(int index,std::string output){
+  std::string fname = output + std::to_string(index) + "_vertex_faces.dat";
+  FILE* fh = fopen(fname.c_str(),"w");
+  int b,c;
+  for(int j=0;j<this->opposite_edges_per_vertex[index].size();j=j+2){
+    b = this->opposite_edges_per_vertex[index][j];
+    c = this->opposite_edges_per_vertex[index][j+1];
+    fprintf(fh,"%20.5f %20.5f %20.5f %20.5f %20.5f %20.5f\n",this->x[index],this->y[index],this->x[b],this->y[b],this->x[c],this->y[c]);
+  }
+  fclose(fh);
+}
+
 //virtual
 void AdaptiveSource::outputSource(const std::string path){
   typedef CGAL::Exact_predicates_inexact_constructions_kernel                  K;
@@ -1540,7 +1483,6 @@ void AdaptiveSource::outputSource(const std::string path){
   typedef K::Point_2                                                           Point;
 
 
-  /*
   // Write the regularization matrix of the source as an image
   ImagePlane matrix(this->Sm,this->Sm,1.0,1.0);
   for(int i=0;i<this->H.tri.size();i++){
@@ -1549,8 +1491,6 @@ void AdaptiveSource::outputSource(const std::string path){
     matrix.img[nx*this->Sm + ny] = this->H.tri[i].v;
   }
   matrix.writeImage(path+"Hmatrix.fits");
-  */
-
 
 
 
@@ -1569,7 +1509,7 @@ void AdaptiveSource::outputSource(const std::string path){
   for(int i=0;i<this->Sm;i++){
 
     if( this->opposite_edges_per_vertex[i].size() != 0 ){
-      fprintf(fh,"%12.5f",src[i]);
+      fprintf(fh,"%20.5f",src[i]);
 
       Locate_result f   = voronoi.locate(Point(this->x[i],this->y[i]));
       Face_handle* face = boost::get<Face_handle>(&f);
@@ -1578,7 +1518,7 @@ void AdaptiveSource::outputSource(const std::string path){
       Ccb_halfedge_circulator ec = ec_start;
       do {
 	Point p = ec->source()->point();
-	fprintf(fh,"%12.5f %12.5f",p.x(),p.y());
+	fprintf(fh,"%20.5f %20.5f",p.x(),p.y());
       } while( ++ec != ec_start );
       fprintf(fh,"\n");
     }
@@ -1590,7 +1530,7 @@ void AdaptiveSource::outputSource(const std::string path){
   std::string filename2 = path + "vkl_source_irregular.dat";
   FILE* fh2 = fopen(filename2.c_str(),"w");
   for(int i=0;i<this->Sm;i++){
-    fprintf(fh2,"%12.5f %12.5f %12.5f\n",this->src[i],this->x[i],this->y[i]);
+    fprintf(fh2,"%20.5f %20.5f %20.5f\n",this->src[i],this->x[i],this->y[i]);
   }  
   fclose(fh2);
 }
@@ -1622,7 +1562,7 @@ void AdaptiveSource::outputSourceErrors(double* errors,const std::string path){
   for(int i=0;i<this->Sm;i++){
 
     if( this->opposite_edges_per_vertex[i].size() != 0 ){
-      fprintf(fh,"%12.5f",errors[i]);
+      fprintf(fh,"%20.5f",errors[i]);
 
       Locate_result f   = voronoi.locate(Point(this->x[i],this->y[i]));
       Face_handle* face = boost::get<Face_handle>(&f);
@@ -1631,7 +1571,7 @@ void AdaptiveSource::outputSourceErrors(double* errors,const std::string path){
       Ccb_halfedge_circulator ec = ec_start;
       do {
 	Point p = ec->source()->point();
-	fprintf(fh,"%12.5f %12.5f",p.x(),p.y());
+	fprintf(fh,"%20.5f %20.5f",p.x(),p.y());
       } while( ++ec != ec_start );
       fprintf(fh,"\n");
     }

@@ -61,10 +61,11 @@ public:
   ~PertAlgebra(){};
 
   void setAlgebraInit(BaseSourcePlane* source,Pert* pert_mass_model);
-  void setAlgebraRuntime(BaseSourcePlane* source,Pert* pert_mass_model,SmoothLikelihood* smooth_like);
-  void solveSourcePert(BaseSourcePlane* source,Pert* pert_mass_model,SmoothLikelihood* smooth_like);
-  void constructDsDpsi(BaseSourcePlane* source,Pert* pert_mass_model);
+  void setAlgebraRuntime(BaseSourcePlane* source,Pert* pert_mass_model);
+  void solveSourcePert(BaseSourcePlane* source,Pert* pert_mass_model);
+  void constructDsDpsi(ImagePlane* image,BaseSourcePlane* source,Pert* pert_mass_model);
   void constructNormalizingJmatrix(BaseSourcePlane* source,Pert* pert_mass_model,Eigen::SparseMatrix<double>& J_out,double lambda_s,double lambda_dpsi);
+  void solvePerturbationsResiduals(std::string output,Pert* pert_mass_model);
 
   PertLikelihood* likeModel;
   Eigen::SparseMatrix<double> DsDpsi;

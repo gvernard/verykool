@@ -216,6 +216,8 @@ void ImagePlane::writeImage(const std::string filename){
   long fpixel(1);
   imageExt->write(fpixel,Ntot,array);
   //  pFits->pHDU().addKey("EXPOSURE",13,"Total Exposure Time"); 
+  pFits->pHDU().addKey("WIDTH",this->width,"width of the image in arcsec");
+  pFits->pHDU().addKey("HEIGHT",this->height,"height of the image in arcsec");
   pFits->pHDU().write(fpixel,Ntot,array); 
   //  std::cout << pFits->pHDU() << std::endl;
 }
