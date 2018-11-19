@@ -38,7 +38,8 @@ public:
   int Ni;                    //pixels in x direction
   int Nj;                    //pixels in y direction
   int Nm;                    //total pixels in the image data
-  std::map<int,int> lookup;  //matching the indices of the data pixels to the indices of the mask pixels
+  //  std::map<int,int> lookup;  //matching the indices of the data pixels to the indices of the mask pixels
+  int Nmask;                 //pixels in the mask
   double width;              //in arcsec
   double height;             //in arcsec
   double xmin;

@@ -34,6 +34,8 @@ public:
   double* y;                      // pixel y-coordinates
   double* s_dx;                   // source derivative in x
   double* s_dy;                   // source derivative in y
+  int* mask_vertices;             // source masked pixels indices (0 masked, 1, not masked)
+  int Smask;                      // number of source pixels in the image mask
   std::vector<double> bound_x;    // embedding polygon vertex x-coordinates
   std::vector<double> bound_y;    // embedding polygon vertex y-coordinates
   std::string reg;                // name of the regularization scheme
@@ -53,6 +55,7 @@ public:
     free(y);
     free(s_dx);
     free(s_dy);
+    free(mask_vertices);
     if( this->reg == "covariance_kernel" ){
       delete this->kernel;
     }
@@ -66,7 +69,7 @@ public:
   virtual void outputSourceErrors(double* errors,const std::string path) = 0;
   virtual void constructDs(ImagePlane* image) = 0;
   virtual void createInterpolationWeights(ImagePlane* image) = 0;
-
+  virtual void inMask(ImagePlane* image) = 0;
 
   //non-virtual members
   void normalize();
@@ -90,6 +93,7 @@ public:
   virtual void constructDs(ImagePlane* image){};
   virtual void outputSource(const std::string path);
   virtual void outputSourceErrors(double* errors,const std::string path);
+  virtual void inMask(ImagePlane* image){};
 
   void setGridRect(double width,double height);
   void setGridRect(double xmin,double xmax,double ymin,double ymax);
@@ -145,6 +149,7 @@ public:
   virtual void constructDs(ImagePlane* image);
   virtual void outputSource(const std::string path);
   virtual void outputSourceErrors(double* errors,const std::string path);
+  virtual void inMask(ImagePlane* image);
 
   void createAdaGrid(ImagePlane* image,CollectionMassModels* mycollection);
   void createDelaunay();
@@ -176,6 +181,8 @@ private:
   int n_triangles;
   std::vector<a_triangle> triangles;
   std::vector< std::vector<int> > opposite_edges_per_vertex;
+
+  std::vector<int> mask_triangles;
 };
 
 

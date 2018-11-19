@@ -246,22 +246,21 @@ void ImagePlane::readS(const std::string filepath){
     
     for(int i=0;i<this->Nm;i++){
       this->S.tri.push_back({i,i,1.});
-      this->lookup[i] = i;
     }
+    this->Nmask = this->Nm;
 
   } else {
 
     std::valarray<float> contents(this->Nm);
     this->readFits(filepath,contents);
-    
-    int count = 0;
+
+    this->Nmask = 0.0;
     for(int i=0;i<this->Nm;i++){
       if( contents[i] == 1 ){
-	this->S.tri.push_back({i,i,1.});
-	this->lookup[i] = count;
-	count++;
+	this->S.tri.push_back({i,i,1.0});
+	this->Nmask++;
       } else {
-	this->S.tri.push_back({i,i,0});
+	this->S.tri.push_back({i,i,0.0});
       }
     }
 

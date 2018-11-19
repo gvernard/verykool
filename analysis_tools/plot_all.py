@@ -106,6 +106,8 @@ if pars["maskpath"] == "0":
     mask = np.ones(im_model.shape)
 else:
     mask = fits.getdata(data_path+'mask.fits',ext=0)
+    im_data = im_data*np.flipud(np.array(mask))
+    im_model = im_model*np.flipud(np.array(mask))
 
 # Set color scale
 limit = max([abs(np.amax(im_data)),abs(np.amin(im_data)),abs(np.amax(im_model)),abs(np.amin(im_model))])
@@ -128,6 +130,7 @@ fig.colorbar(im,cax=cax,format="%5.2f")
 # Plot mask contour
 if pars["maskpath"] != "0":
     data.contour(mask,levels=[0.5],extent=[xmin,xmax,ymin,ymax],colors='#001A47')
+    data.imshow(np.flipud(np.ma.masked_where(mask>0,mask)),interpolation='none',cmap='Greys',extent=[xmin,xmax,ymin,ymax])
 
 
 # Plot model
@@ -147,6 +150,7 @@ fig.colorbar(im,cax=cax,format="%5.2f")
 # Plot mask contour
 if pars["maskpath"] != "0":
     model.contour(mask,levels=[0.5],extent=[xmin,xmax,ymin,ymax],colors='#001A47')
+    model.imshow(np.flipud(np.ma.masked_where(mask>0,mask)),interpolation='none',cmap='Greys',extent=[xmin,xmax,ymin,ymax])
 
 
 

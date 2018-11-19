@@ -43,13 +43,15 @@ BaseSourcePlane::BaseSourcePlane(const BaseSourcePlane& other){
   y    = (double*) calloc(Sm,sizeof(double));
   s_dx = (double*) calloc(Sm,sizeof(double));
   s_dy = (double*) calloc(Sm,sizeof(double));
-  
+  mask_vertices = (int*) calloc(Sm,sizeof(int));
+
   for(int i=0;i<Sm;i++){
     src[i]  = other.src[i];
     x[i]    = other.x[i];
     y[i]    = other.y[i];
     s_dx[i] = other.s_dx[i];
     s_dy[i] = other.s_dy[i];
+    mask_vertices[i] = other.mask_vertices[i];
   }
 
   L.Ti = other.L.Ti;
@@ -85,8 +87,6 @@ void BaseSourcePlane::constructL(ImagePlane* image){
   
   this->L.tri.swap(tmp);
 }
-
-
 //===============================================================================================================
 
 
@@ -817,6 +817,7 @@ AdaptiveSource::AdaptiveSource(int a,std::string reg_scheme){
   y    = (double*) calloc(Sm,sizeof(double));
   s_dx = (double*) calloc(Sm,sizeof(double));
   s_dy = (double*) calloc(Sm,sizeof(double));
+  mask_vertices = (int*) calloc(Sm,sizeof(int));
 
   reg = reg_scheme;
   if( reg == "identity"){
@@ -847,6 +848,7 @@ AdaptiveSource::AdaptiveSource(std::string m,int a,int b,std::string reg_scheme)
   y    = (double*) calloc(Sm,sizeof(double));
   s_dx = (double*) calloc(Sm,sizeof(double));
   s_dy = (double*) calloc(Sm,sizeof(double));
+  mask_vertices = (int*) calloc(Sm,sizeof(int));
 
   reg = reg_scheme;
   if( reg == "identity"){
@@ -886,6 +888,8 @@ AdaptiveSource::~AdaptiveSource(){
 
 //non-virtual
 void AdaptiveSource::createAdaGrid(ImagePlane* image,CollectionMassModels* mycollection){
+  // Create the adaptive grid
+
   if( this->mode == "random" ){
     
     double xtmp,ytmp;
@@ -899,6 +903,7 @@ void AdaptiveSource::createAdaGrid(ImagePlane* image,CollectionMassModels* mycol
     for(int i=0;i<image->Nm;i++){
       image->active[i] = -1;
     }
+    this->inMask(image);
 
   } else if( this->mode == "image" ){
 
@@ -977,9 +982,40 @@ void AdaptiveSource::createAdaGrid(ImagePlane* image,CollectionMassModels* mycol
     for(int i=0;i<image->Nm;i++){
       image->active[i] = -1;
     }
+    this->inMask(image);
 
   }
 
+}
+
+//non-virtual
+void AdaptiveSource::inMask(ImagePlane* image){
+  // Find which source pixels are within the data mask
+
+  if( this->mode == "random" ){
+    
+  } else if( this->mode == "image" ){
+
+    int i0    = (int) floor( (this->spacing-1)/2.0 );
+    int j0    = (int) floor( (this->spacing-1)/2.0 );
+    int count = 0;//must go up to Sm
+    int mask_count = 0;
+    for(int i=i0;i<image->Ni;i=i+this->spacing){
+      for(int j=j0;j<image->Nj;j=j+this->spacing){
+	if( image->S.tri[i*image->Nj+j].v == 1 ){
+	  this->mask_vertices[count] = 1;
+	  mask_count++;
+	} else {
+	  this->mask_vertices[count] = 0;
+	}
+	count++;
+      }
+    }
+    this->Smask = mask_count;
+
+  } else if( this->mode == "grid" ){
+
+  }
 
 }
 
@@ -1158,15 +1194,6 @@ void AdaptiveSource::constructH(){
 
   } else if ( this->reg == "gradient" || this->reg == "curvature" ){
 
-
-
-
-
-
-
-
-
-
     for(int i=0;i<this->Sm;i++){
 
       xypoint p0 = {this->x[i],this->y[i]};
@@ -1258,16 +1285,6 @@ void AdaptiveSource::constructH(){
 
       //      break;
     }
-
-
-
-
-
-
-
-
-
-
 
   } else if ( this->reg == "covariance_kernel" ){//-------------------> covariance matrix
 
@@ -1482,7 +1499,7 @@ void AdaptiveSource::outputSource(const std::string path){
   typedef Voronoi::Ccb_halfedge_circulator                                     Ccb_halfedge_circulator;
   typedef K::Point_2                                                           Point;
 
-
+  /*
   // Write the regularization matrix of the source as an image
   ImagePlane matrix(this->Sm,this->Sm,1.0,1.0);
   for(int i=0;i<this->H.tri.size();i++){
@@ -1491,7 +1508,7 @@ void AdaptiveSource::outputSource(const std::string path){
     matrix.img[nx*this->Sm + ny] = this->H.tri[i].v;
   }
   matrix.writeImage(path+"Hmatrix.fits");
-
+  */
 
 
   //Calculate the Voronoi graph
@@ -1508,7 +1525,19 @@ void AdaptiveSource::outputSource(const std::string path){
   FILE* fh = fopen(filename.c_str(),"w");
   for(int i=0;i<this->Sm;i++){
 
-    if( this->opposite_edges_per_vertex[i].size() != 0 ){
+
+    int mask_flag = 0;
+    for(int k=0;k<this->opposite_edges_per_vertex[i].size();k++){
+      int vertex_id = this->opposite_edges_per_vertex[i][k];
+      if( this->mask_vertices[vertex_id] == 1 ){
+	mask_flag = 1;
+	break;
+      }
+    }
+   
+    if( mask_flag == 1 ){
+      //    if( this->opposite_edges_per_vertex[i].size() != 0 ){
+
       fprintf(fh,"%20.5f",src[i]);
 
       Locate_result f   = voronoi.locate(Point(this->x[i],this->y[i]));
@@ -1522,6 +1551,7 @@ void AdaptiveSource::outputSource(const std::string path){
       } while( ++ec != ec_start );
       fprintf(fh,"\n");
     }
+	  
 
   }
   fclose(fh);
@@ -1561,7 +1591,18 @@ void AdaptiveSource::outputSourceErrors(double* errors,const std::string path){
   FILE* fh = fopen((path+"vkl_voronoi_errors.dat").c_str(),"w");
   for(int i=0;i<this->Sm;i++){
 
-    if( this->opposite_edges_per_vertex[i].size() != 0 ){
+    int mask_flag = 0;
+    for(int k=0;k<this->opposite_edges_per_vertex[i].size();k++){
+      int vertex_id = this->opposite_edges_per_vertex[i][k];
+      if( this->mask_vertices[vertex_id] == 1 ){
+	mask_flag = 1;
+	break;
+      }
+    }
+    
+    if( mask_flag == 1 ){
+      //   if( this->opposite_edges_per_vertex[i].size() != 0 ){
+
       fprintf(fh,"%20.5f",errors[i]);
 
       Locate_result f   = voronoi.locate(Point(this->x[i],this->y[i]));

@@ -138,7 +138,7 @@ void SmoothAlgebra::setAlgebraInit(ImagePlane* image,BaseSourcePlane* source){
   HH.resize(0,0);
 
   // Calculate two likelihood terms
-  this->likeModel->terms["Nilog2p"] = -(image->lookup.size()*log10(2*M_PI)/2.0); // for some reason i need the outer parenthsis here, otherwise there is a memory problem
+  this->likeModel->terms["Nilog2p"] = -(image->Nmask*log10(2*M_PI)/2.0); // for some reason i need the outer parenthsis here, otherwise there is a memory problem
   this->likeModel->terms["Nslogl"]  = source->Sm*log10(Nlpar::getValueByName("lambda",this->likeModel->reg))/2.0;
 }
 
@@ -343,7 +343,7 @@ void PertAlgebra::setAlgebraInit(BaseSourcePlane* source,Pert* pert_mass_model){
   this->likeModel->terms["detCd"]   = this->likeModel->smooth_like->terms["detC"];
   this->likeModel->terms["Nslogls"] = source->Sm*log10(Nlpar::getValueByName("lambda_s",this->likeModel->reg_s))/2.0;
   this->likeModel->terms["Nploglp"] = pert_mass_model->dpsi->Sm*log10(Nlpar::getValueByName("lambda_dpsi",this->likeModel->reg_dpsi))/2.0;
-  this->likeModel->terms["Nilog2p"] = -(this->likeModel->smooth_like->image->lookup.size()*log10(2*M_PI)/2.0); // for some reason i need the outer parenthsis here, otherwise there is a memory problem
+  this->likeModel->terms["Nilog2p"] = -(this->likeModel->smooth_like->image->Nmask*log10(2*M_PI)/2.0); // for some reason i need the outer parenthsis here, otherwise there is a memory problem
 }
 
 void PertAlgebra::constructNormalizingJmatrix(BaseSourcePlane* source,Pert* pert_mass_model,Eigen::SparseMatrix<double>& J_out,double lambda_s,double lambda_dpsi){

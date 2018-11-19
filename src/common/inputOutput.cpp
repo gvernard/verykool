@@ -64,6 +64,7 @@ void Initialization::initialize_program(std::string path,std::string run,Initial
 
   // Update/initialize source --------------------------------------------------------------------------------------------------------------------------------------
   //initialize here, but also in each iteration for an adaptive grid                                                  [<---iteration dependent for adaptive source]
+  mysource->inMask(mydata);
   if( mysource->type == "adaptive" ){
     AdaptiveSource* ada = dynamic_cast<AdaptiveSource*>(mysource);
     ada->createAdaGrid(mydata,mycollection);

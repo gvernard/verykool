@@ -418,7 +418,7 @@ void SmoothLikelihood::outputLikelihoodModel(std::string output){
   Json::Value other;
   other["Nsource"] = this->source->Sm;
   other["Ndata"]   = this->image->Nm;
-  other["Nmask"]   = static_cast<int>( this->image->lookup.size() );
+  other["Nmask"]   = this->image->Nmask;
   other["Psize"]   = this->image->width/this->image->Ni;
   json_output["generic"] = other;
 
