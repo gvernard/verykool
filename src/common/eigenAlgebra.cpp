@@ -137,9 +137,29 @@ void SmoothAlgebra::setAlgebraInit(ImagePlane* image,BaseSourcePlane* source){
   this->likeModel->terms["detCs"] = detCs/2.0;
   HH.resize(0,0);
 
-  // Calculate two likelihood terms
+  // Construct the lambda_matrix (diagonal matrix)
+  if( this->likeModel->source->reg == "curvature_in_identity_out" ){
+    Eigen::SparseMatrix<double> l_mat(source->Sm,source->Sm);
+    for(int i=0;i<source->Sm;i++){
+      l_mat.insert(i,i) = source->lambda_out[i]; 
+    }
+    for(int i=0;i<source->in_mask.size();i++){
+      l_mat.coeffRef(source->in_mask[i],source->in_mask[i]) = Nlpar::getValueByName("lambda",this->likeModel->reg);
+    }
+    this->lambda_matrix = l_mat;
+    l_mat.resize(0,0);
+  }
+
+  // Calculate the data related constant likelihood term
   this->likeModel->terms["Nilog2p"] = -(image->Nmask*log10(2*M_PI)/2.0); // for some reason i need the outer parenthsis here, otherwise there is a memory problem
-  this->likeModel->terms["Nslogl"]  = source->Sm*log10(Nlpar::getValueByName("lambda",this->likeModel->reg))/2.0;
+
+  // Calculate the source related constant likelihood term (dependent on lambda)
+  if( this->likeModel->source->reg == "curvature_in_identity_out" ){
+    this->likeModel->terms["Nslogl"] = source->Smask*log10(Nlpar::getValueByName("lambda",this->likeModel->reg))/2.0 + source->lambda_out_sum/2.0;
+    // construct the lambda matrix here
+  } else {
+    this->likeModel->terms["Nslogl"] = source->Sm*log10(Nlpar::getValueByName("lambda",this->likeModel->reg))/2.0;
+  }
 }
 
 
@@ -173,8 +193,16 @@ void SmoothAlgebra::setAlgebraRuntime(ImagePlane* image,BaseSourcePlane* source)
 
   // Calculate the new A matrix
   Eigen::SparseMatrix<double> A(source->Sm,source->Sm);
-  //  A = this->Mt*this->C*this->M + Nlpar::getValueByName("lambda",this->likeModel->reg)*this->Cs;
-  A = this->Mt*this->StCS*this->M + Nlpar::getValueByName("lambda",this->likeModel->reg)*this->Cs;
+  if( this->likeModel->source->reg == "curvature_in_identity_out" ){
+    //update the lambda matrix
+    for(int i=0;i<source->in_mask.size();i++){
+      this->lambda_matrix.coeffRef(source->in_mask[i],source->in_mask[i]) = Nlpar::getValueByName("lambda",this->likeModel->reg);
+    }
+    A = this->Mt*this->StCS*this->M + this->lambda_matrix*this->Cs;
+  } else {
+    //  A = this->Mt*this->C*this->M + Nlpar::getValueByName("lambda",this->likeModel->reg)*this->Cs;
+    A = this->Mt*this->StCS*this->M + Nlpar::getValueByName("lambda",this->likeModel->reg)*this->Cs;
+  }
   this->A = A;
   A.resize(0,0);
 }
@@ -215,15 +243,22 @@ void SmoothAlgebra::solveSource(BaseSourcePlane* source){
   */
 
 
-
-  //Get the chi-squared and reg terms
-  Eigen::VectorXd st = s.transpose();
+  // Get the chi-squared term
   Eigen::VectorXd y  = this->d - (this->M*s);
   Eigen::VectorXd yt = y.transpose();
   double chi2        = yt.dot(this->StCS*y);
-  double reg         = st.dot(this->Cs*s);
   this->likeModel->terms["chi2"] = -chi2/2.0;
-  this->likeModel->terms["reg"]  = -Nlpar::getValueByName("lambda",this->likeModel->reg)*reg/2.0;
+
+
+  // Get the regularization term
+  Eigen::VectorXd st = s.transpose();
+  if( this->likeModel->source->reg == "curvature_in_identity_out" ){
+    double reg                    = st.dot(this->lambda_matrix*this->Cs*s);
+    this->likeModel->terms["reg"] = -reg/2.0;
+  } else {
+    double reg                     = st.dot(this->Cs*s);
+    this->likeModel->terms["reg"]  = -Nlpar::getValueByName("lambda",this->likeModel->reg)*reg/2.0;
+  }
 }
 
 

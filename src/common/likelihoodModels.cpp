@@ -325,7 +325,11 @@ void SmoothLikelihood::updateLikelihoodModel(){
   // If lambda is allowed to vary then update the lambda term
   Nlpar* lambda = Nlpar::getParByName("lambda",this->reg);
   if( lambda->fix == 0 ){
-    this->terms["Nslogl"] = source->Sm*log10(lambda->val)/2.0;
+    if( this->source->reg == "curvature_in_identity_out" ){
+      this->terms["Nslogl"] = source->Smask*log10(lambda->val)/2.0 + source->lambda_out_sum/2.0;
+    } else {
+      this->terms["Nslogl"] = source->Sm*log10(lambda->val)/2.0;
+    }
   }
 
   // Update all the needed algebraic tables, e.g. M, Mt, Mt*Cd*M + l*Cs, Cs and detCs (if needed)

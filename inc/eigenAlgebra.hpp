@@ -51,6 +51,7 @@ public:
   Eigen::SparseMatrix<double> Mt;
   Eigen::SparseMatrix<double> A;
   Eigen::SparseMatrix<double> Cs;
+  Eigen::SparseMatrix<double> lambda_matrix;
 };
 
 

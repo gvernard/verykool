@@ -25,23 +25,26 @@ class CollectionMassModels;
 
 class BaseSourcePlane {
 public:
-  std::string type;               // adaptive or regular
-  int Si;                         // pixels in x, if adaptive then Si is set to 0
-  int Sj;                         // pixels in y, if adaptive then Sj is set to 0
-  int Sm;                         // total number of pixels
-  double* src;                    // values of the pixels
-  double* x;                      // pixel x-coordinates
-  double* y;                      // pixel y-coordinates
-  double* s_dx;                   // source derivative in x
-  double* s_dy;                   // source derivative in y
-  int* mask_vertices;             // source masked pixels indices (0 masked, 1, not masked)
-  int Smask;                      // number of source pixels in the image mask
-  std::vector<double> bound_x;    // embedding polygon vertex x-coordinates
-  std::vector<double> bound_y;    // embedding polygon vertex y-coordinates
-  std::string reg;                // name of the regularization scheme
-  int eigenSparseMemoryAllocForH; // estimate of the non-zero elements per row of the regularization matrix H
-  bool sample_reg = false;        // sampling regularization matrix related parameters
-  BaseCovKernel* kernel;          // pointer to kernel class
+  std::string type;                // adaptive or regular
+  int Si;                          // pixels in x, if adaptive then Si is set to 0
+  int Sj;                          // pixels in y, if adaptive then Sj is set to 0
+  int Sm;                          // total number of pixels
+  double* src;                     // values of the pixels
+  double* x;                       // pixel x-coordinates
+  double* y;                       // pixel y-coordinates
+  double* s_dx;                    // source derivative in x
+  double* s_dy;                    // source derivative in y
+  int* mask_vertices;              // source masked pixels indices (0 masked, 1, not masked)
+  std::vector<int> in_mask;        // vector of pixel indices that are in the mask
+  double* lambda_out;              // regularization parameters lambda_out for the source pixels outside the mask (0 inside the mask)
+  int Smask;                       // number of source pixels in the image mask
+  std::vector<double> bound_x;     // embedding polygon vertex x-coordinates
+  std::vector<double> bound_y;     // embedding polygon vertex y-coordinates
+  std::string reg;                 // name of the regularization scheme
+  int eigenSparseMemoryAllocForH;  // estimate of the non-zero elements per row of the regularization matrix H
+  bool sample_reg = false;         // sampling regularization matrix related parameters
+  double lambda_out_sum;           // the sum of the log10 entries of lambda_out
+  BaseCovKernel* kernel;           // pointer to kernel class
   mytable L;
   mytable H;
   mytable Ds;
@@ -56,6 +59,7 @@ public:
     free(s_dx);
     free(s_dy);
     free(mask_vertices);
+    free(lambda_out);
     if( this->reg == "covariance_kernel" ){
       delete this->kernel;
     }

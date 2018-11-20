@@ -43,6 +43,7 @@ BaseSourcePlane::BaseSourcePlane(const BaseSourcePlane& other){
   y    = (double*) calloc(Sm,sizeof(double));
   s_dx = (double*) calloc(Sm,sizeof(double));
   s_dy = (double*) calloc(Sm,sizeof(double));
+  lambda_out = (double*) calloc(Sm,sizeof(double));
   mask_vertices = (int*) calloc(Sm,sizeof(int));
 
   for(int i=0;i<Sm;i++){
@@ -51,6 +52,7 @@ BaseSourcePlane::BaseSourcePlane(const BaseSourcePlane& other){
     y[i]    = other.y[i];
     s_dx[i] = other.s_dx[i];
     s_dy[i] = other.s_dy[i];
+    lambda_out[i] = other.lambda_out[i];
     mask_vertices[i] = other.mask_vertices[i];
   }
 
@@ -817,6 +819,7 @@ AdaptiveSource::AdaptiveSource(int a,std::string reg_scheme){
   y    = (double*) calloc(Sm,sizeof(double));
   s_dx = (double*) calloc(Sm,sizeof(double));
   s_dy = (double*) calloc(Sm,sizeof(double));
+  lambda_out = (double*) calloc(Sm,sizeof(double));
   mask_vertices = (int*) calloc(Sm,sizeof(int));
 
   reg = reg_scheme;
@@ -848,6 +851,7 @@ AdaptiveSource::AdaptiveSource(std::string m,int a,int b,std::string reg_scheme)
   y    = (double*) calloc(Sm,sizeof(double));
   s_dx = (double*) calloc(Sm,sizeof(double));
   s_dy = (double*) calloc(Sm,sizeof(double));
+  lambda_out = (double*) calloc(Sm,sizeof(double));
   mask_vertices = (int*) calloc(Sm,sizeof(int));
 
   reg = reg_scheme;
@@ -1000,18 +1004,30 @@ void AdaptiveSource::inMask(ImagePlane* image){
     int j0    = (int) floor( (this->spacing-1)/2.0 );
     int count = 0;//must go up to Sm
     int mask_count = 0;
+    this->in_mask.resize(0);
     for(int i=i0;i<image->Ni;i=i+this->spacing){
       for(int j=j0;j<image->Nj;j=j+this->spacing){
 	if( image->S.tri[i*image->Nj+j].v == 1 ){
 	  this->mask_vertices[count] = 1;
+	  this->lambda_out[count] = 0.01; // here calculate lambda_out[count] as a function of the noise of adjacent image pixels
+	  this->in_mask.push_back(count);
 	  mask_count++;
 	} else {
 	  this->mask_vertices[count] = 0;
+	  this->lambda_out[count] = 0.0;
 	}
 	count++;
       }
     }
     this->Smask = mask_count;
+
+    this->lambda_out_sum = 0.0;
+    for(int i=0;i<image->Nm;i++){
+      if( this->lambda_out[i] != 0 ){
+	this->lambda_out_sum += log10(this->lambda_out[i]);
+      }
+    }
+
 
   } else if( this->mode == "grid" ){
 
@@ -1282,8 +1298,85 @@ void AdaptiveSource::constructH(){
 	//	std::cout << std::endl;
 	weights.clear();
       }
-
       //      break;
+    }
+    
+  } else if ( this->reg == "curvature_in_identity_out" ){
+    
+    for(int i=0;i<this->Sm;i++){
+      
+      xypoint p0 = {this->x[i],this->y[i]};
+      std::vector<int> indices = this->opposite_edges_per_vertex[i];
+      
+      if( this->mask_vertices[i] == 0 ){
+	
+	tmp.push_back({i,i,1.0});
+	
+      } else {
+	
+	tmp.push_back({i,i,1.0});
+	/*
+	std::map<int,double> weights;
+	  
+	for(int j=0;j<indices.size();j=j+2){
+	  double ymin = 0.0;
+	  double ymax = 0.0;
+	  double xmin = 0.0;
+	  double xmax = 0.0;
+	  
+	  xypoint p1 = {this->x[indices[j]],this->y[indices[j]]};
+	  xypoint p2 = {this->x[indices[j+1]],this->y[indices[j+1]]};
+	  
+	  //Smoothing in the x-direction
+	  if( p1.y > p2.y ){
+	    ymax = p1.y;
+	    ymin = p2.y;
+	  } else {
+	    ymax = p2.y;
+	    ymin = p1.y;
+	  }
+	  
+	  //Find intersection point (if it exists), interpolate to get the weights, and add them to <map>weights
+	  if( ymin <= p0.y && p0.y < ymax ){
+	    xypoint pint = intersection_point_x(p0,p1,p2);
+	    double l2 = ((p1.y-p0.y)*(pint.x-p1.x)+(p0.x-p1.x)*(pint.y-p1.y))/((p2.y-p1.y)*(p0.x-p1.x)+(p1.x-p2.x)*(p0.y-p1.y));
+	    double l1 = 1.0 - l2;
+	    double d  = fabs(p0.x-pint.x);
+	    weights[ i            ] -= 1.0/d;
+	    weights[ indices[j]   ] += l1/d;
+	    weights[ indices[j+1] ] += l2/d;
+	  }
+
+	  //Smoothing in the y-direction
+	  if( p1.x > p2.x ){
+	    xmax = p1.x;
+	    xmin = p2.x;
+	  } else {
+	    xmax = p2.x;
+	    xmin = p1.x;
+	  }
+
+	  //Find intersection point (if it exists), interpolate to get the weights, and add them to <map>weights
+	  if( xmin <= p0.x && p0.x < xmax ){
+	    xypoint pint = intersection_point_y(p0,p1,p2);
+	    double l2 = ((p1.y-p0.y)*(pint.x-p1.x)+(p0.x-p1.x)*(pint.y-p1.y))/((p2.y-p1.y)*(p0.x-p1.x)+(p1.x-p2.x)*(p0.y-p1.y));
+	    double l1 = 1.0 - l2;
+	    double d  = fabs(p0.y-pint.y);
+	    weights[ i            ] -= 1.0/d;
+	    weights[ indices[j]   ] += l1/d;
+	    weights[ indices[j+1] ] += l2/d;
+	  }
+
+	}
+	
+	//Loop through weights and add entries to H
+	for(it_int_double iterator=weights.begin();iterator!=weights.end();iterator++){
+	  tmp.push_back({i,iterator->first,iterator->second});
+	}
+	weights.clear();
+	*/
+      }
+
     }
 
   } else if ( this->reg == "covariance_kernel" ){//-------------------> covariance matrix
