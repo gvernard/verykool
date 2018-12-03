@@ -99,13 +99,13 @@ void SmoothAlgebra::setAlgebraInit(ImagePlane* image,BaseSourcePlane* source){
   Eigen::Map<Eigen::VectorXd> d(image->img,image->Nm);
   this->d = d;
   
-  // Read CC and calculate detCs
+  // Read CC and calculate detC
   Eigen::SparseMatrix<double> CC(image->C.Ti,image->C.Tj);
   CC.reserve(Eigen::VectorXi::Constant(image->C.Ti,8));//overestimating the covariance matrix number of entries per row
   for(int i=0;i<image->C.tri.size();i++){  CC.insert(image->C.tri[i].i,image->C.tri[i].j) = image->C.tri[i].v;  }
   this->C = CC;
   double detC = this->getDeterminant(this->C);
-  this->likeModel->terms["detC"] = detC/2.0;
+  this->likeModel->terms["detCd"] = detC/2.0;
   CC.resize(0,0);
 
   // Read mask and calculate StCS
@@ -129,7 +129,7 @@ void SmoothAlgebra::setAlgebraInit(ImagePlane* image,BaseSourcePlane* source){
   BB.resize(0,0);
 
   // Read HH and calculate Cs and detCs
-  Eigen::SparseMatrix<double> HH(source->Sm,source->Sm);
+  Eigen::SparseMatrix<double> HH(source->H.Ti,source->H.Tj);
   HH.reserve(Eigen::VectorXi::Constant(source->Sm,source->eigenSparseMemoryAllocForH));//overestimating the number of non-zero coefficients per HH row (different number for 1st,2nd order derivative etc)
   for(int i=0;i<source->H.tri.size();i++){  HH.insert(source->H.tri[i].i,source->H.tri[i].j) = source->H.tri[i].v;  }
   double detCs = 0.0;
@@ -137,29 +137,25 @@ void SmoothAlgebra::setAlgebraInit(ImagePlane* image,BaseSourcePlane* source){
   this->likeModel->terms["detCs"] = detCs/2.0;
   HH.resize(0,0);
 
-  // Construct the lambda_matrix (diagonal matrix)
-  if( this->likeModel->source->reg == "curvature_in_identity_out" ){
-    Eigen::SparseMatrix<double> l_mat(source->Sm,source->Sm);
-    for(int i=0;i<source->Sm;i++){
-      l_mat.insert(i,i) = source->lambda_out[i]; 
-    }
-    for(int i=0;i<source->in_mask.size();i++){
-      l_mat.coeffRef(source->in_mask[i],source->in_mask[i]) = Nlpar::getValueByName("lambda",this->likeModel->reg);
-    }
-    this->lambda_matrix = l_mat;
-    l_mat.resize(0,0);
-  }
-
   // Calculate the data related constant likelihood term
-  this->likeModel->terms["Nilog2p"] = -(image->Nmask*log10(2*M_PI)/2.0); // for some reason i need the outer parenthsis here, otherwise there is a memory problem
+  this->likeModel->terms["Nilog2pi"] = -(image->Nmask*log10(2*M_PI)/2.0); // for some reason i need the outer parenthsis here, otherwise there is a memory problem
 
   // Calculate the source related constant likelihood term (dependent on lambda)
-  if( this->likeModel->source->reg == "curvature_in_identity_out" ){
-    this->likeModel->terms["Nslogl"] = source->Smask*log10(Nlpar::getValueByName("lambda",this->likeModel->reg))/2.0 + source->lambda_out_sum/2.0;
-    // construct the lambda matrix here
-  } else {
-    this->likeModel->terms["Nslogl"] = source->Sm*log10(Nlpar::getValueByName("lambda",this->likeModel->reg))/2.0;
+  if( this->likeModel->source->reg == "curvature_in_identity_out" || this->likeModel->source->reg == "covariance_kernel_in_identity_out" ){
+    Eigen::SparseMatrix<double> block_dum(source->Sm,source->Sm);
+    block_dum.reserve(Eigen::VectorXi::Constant(source->Sm,10));
+    for(int i=0;i<source->Sm;i++){
+      if( source->mask_vertices[i] == 0 ){
+	block_dum.insert(i,i) = source->lambda_out[i];
+      }
+    }
+    this->block = block_dum;
+    block_dum.resize(0,0);
+
+    this->likeModel->terms["Noutlog2pi"] = -(source->Sm-source->Smask)*log10(2*M_PI)/2.0;
+    this->likeModel->terms["detLout"] = -source->lambda_out_sum/2.0;
   }
+  this->likeModel->terms["Nslogl"]    =  source->Sm*log10(Nlpar::getValueByName("lambda",this->likeModel->reg))/2.0;
 }
 
 
@@ -181,7 +177,7 @@ void SmoothAlgebra::setAlgebraRuntime(ImagePlane* image,BaseSourcePlane* source)
 
   // If the source is adaptive, or if the source covariance matrix has changed, calculate Cs and detCs
   if( source->type == "adaptive" || source->sample_reg ){
-    Eigen::SparseMatrix<double> HH(source->Sm,source->Sm);
+    Eigen::SparseMatrix<double> HH(source->H.Ti,source->H.Tj);
     HH.reserve(Eigen::VectorXi::Constant(source->Sm,source->eigenSparseMemoryAllocForH));//overestimating the number of non-zero coefficients per HH row (different number for 1st,2nd order derivative etc)
     for(int i=0;i<source->H.tri.size();i++){  HH.insert(source->H.tri[i].i,source->H.tri[i].j) = source->H.tri[i].v;  }
 
@@ -191,20 +187,35 @@ void SmoothAlgebra::setAlgebraRuntime(ImagePlane* image,BaseSourcePlane* source)
     HH.resize(0,0);
   }
 
-  // Calculate the new A matrix
-  Eigen::SparseMatrix<double> A(source->Sm,source->Sm);
-  if( this->likeModel->source->reg == "curvature_in_identity_out" ){
-    //update the lambda matrix
-    for(int i=0;i<source->in_mask.size();i++){
-      this->lambda_matrix.coeffRef(source->in_mask[i],source->in_mask[i]) = Nlpar::getValueByName("lambda",this->likeModel->reg);
+  Eigen::SparseMatrix<double> A_dum(source->Sm,source->Sm);
+  if( this->likeModel->source->reg == "curvature_in_identity_out" || this->likeModel->source->reg == "covariance_kernel_in_identity_out" ){
+    /*
+    // construct block regularization matrix
+    Eigen::SparseMatrix<double> block_dum(source->Sm,source->Sm);
+    block_dum.reserve(Eigen::VectorXi::Constant(source->Sm,source->eigenSparseMemoryAllocForH));//overestimating the number of non-zero coefficients per HH row (different number for 1st,2nd order derivative etc)
+    for(int i=0;i<source->Sm;i++){
+      if( source->mask_vertices[i] == 0 ){
+	block_dum.insert(i,i) = source->lambda_out[i];
+      }
     }
-    A = this->Mt*this->StCS*this->M + this->lambda_matrix*this->Cs;
+    double lambda_in = Nlpar::getValueByName("lambda",this->likeModel->reg);
+    for(int i=0;i<source->H.tri.size();i++){
+      block_dum.insert( source->in_total[source->H.tri[i].i], source->in_total[source->H.tri[i].j]) = lambda_in * source->H.tri[i].v;
+    }
+    this->block = block_dum;
+    block_dum.resize(0,0);
+    A_dum = this->Mt*this->StCS*this->M + this->block;
+    */
+    A_dum = this->Mt*this->StCS*this->M + Nlpar::getValueByName("lambda",this->likeModel->reg)*this->Cs + this->block;
+
   } else {
     //  A = this->Mt*this->C*this->M + Nlpar::getValueByName("lambda",this->likeModel->reg)*this->Cs;
-    A = this->Mt*this->StCS*this->M + Nlpar::getValueByName("lambda",this->likeModel->reg)*this->Cs;
+    A_dum = this->Mt*this->StCS*this->M + Nlpar::getValueByName("lambda",this->likeModel->reg)*this->Cs;
   }
-  this->A = A;
-  A.resize(0,0);
+
+
+  this->A = A_dum;
+  A_dum.resize(0,0);
 }
 
 
@@ -222,7 +233,6 @@ void SmoothAlgebra::solveSource(BaseSourcePlane* source){
   s = inv*(this->Mt*this->StCS*this->d);
   Eigen::Map<Eigen::VectorXd>(source->src,s.size()) = s;
   inv.resize(0,0);
-
 
   /*
   // Read in a matching source
@@ -242,19 +252,20 @@ void SmoothAlgebra::solveSource(BaseSourcePlane* source){
   Eigen::Map<Eigen::VectorXd>(source->src,s.size()) = s;
   */
 
-
   // Get the chi-squared term
   Eigen::VectorXd y  = this->d - (this->M*s);
   Eigen::VectorXd yt = y.transpose();
   double chi2        = yt.dot(this->StCS*y);
   this->likeModel->terms["chi2"] = -chi2/2.0;
 
-
   // Get the regularization term
   Eigen::VectorXd st = s.transpose();
-  if( this->likeModel->source->reg == "curvature_in_identity_out" ){
-    double reg                    = st.dot(this->lambda_matrix*this->Cs*s);
-    this->likeModel->terms["reg"] = -reg/2.0;
+  if( this->likeModel->source->reg == "curvature_in_identity_out" || this->likeModel->source->reg == "covariance_kernel_in_identity_out" ){
+    //    double reg                    =  st.dot(this->block*s);
+    double reg1                   =  st.dot(this->Cs*s);
+    double reg2                   =  st.dot(this->block*s);
+    this->likeModel->terms["reg"] = -Nlpar::getValueByName("lambda",this->likeModel->reg)*reg1/2.0;
+    this->likeModel->terms["reg_out"] = -reg2/2.0;
   } else {
     double reg                     = st.dot(this->Cs*s);
     this->likeModel->terms["reg"]  = -Nlpar::getValueByName("lambda",this->likeModel->reg)*reg/2.0;
@@ -338,7 +349,7 @@ PertAlgebra::PertAlgebra(PertLikelihood* a){
 
 void PertAlgebra::setAlgebraInit(BaseSourcePlane* source,Pert* pert_mass_model){
   // Read source regularization matrix
-  Eigen::SparseMatrix<double> HH_s(source->Sm,source->Sm);
+  Eigen::SparseMatrix<double> HH_s(source->H.Ti,source->H.Tj);
   HH_s.reserve(Eigen::VectorXi::Constant(source->Sm,source->eigenSparseMemoryAllocForH));//overestimating the number of non-zero coefficients per HH_s row (different number for 1st,2nd order derivative etc)
   for(int i=0;i<source->H.tri.size();i++){  HH_s.insert(source->H.tri[i].i,source->H.tri[i].j) = source->H.tri[i].v;  }
 
@@ -375,10 +386,40 @@ void PertAlgebra::setAlgebraInit(BaseSourcePlane* source,Pert* pert_mass_model){
   // Create DsDpsi sparse matrix directly based on source->Ds (varying at each call) and image->crosses (fixed at initialization)
   this->constructDsDpsi(this->likeModel->smooth_like->image,source,pert_mass_model);
 
-  this->likeModel->terms["detCd"]   = this->likeModel->smooth_like->terms["detC"];
-  this->likeModel->terms["Nslogls"] = source->Sm*log10(Nlpar::getValueByName("lambda_s",this->likeModel->reg_s))/2.0;
-  this->likeModel->terms["Nploglp"] = pert_mass_model->dpsi->Sm*log10(Nlpar::getValueByName("lambda_dpsi",this->likeModel->reg_dpsi))/2.0;
-  this->likeModel->terms["Nilog2p"] = -(this->likeModel->smooth_like->image->Nmask*log10(2*M_PI)/2.0); // for some reason i need the outer parenthsis here, otherwise there is a memory problem
+  this->likeModel->terms["detCd"]    = this->likeModel->smooth_like->terms["detCd"];
+  this->likeModel->terms["Nilog2pi"] = -(this->likeModel->smooth_like->image->Nmask*log10(2*M_PI)/2.0); // for some reason i need the outer parenthsis here, otherwise there is a memory problem
+
+  if( source->reg == "curvature_in_identity_out" || source->reg == "covariance_kernel_in_identity_out" ){
+    Eigen::SparseMatrix<double> block_dum(source->Sm+pert_mass_model->dpsi->Sm,source->Sm+pert_mass_model->dpsi->Sm);
+    block_dum.reserve(Eigen::VectorXi::Constant(source->Sm+pert_mass_model->dpsi->Sm,10));
+    for(int i=0;i<source->Sm;i++){
+      if( source->mask_vertices[i] == 0 ){
+	block_dum.insert(i,i) = source->lambda_out[i];
+      }
+    }
+    this->block_s = block_dum;
+    block_dum.resize(0,0);
+
+    this->likeModel->terms["Noutlog2pi_s"] = -(source->Sm-source->Smask)*log10(2*M_PI)/2.0;
+    this->likeModel->terms["detLout_s"] = -source->lambda_out_sum/2.0;
+  }
+  this->likeModel->terms["Nslogl_s"] = source->Sm*log10(Nlpar::getValueByName("lambda_s",this->likeModel->reg_s))/2.0;
+
+  if( pert_mass_model->dpsi->reg == "curvature_in_identity_out" || pert_mass_model->dpsi->reg == "covariance_kernel_in_identity_out" ){
+    Eigen::SparseMatrix<double> block_dum(source->Sm+pert_mass_model->dpsi->Sm,source->Sm+pert_mass_model->dpsi->Sm);
+    block_dum.reserve(Eigen::VectorXi::Constant(source->Sm+pert_mass_model->dpsi->Sm,10));
+    for(int i=0;i<pert_mass_model->dpsi->Sm;i++){
+      if( pert_mass_model->dpsi->mask_vertices[i] == 0 ){
+	block_dum.insert(source->Sm+i,source->Sm+i) = pert_mass_model->dpsi->lambda_out[i];
+      }
+    }
+    this->block_p = block_dum;
+    block_dum.resize(0,0);
+
+    this->likeModel->terms["Noutlog2pi_p"] = -(pert_mass_model->dpsi->Sm-pert_mass_model->dpsi->Smask)*log10(2*M_PI)/2.0;
+    this->likeModel->terms["detLout_p"] = -pert_mass_model->dpsi->lambda_out_sum/2.0;
+  }
+  this->likeModel->terms["Nplogl_p"] = pert_mass_model->dpsi->Sm*log10(Nlpar::getValueByName("lambda_dpsi",this->likeModel->reg_dpsi))/2.0;
 }
 
 void PertAlgebra::constructNormalizingJmatrix(BaseSourcePlane* source,Pert* pert_mass_model,Eigen::SparseMatrix<double>& J_out,double lambda_s,double lambda_dpsi){
@@ -494,7 +535,7 @@ void PertAlgebra::setAlgebraRuntime(BaseSourcePlane* source,Pert* pert_mass_mode
   // Calculate source regularization
   if( source->sample_reg && this->likeModel->reg_s_type == "covariance_kernel" ){
     // Read updated source regularization matrix
-    Eigen::SparseMatrix<double> HH_s(source->Sm,source->Sm);
+    Eigen::SparseMatrix<double> HH_s(source->H.Ti,source->H.Tj);
     HH_s.reserve(Eigen::VectorXi::Constant(source->Sm,source->eigenSparseMemoryAllocForH));//overestimating the number of non-zero coefficients per HH_s row (different number for 1st,2nd order derivative etc)
     for(int i=0;i<source->H.tri.size();i++){  HH_s.insert(source->H.tri[i].i,source->H.tri[i].j) = source->H.tri[i].v;  }
     
@@ -533,14 +574,21 @@ void PertAlgebra::setAlgebraRuntime(BaseSourcePlane* source,Pert* pert_mass_mode
       RtR_dum.insert(it.row(),it.col()) = lambda_s * it.value();
     }
   }
+  if( source->reg == "curvature_in_identity_out" || source->reg == "covariance_kernel_in_identity_out" ){
+    RtR_dum += this->block_s;
+  }
   double lambda_dpsi = Nlpar::getValueByName("lambda_dpsi",this->likeModel->reg_dpsi);
   for(int k=0;k<this->Cp.outerSize();++k){
     for(Eigen::SparseMatrix<double>::InnerIterator it(this->Cp,k);it;++it){
       RtR_dum.insert(source->Sm+it.row(),source->Sm+it.col()) = lambda_dpsi * it.value();
     }
   }
+  if( pert_mass_model->dpsi->reg == "curvature_in_identity_out" || pert_mass_model->dpsi->reg == "covariance_kernel_in_identity_out" ){
+    RtR_dum += this->block_p;
+  }
   this->RtR = RtR_dum;
   RtR_dum.resize(0,0);
+
 
   /*
   // Calculate J matrix
@@ -617,7 +665,7 @@ void PertAlgebra::solveSourcePert(BaseSourcePlane* source,Pert* pert_mass_model)
   double chi2        = yt.dot(this->likeModel->smooth_like->algebra->StCS*y);
   this->likeModel->terms["chi2"] = -chi2/2.0;
 
-  // Get the regularization term
+  // Get the regularization term (adding the block matrix is already incorporated in RtR)
   Eigen::VectorXd rt = r.transpose();
   double reg         = rt.dot(this->RtR*r);
   this->likeModel->terms["reg"] = -reg/2.0;

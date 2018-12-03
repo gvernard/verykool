@@ -101,7 +101,7 @@ srcyticks = np.append(srcyticks,srcrange)
 im_data  = fits.getdata(data_path+'image.fits',ext=0)
 im_data  = im_data[::-1,:]
 # Read model
-im_model = fits.getdata(out_path+'pert_vkl_image.fits',ext=0)
+im_model = fits.getdata(out_path+'pert_model.fits',ext=0)
 im_model = im_model[::-1,:]
 # Read mask
 if pars["maskpath"] == "0":
@@ -160,7 +160,7 @@ if pars["maskpath"] != "0":
 # Residual image between data and model
 #########################################################################################################################
 # Read residuals
-im_res = fits.getdata(out_path+'pert_vkl_residual.fits',ext=0)
+im_res = fits.getdata(out_path+'pert_residual.fits',ext=0)
 im_res = im_res[::-1,:]
 if pars["maskpath"] != "0":
     im_res = im_res*np.flipud(np.array(mask))
@@ -202,7 +202,7 @@ else:
     max_true = 0
 
 # Read reconstructed adaptive source
-f        = open(out_path+'pert_vkl_voronoi.dat')
+f        = open(out_path+'pert_source_voronoi.dat')
 content  = [x.strip('\n') for x in f.readlines()]
 zvalues  = []
 polygons = []
@@ -278,7 +278,7 @@ plt.colorbar(col,cax=cax,format="%5.2f")
 
 # Errors on reconstructed adaptive source
 #########################################################################################################################
-f        = open(out_path+'vkl_voronoi_errors.dat')
+f        = open(out_path+'pert_source_voronoi_errors.dat')
 content  = [x.strip('\n') for x in f.readlines()]
 zvalues  = []
 polygons = []
@@ -339,13 +339,10 @@ else:
 if os.path.isfile(out_path+'added_perturbations_vkl_source.fits'):
     im_pert = fits.getdata(out_path+'added_perturbations_vkl_source.fits',ext=0)
     pert_title = "ADDED RECONSTRUCTION"
-    im_conv = fits.getdata(out_path+'added_convergence.fits',ext=0)
 else:
-    im_pert = fits.getdata(out_path+'perturbations_vkl_source.fits',ext=0)
+    im_pert = fits.getdata(out_path+'pert_dpsi.fits',ext=0)
     pert_title = "RECONSTRUCTION"
-    im_conv = fits.getdata(out_path+'convergence.fits',ext=0)
 im_pert = im_pert[::-1,:]
-im_conv = im_conv[::-1,:]
 
 # Set color scale
 limit = np.amax([max_pert_true,abs(np.amax(im_pert)),abs(np.amin(im_pert))])
@@ -412,7 +409,7 @@ else:
 if os.path.isfile(out_path+'added_convergence.fits'):
     im_conv = fits.getdata(out_path+'added_convergence.fits',ext=0)
 else:
-    im_conv = fits.getdata(out_path+'convergence.fits',ext=0)
+    im_conv = fits.getdata(out_path+'pert_convergence.fits',ext=0)
 im_conv = im_conv[::-1,:]
 
 # Set color scale
@@ -475,5 +472,6 @@ dum.axis('off')
 fig.suptitle('step: '+str(step),fontsize=10)
 plt.tight_layout(rect=[0, 0.0, 1, 0.95])
 #plt.tight_layout()
-plt.savefig('pert_all.png',bbox_inches='tight')
+plt.savefig('all.png',bbox_inches='tight')
+plt.savefig('all.pdf',bbox_inches='tight')
 #plt.show()

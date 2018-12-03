@@ -3,6 +3,7 @@
 #include <string>
 #include <vector>
 #include <map>
+#include <unordered_map>
 
 #include "json/json.h"
 
@@ -25,7 +26,7 @@ std::vector<double> BaseLikelihoodModel::getActiveValues(){
 }
 
 //non-virtual
-std::vector<std::string> BaseLikelihoodModel::getActiveNames(){
+std::vector<std::string> BaseLikelihoodModel::getActiveNlparNames(){
   std::vector<std::string> names;
   for(int i=0;i<this->active.size();i++){
     names.push_back( this->active[i]->nam );
@@ -43,7 +44,8 @@ void BaseLikelihoodModel::updateActive(std::vector<double> values){
 //non-virtual
 void BaseLikelihoodModel::printActive(){
   for(int i=0;i<this->active.size();i++){
-    printf(" %12s",(this->active[i]->nam).c_str());
+    printf(" %12s",(this->active_names[i]).c_str());
+    //printf(" %12s",(this->active[i]->nam).c_str());
   }
   printf("\n");
   for(int i=0;i<this->active.size();i++){
@@ -52,16 +54,28 @@ void BaseLikelihoodModel::printActive(){
   printf("\n");
 }
 
+/*
 //non-virtual
 void BaseLikelihoodModel::printTerms(){
-  for(std::map<std::string,double>::iterator it=this->terms.begin();it!=this->terms.end();it++){
+  for(std::unordered_map<std::string,double>::iterator it=this->terms.begin();it!=this->terms.end();it++){
     printf(" %16s",(it->first).c_str());
   }
   printf("\n");
-  for(std::map<std::string,double>::iterator it=this->terms.begin();it!=this->terms.end();it++){
+  for(std::unordered_map<std::string,double>::iterator it=this->terms.begin();it!=this->terms.end();it++){
     printf(" %16.5f",it->second);
   }
   printf("\n");
+}
+*/
+
+//non-virtual
+double BaseLikelihoodModel::getLogLike(){
+  double sum = 0.0;
+  for(std::unordered_map<std::string,double>::iterator it=this->terms.begin();it!=this->terms.end();it++){
+    sum += it->second;
+  }
+  this->terms["evidence"] = sum;
+  return sum;
 }
 
 
@@ -83,37 +97,66 @@ SmoothLikelihood::SmoothLikelihood(std::vector<Nlpar*> a,std::vector<Nlpar*> b,s
 
   for(int i=0;i<this->physical.size();i++){
     if( this->physical[i]->getActive() ){
-      active.push_back( this->physical[i] );
+      this->active.push_back( this->physical[i] );
+      this->active_names.push_back( this->physical[i]->nam );
     }
   }
 
   for(int i=0;i<this->reg.size();i++){
     if( this->reg[i]->getActive() ){
-      active.push_back( this->reg[i] );
+      this->active.push_back( this->reg[i] );
+      this->active_names.push_back( this->reg[i]->nam );
     }
   }
 
   for(int j=0;j<this->lenses.size();j++){
     for(int i=0;i<this->lenses[j].size();i++){
       if( this->lenses[j][i]->getActive() ){
-	active.push_back( this->lenses[j][i] );
+	this->active.push_back( this->lenses[j][i] );
+	this->active_names.push_back( this->lens_names[j] + "_" + this->lenses[j][i]->nam );
       }
     }
   }
 
-  this->means = (double*) malloc(this->active.size()*sizeof(double));
-  this->sdevs = (double*) malloc(this->active.size()*sizeof(double));
-  this->bests = (double*) malloc(this->active.size()*sizeof(double));
-  this->maps  = (double*) malloc(this->active.size()*sizeof(double));
+  // Update limits of source covariance kernel, if applicable
+  if( this->source->reg == "covariance_kernel" || this->source->reg == "covariance_kernel_in_identity_out" ){
+    if( this->source->type == "fixed" ){
+      if( this->source->kernel->type == "modgauss" ){
+	Nlpar* nlpar_sdev = Nlpar::getParByName("sdev",this->active);
+	FixedSource* fixed = dynamic_cast<FixedSource*>(this->source); // needed to access width
+	nlpar_sdev->min = fixed->width/(this->source->Sj*log(this->source->kernel->cmax));
+	nlpar_sdev->max = 50.0*this->image->width;
+      }
+    } else if( this->source->type == "adaptive" ){
+      if( this->source->kernel->type == "modgauss" ){
+	Nlpar* nlpar_sdev = Nlpar::getParByName("sdev",this->active);
+	nlpar_sdev->max = 50.0*this->image->width;
+      }
+    }
+  }
 
-  terms["chi2"]    = 0.0;
-  terms["reg"]     = 0.0;
-  terms["Nilog2p"] = 0.0;
-  terms["Nslogl"]  = 0.0;
-  terms["detC"]    = 0.0;
-  terms["detCs"]   = 0.0;
-  terms["detA"]    = 0.0;
-  terms["like"]    = 0.0;
+  this->maps    = (double*) malloc(this->active.size()*sizeof(double));
+  this->means   = (double*) malloc(this->active.size()*sizeof(double));
+  this->s1_low  = (double*) malloc(this->active.size()*sizeof(double));
+  this->s1_high = (double*) malloc(this->active.size()*sizeof(double));
+
+  terms["Nilog2pi"] = 0.0;
+  terms["Nslogl"]   = 0.0;
+  if( this->source->reg == "curvature_in_identity_out" || this->source->reg == "covariance_kernel_in_identity_out" ){
+    terms["Noutlog2pi"] = 0.0;
+  }
+  terms["detCd"]    = 0.0;
+  terms["detA"]     = 0.0;
+  terms["detCs"]    = 0.0; 
+  if( this->source->reg == "curvature_in_identity_out" || this->source->reg == "covariance_kernel_in_identity_out" ){
+    terms["detLout"] = 0.0;
+  }
+  terms["chi2"]     = 0.0;
+  terms["reg"]      = 0.0;
+  if( this->source->reg == "curvature_in_identity_out" || this->source->reg == "covariance_kernel_in_identity_out" ){
+    terms["reg_out"] = 0.0;
+  }
+  terms["evidence"] = 0.0;
 }
 
 
@@ -153,8 +196,56 @@ void SmoothLikelihood::getResidual(){
   }
 }
 
+//virtual
+void SmoothLikelihood::printTerms(){
+  if( this->source->reg == "curvature_in_identity_out" || this->source->reg == "covariance_kernel_in_identity_out" ){
+    printf(" %16s","Nilog2pi");
+    printf(" %16s","Nslogl");
+    printf(" %16s","Noutlog2pi");
+    printf(" %16s","detCd");
+    printf(" %16s","detA");
+    printf(" %16s","detCs");
+    printf(" %16s","detLout");
+    printf(" %16s","chi2");
+    printf(" %16s","reg");
+    printf(" %16s","reg_out");
+    printf(" %16s","evidence");
+    printf("\n");
+    printf(" %16f",terms["Nilog2pi"]);
+    printf(" %16f",terms["Nslogl"]);
+    printf(" %16f",terms["Noutlog2pi"]);
+    printf(" %16f",terms["detCd"]);
+    printf(" %16f",terms["detA"]);
+    printf(" %16f",terms["detCs"]);
+    printf(" %16f",terms["detLout"]);
+    printf(" %16f",terms["chi2"]);
+    printf(" %16f",terms["reg"]);
+    printf(" %16f",terms["reg_out"]);
+    printf(" %16f",terms["evidence"]);
+    printf("\n");
+  } else {
+    printf(" %16s","Nilog2pi");
+    printf(" %16s","Nslogl");
+    printf(" %16s","detCd");
+    printf(" %16s","detA");
+    printf(" %16s","detCs");
+    printf(" %16s","chi2");
+    printf(" %16s","reg");
+    printf(" %16s","evidence");
+    printf("\n");
+    printf(" %16f",terms["Nilog2pi"]);
+    printf(" %16f",terms["Nslogl"]);
+    printf(" %16f",terms["detCd"]);
+    printf(" %16f",terms["detA"]);
+    printf(" %16f",terms["detCs"]);
+    printf(" %16f",terms["chi2"]);
+    printf(" %16f",terms["reg"]);
+    printf(" %16f",terms["evidence"]);
+    printf("\n");
+  }
+}
 
-//virtual,
+//virtual
 std::vector<Nlpar*> SmoothLikelihood::getPhysicalPars(){
   return this->physical;
 }
@@ -165,84 +256,68 @@ std::vector<Nlpar*> SmoothLikelihood::getMassModelPars(int i){
 }
 
 //virtual
-std::vector<std::string> SmoothLikelihood::getFullNames(){
-  std::vector<std::string> full_names;
+void SmoothLikelihood::getAllNamesValues(std::vector<std::string>& names,std::vector<double>& values){
+  std::map<std::string,int> active_ind;
+  for(int i=0;i<this->active.size();i++){
+    active_ind[this->active[i]->nam] = i;
+  }
+  double value;
+  std::string name;
 
   for(int i=0;i<this->physical.size();i++){
-    full_names.push_back( this->physical[i]->getName() );
-  }
-
-  for(int i=0;i<this->reg.size();i++){
-    full_names.push_back( this->reg[i]->getName() );
-  }
-  
-  for(int j=0;j<this->lenses.size();j++){
-    for(int i=0;i<this->lenses[j].size();i++){
-      full_names.push_back( lens_names[j] + "_" + this->lenses[j][i]->getName() );
-    }
-  }
-  
-  return full_names; 
-}
-
-//virtual
-std::vector<std::string> SmoothLikelihood::getActiveFullNames(){
-  std::vector<std::string> full_names;
-
-  for(int i=0;i<this->physical.size();i++){
+    name = this->physical[i]->getName();
     if( this->physical[i]->getActive() ){
-      full_names.push_back( this->physical[i]->getName() );
+      value = this->maps[active_ind[name]];
+    } else {
+      value = this->physical[i]->getValue();
     }
+    names.push_back(name);
+    values.push_back(value);
   }
-
   for(int i=0;i<this->reg.size();i++){
+    name = this->reg[i]->getName();
     if( this->reg[i]->getActive() ){
-      full_names.push_back( this->reg[i]->getName() );
+      value = this->maps[active_ind[name]];
+    } else {
+      value = this->reg[i]->getValue();
     }
+    names.push_back(name);
+    values.push_back(value);
   }
-
   for(int j=0;j<this->lenses.size();j++){
     for(int i=0;i<this->lenses[j].size();i++){
+      name = this->lenses[j][i]->getName();
       if( this->lenses[j][i]->getActive() ){
-	full_names.push_back( lens_names[j] + "_" + this->lenses[j][i]->getName() );
+	value = this->maps[active_ind[name]];
+      } else {
+	value = this->lenses[j][i]->getValue();
       }
+      names.push_back(this->lens_names[j] + "_" + name);
+      values.push_back(value);
     }
   }
-
-  return full_names; 
 }
 
-//virtual
-std::vector<double> SmoothLikelihood::getValues(){
-  std::vector<double> values;
-
-  for(int i=0;i<this->physical.size();i++){
-    values.push_back( this->physical[i]->getValue() );
-  }
-
-  for(int i=0;i<this->reg.size();i++){
-    values.push_back( this->reg[i]->getValue() );
-  }
-  
-  for(int j=0;j<this->lenses.size();j++){
-    for(int i=0;i<this->lenses[j].size();i++){
-      values.push_back( this->lenses[j][i]->getValue() );
-    }
-  }
-  
-  return values;
-}
 
 //virtual
-Json::Value SmoothLikelihood::getActiveNamesValues(){
+Json::Value SmoothLikelihood::getActiveJson(){
   Json::Value all;
+
+  std::map<std::string,int> active_ind;
+  for(int i=0;i<this->active.size();i++){
+    active_ind[this->active[i]->nam] = i;
+  }
 
   Json::Value physical = Json::Value(Json::arrayValue);
   for(int i=0;i<this->physical.size();i++){
     if( this->physical[i]->getActive() ){
+      std::string name = this->physical[i]->getName();
       Json::Value dum;
-      dum["nam"] = this->physical[i]->getName();
-      dum["val"] = this->physical[i]->getValue();
+      dum["nam"]     = name;
+      dum["map"]     = this->maps[active_ind[name]];
+      dum["mean"]    = this->means[active_ind[name]];
+      dum["s1_low"]  = this->s1_low[active_ind[name]];
+      dum["s1_high"] = this->s1_high[active_ind[name]];
       physical.append(dum);
     }
   }
@@ -253,9 +328,13 @@ Json::Value SmoothLikelihood::getActiveNamesValues(){
   Json::Value reg = Json::Value(Json::arrayValue);
   for(int i=0;i<this->reg.size();i++){
     if( this->reg[i]->getActive() ){
+      std::string name = this->reg[i]->getName();
       Json::Value dum;
-      dum["nam"] = this->reg[i]->getName();
-      dum["val"] = this->reg[i]->getValue();
+      dum["nam"]     = name;
+      dum["map"]     = this->maps[active_ind[name]];
+      dum["mean"]    = this->means[active_ind[name]];
+      dum["s1_low"]  = this->s1_low[active_ind[name]];
+      dum["s1_high"] = this->s1_high[active_ind[name]];
       reg.append(dum);
     }
   }
@@ -268,9 +347,13 @@ Json::Value SmoothLikelihood::getActiveNamesValues(){
     Json::Value lens = Json::Value(Json::arrayValue);
     for(int i=0;i<this->lenses[j].size();i++){
       if( this->lenses[j][i]->getActive() ){
+	std::string name = this->lenses[j][i]->getName();
 	Json::Value dum;
-	dum["nam"] = this->lenses[j][i]->getName();
-	dum["val"] = this->lenses[j][i]->getValue();
+	dum["nam"]     = name;
+	dum["map"]     = this->maps[active_ind[name]];
+	dum["mean"]    = this->means[active_ind[name]];
+	dum["s1_low"]  = this->s1_low[active_ind[name]];
+	dum["s1_high"] = this->s1_high[active_ind[name]];
 	lens.append(dum);
       }
     }
@@ -325,11 +408,7 @@ void SmoothLikelihood::updateLikelihoodModel(){
   // If lambda is allowed to vary then update the lambda term
   Nlpar* lambda = Nlpar::getParByName("lambda",this->reg);
   if( lambda->fix == 0 ){
-    if( this->source->reg == "curvature_in_identity_out" ){
-      this->terms["Nslogl"] = source->Smask*log10(lambda->val)/2.0 + source->lambda_out_sum/2.0;
-    } else {
-      this->terms["Nslogl"] = source->Sm*log10(lambda->val)/2.0;
-    }
+    this->terms["Nslogl"] = source->Sm*log10(lambda->val)/2.0;
   }
 
   // Update all the needed algebraic tables, e.g. M, Mt, Mt*Cd*M + l*Cs, Cs and detCs (if needed)
@@ -340,101 +419,89 @@ void SmoothLikelihood::updateLikelihoodModel(){
 }
 
 //virtual
-double SmoothLikelihood::getLogLike(){
-  double val = terms["chi2"] + terms["reg"] + terms["Nilog2p"] + terms["Nslogl"] + terms["detC"] + terms["detCs"] + terms["detA"];
-  this->terms["like"] = val;
-  return val;
-}
-
-//virtual
 void SmoothLikelihood::initialOutputLikelihoodModel(std::string output){
-  // File with the parameter names
-  std::ofstream f_names(output+"plt_corner.paramnames",std::ofstream::out);
-  std::vector<std::string> active_full_names = this->getActiveFullNames();
-  for(int i=0;i<active_full_names.size();i++){
-    f_names << active_full_names[i];
-    f_names << " ";
-    f_names << active_full_names[i];
-    f_names << std::endl;
-  }
-  f_names.close();
-
-  // File with the parameter ranges
-  std::ofstream f_ranges(output+"plt_corner.ranges",std::ofstream::out);
-  for(int i=0;i<this->active.size();i++){
-    f_ranges << active_full_names[i];
-    f_ranges << " ";
-    f_ranges << this->active[i]->min;
-    f_ranges << " ";
-    f_ranges << this->active[i]->max;
-    f_ranges << std::endl;
-  }
-  f_ranges.close();
 }
-
-
 
 //virtual
 void SmoothLikelihood::outputLikelihoodModel(std::string output){
   // Output reconstructed source
-  this->source->outputSource(output);
+  this->source->outputSource(output + "smooth_");
 
   // Output errors of reconstructed source
   double* errors = (double*) calloc(this->source->Sm,sizeof(double));
   this->algebra->getSourceErrors(this->source->Sm,errors);
-  this->source->outputSourceErrors(errors,output);
+  this->source->outputSourceErrors(errors,output + "smooth_");
   free(errors);
+
+  /*
+  // Write the regularization matrix of the source as an image
+  ImagePlane* matrix_s = new ImagePlane(this->source->Sm,this->source->Sm,1.0,1.0);
+  for(int i=0;i<this->source->H.tri.size();i++){
+    int nx = this->source->H.tri[i].i;
+    int ny = this->source->H.tri[i].j;
+    matrix_s->img[nx*this->source->Sm + ny] = this->source->H.tri[i].v;
+  }
+  matrix_s->writeImage(output+"Hmatrix_source.fits");
+  delete(matrix_s);
+  */
 
   // Create mock data (lensed MAP source)
   this->getModel();
-  this->model->writeImage(output + "vkl_image.fits");
+  this->model->writeImage(output + "smooth_model.fits");
 
   // Output residual image (diference between mydata and mock_data)
   this->getResidual();
-  this->res->writeImage(output + "vkl_residual.fits");
+  this->res->writeImage(output + "smooth_residual.fits");
   
   // Output various quantities in json format
   Json::Value json_output;
   
-  // Print and write to json the MAP parameters from the parameter model
+  // Print and write to json the parameters and their associated uncertainties from the parameter model
+  // 1: collapsed list of ALL the parameter names and MAP values
   Json::Value pars;
-  std::vector<std::string> all_names = this->getFullNames();
-  std::vector<double> all_values = this->getValues();
-  for(int i=0;i<all_names.size();i++){
-    std::cout << all_names[i] << " " << all_values[i] << std::endl;
-    pars[all_names[i]] = all_values[i];
-  }
-  json_output["full_pars"] = pars;
-  
-  Json::Value full_active;
-  std::vector<std::string> names = this->getActiveFullNames();
-  std::vector<double> values = this->getActiveValues();
+  std::vector<double> values;
+  std::vector<std::string> names;
+  this->getAllNamesValues(names,values);
   for(int i=0;i<names.size();i++){
-    full_active[names[i]] = values[i];
+    //    std::cout << it->first << " " << it->second << std::endl;
+    printf("%10s %10.5f\n",names[i].c_str(),values[i]);
+    pars[names[i]] = values[i];
   }
-  json_output["full_active"] = full_active;
+  json_output["collapsed_all"] = pars;
   
-  // Write structured active parameter names and values
-  Json::Value json_active = this->getActiveNamesValues();
+  // 2: collapsed list of the ACTIVE parameter names and MAP, mean, 1-sigma lower and 1-sigma upper bounds
+  Json::Value collapsed_active;
+  for(int i=0;i<this->active_names.size();i++){
+    Json::Value active_par;
+    active_par["map"]     = this->maps[i];
+    active_par["mean"]    = this->means[i];
+    active_par["s1_low"]  = this->s1_low[i];
+    active_par["s1_high"] = this->s1_high[i];
+    collapsed_active[this->active_names[i]] = active_par;
+  }
+  json_output["collapsed_active"] = collapsed_active;
+  
+  // 3: same as above, but the non-linear parameter json structure is preserved
+  Json::Value json_active = this->getActiveJson();
   json_output["json_active"] = json_active;
 
-  // Write generic parameters
+  // 4: generic quantities computed in the code (smooth part)
   Json::Value other;
-  other["Nsource"] = this->source->Sm;
   other["Ndata"]   = this->image->Nm;
   other["Nmask"]   = this->image->Nmask;
   other["Psize"]   = this->image->width/this->image->Ni;
+  other["Nsource"] = this->source->Sm;
+  other["Nsource_mask"] = this->source->Smask;
   json_output["generic"] = other;
 
-  // Write likelihood terms
+  // 5: likelihood terms
   Json::Value terms;
-  std::map<std::string,double>::iterator it;
-  for(it=this->terms.begin();it!=this->terms.end();it++){
+  for(std::unordered_map<std::string,double>::iterator it=this->terms.begin();it!=this->terms.end();it++){
     terms[it->first] = it->second;
   }
   json_output["terms"] = terms;
 
-  std::ofstream jsonfile(output+"vkl_output.json");
+  std::ofstream jsonfile(output+"smooth_output.json");
   jsonfile << json_output;
   jsonfile.close();
 
@@ -515,34 +582,167 @@ PertLikelihood::PertLikelihood(std::vector<Nlpar*> reg_s,std::vector<Nlpar*> reg
 
   for(int i=0;i<this->reg_s.size();i++){
     if( this->reg_s[i]->getActive() ){
-      active.push_back( this->reg_s[i] );
+      this->active.push_back( this->reg_s[i] );
+      this->active_names.push_back( this->reg_s[i]->nam );
     }
   }
   for(int i=0;i<this->reg_dpsi.size();i++){
     if( this->reg_dpsi[i]->getActive() ){
-      active.push_back( this->reg_dpsi[i] );
+      this->active.push_back( this->reg_dpsi[i] );
+      this->active_names.push_back( this->reg_dpsi[i]->nam );
     }
   }
 
-  this->means = (double*) malloc(this->active.size()*sizeof(double));
-  this->sdevs = (double*) malloc(this->active.size()*sizeof(double));
-  this->bests = (double*) malloc(this->active.size()*sizeof(double));
-  this->maps  = (double*) malloc(this->active.size()*sizeof(double));
+  this->maps    = (double*) malloc(this->active.size()*sizeof(double));
+  this->means   = (double*) malloc(this->active.size()*sizeof(double));
+  this->s1_low  = (double*) malloc(this->active.size()*sizeof(double));
+  this->s1_high = (double*) malloc(this->active.size()*sizeof(double));
 
-  terms["chi2"]    = 0.0; // (Mr*r-d)^T C_d^-1 (Mr*r-d)/2
-  terms["reg"]     = 0.0; // r^T (R^T R) r /2
-  terms["Nilog2p"] = 0.0; // -Nd*log(2pi)/2
-  terms["Nslogls"] = 0.0; // Ns*log(l_s)/2
-  terms["Nploglp"] = 0.0; // Npsi*log(l_psi)/2
-  terms["detCd"]   = 0.0; // log(det C_d^-1)/2
-  terms["detCs"]   = 0.0; // log(det C_s^-1)/2
-  terms["detCp"]   = 0.0; // log(det C_dpsi^-1)/2
-  terms["detA"]    = 0.0; // -log(detA)/2
-  terms["like"]    = 0.0; // evidence
+  terms["Nilog2pi"] = 0.0;
+  terms["Nslogl_s"] = 0.0;
+  if( this->source->reg == "curvature_in_identity_out" || this->source->reg == "covariance_kernel_in_identity_out" ){
+    terms["Noutlog2pi_s"] = 0.0;
+  }
+  terms["Nplogl_p"] = 0.0;
+  if( this->pert_mass_model->dpsi->reg == "curvature_in_identity_out" || this->pert_mass_model->dpsi->reg == "covariance_kernel_in_identity_out" ){
+    terms["Noutlog2pi_p"] = 0.0;
+  }
+  terms["detCd"]    = 0.0;
+  terms["detA"]     = 0.0;
+  terms["detCs"]    = 0.0;
+  if( this->source->reg == "curvature_in_identity_out" || this->source->reg == "covariance_kernel_in_identity_out" ){
+    terms["detLout_s"] = 0.0;
+  }
+  terms["detCp"]    = 0.0;
+  if( this->pert_mass_model->dpsi->reg == "curvature_in_identity_out" || this->pert_mass_model->dpsi->reg == "covariance_kernel_in_identity_out" ){
+    terms["detLout_p"] = 0.0;
+  }
+  terms["chi2"]     = 0.0;
+  terms["reg"]      = 0.0; // the regularization term already containts an Lout contribution if required
+  terms["evidence"] = 0.0;
 }
 
 PertLikelihood::~PertLikelihood(){
   delete(algebra);
+}
+
+//virtual
+void PertLikelihood::printTerms(){
+  printf(" %16s","Nilog2pi");
+  printf(" %16s","detCd");
+  printf(" %16s","detA");
+  printf(" %16s","Nslogl_s");
+  if( this->source->reg == "curvature_in_identity_out" || this->source->reg == "covariance_kernel_in_identity_out" ){
+    printf(" %16s","Noutlog2pi_s");
+    printf(" %16s","detLout_s");
+  }
+  printf(" %16s","detCs");
+  printf(" %16s","Nplogl_p");
+  if( this->pert_mass_model->dpsi->reg == "curvature_in_identity_out" || this->pert_mass_model->dpsi->reg == "covariance_kernel_in_identity_out" ){
+    printf(" %16s","Noutlog2pi_p");
+    printf(" %16s","detLout_p");
+  }
+  printf(" %16s","detCp");
+  printf(" %16s","chi2");
+  printf(" %16s","reg");
+  printf(" %16s","evidence");
+  printf("\n");
+  printf(" %16f",terms["Nilog2pi"]);
+  printf(" %16f",terms["detCd"]);
+  printf(" %16f",terms["detA"]);
+  printf(" %16f",terms["Nslogl_s"]);
+  if( this->source->reg == "curvature_in_identity_out" || this->source->reg == "covariance_kernel_in_identity_out" ){
+    printf(" %16f",terms["Noutlog2pi_s"]);
+    printf(" %16f",terms["detLout_s"]);
+  }
+  printf(" %16f",terms["detCs"]);
+  printf(" %16f",terms["Nplogl_p"]);
+  if( this->pert_mass_model->dpsi->reg == "curvature_in_identity_out" || this->pert_mass_model->dpsi->reg == "covariance_kernel_in_identity_out" ){
+    printf(" %16f",terms["Noutlog2pi_p"]);
+    printf(" %16f",terms["detLout_p"]);
+  }
+  printf(" %16f",terms["detCp"]);
+  printf(" %16f",terms["chi2"]);
+  printf(" %16f",terms["reg"]);
+  printf(" %16f",terms["evidence"]);
+  printf("\n");
+}
+
+//virtual
+void PertLikelihood::getAllNamesValues(std::vector<std::string>& names,std::vector<double>& values){
+  std::map<std::string,int> active_ind;
+  for(int i=0;i<this->active.size();i++){
+    active_ind[this->active[i]->nam] = i;
+  }
+  double value;
+  std::string name;
+
+  for(int i=0;i<this->reg_s.size();i++){
+    name = this->reg_s[i]->getName();
+    if( this->reg_s[i]->getActive() ){
+      value = this->maps[active_ind[name]];
+    } else {
+      value = this->reg_s[i]->getValue();
+    }
+    names.push_back(name);
+    values.push_back(value);
+  }
+  for(int i=0;i<this->reg_dpsi.size();i++){
+    name = this->reg_dpsi[i]->getName();
+    if( this->reg_dpsi[i]->getActive() ){
+      value = this->maps[active_ind[name]];
+    } else {
+      value = this->reg_dpsi[i]->getValue();
+    }
+    names.push_back(name);
+    values.push_back(value);
+  }
+}
+
+//virtual
+Json::Value PertLikelihood::getActiveJson(){
+  Json::Value all;
+
+  std::map<std::string,int> active_ind;
+  for(int i=0;i<this->active.size();i++){
+    active_ind[this->active[i]->nam] = i;
+  }
+
+  Json::Value reg_s = Json::Value(Json::arrayValue);
+  for(int i=0;i<this->reg_s.size();i++){
+    if( this->reg_s[i]->getActive() ){
+      std::string name = this->reg_s[i]->getName();
+      Json::Value dum;
+      dum["nam"]     = name;
+      dum["map"]     = this->maps[active_ind[name]];
+      dum["mean"]    = this->means[active_ind[name]];
+      dum["s1_low"]  = this->s1_low[active_ind[name]];
+      dum["s1_high"] = this->s1_high[active_ind[name]];
+      reg_s.append(dum);
+    }
+  }
+  if( reg_s.size() != 0 ){
+    all["reg_s"] = reg_s;
+  }
+
+  Json::Value reg_dpsi = Json::Value(Json::arrayValue);
+  for(int i=0;i<this->reg_dpsi.size();i++){
+    if( this->reg_dpsi[i]->getActive() ){
+      std::string name = this->reg_dpsi[i]->getName();
+      Json::Value dum;
+      dum["nam"]     = name;
+      dum["map"]     = this->maps[active_ind[name]];
+      dum["mean"]    = this->means[active_ind[name]];
+      dum["s1_low"]  = this->s1_low[active_ind[name]];
+      dum["s1_high"] = this->s1_high[active_ind[name]];
+      reg_dpsi.append(dum);
+    }
+  }
+  if( reg_dpsi.size() != 0 ){
+    all["reg_dpsi"] = reg_dpsi;
+  }
+
+  return all;
 }
 
 //non-virtual
@@ -553,6 +753,31 @@ void PertLikelihood::initializePert(SmoothLikelihood* smooth_like){
   // Add pointer to smooth likelihood model
   this->smooth_like = smooth_like;
 
+  // Update limits of source covariance kernel, if applicable
+  if( this->source->reg == "covariance_kernel" || this->source->reg == "covariance_kernel_in_identity_out" ){
+    if( this->source->type == "fixed" ){
+      if( this->source->kernel->type == "modgauss" ){
+	Nlpar* nlpar_sdev = Nlpar::getParByName("sdev",this->active);
+	FixedSource* fixed = dynamic_cast<FixedSource*>(this->source); // needed to access width
+	nlpar_sdev->min = fixed->width/(this->source->Sj*log(this->source->kernel->cmax));
+	nlpar_sdev->max = 50.0*this->smooth_like->image->width;
+      }
+    } else if( this->source->type == "adaptive" ){
+      if( this->source->kernel->type == "modgauss" ){
+	Nlpar* nlpar_sdev = Nlpar::getParByName("sdev",this->active);
+	nlpar_sdev->max = 50.0*this->smooth_like->image->width;
+      }
+    }
+  }
+
+  // Update limits of perturbations covariance kernel, if applicable
+  if( this->pert_mass_model->dpsi->reg == "covariance_kernel" || this->pert_mass_model->dpsi->reg == "covariance_kernel_in_identity_out" ){
+    if( this->pert_mass_model->dpsi->kernel->type == "modgauss" ){
+      Nlpar* nlpar_sdev = Nlpar::getParByName("sdev",this->active);
+      nlpar_sdev->min = this->pert_mass_model->dpsi->width/(this->pert_mass_model->dpsi->Sj*log(this->pert_mass_model->dpsi->kernel->cmax));
+      nlpar_sdev->max = 50.0*this->smooth_like->image->width;
+    }
+  }
 
   // Use source from smooth likelihood model
   if( this->source->type == "adaptive" ){
@@ -605,13 +830,13 @@ void PertLikelihood::updateLikelihoodModel(){
   // If lambda is allowed to vary then update the lambda term for the source
   Nlpar* lambda_s = Nlpar::getParByName("lambda_s",this->reg_s);
   if( lambda_s->fix == 0 ){
-    this->terms["Nslogls"] = this->source->Sm*log10(lambda_s->val)/2.0;
+    this->terms["Nslogl_s"] = this->source->Sm*log10(lambda_s->val)/2.0;
   }  
   
   // If lambda is allowed to vary then update the lambda term for the potential corrections
   Nlpar* lambda_dpsi = Nlpar::getParByName("lambda_dpsi",this->reg_dpsi);
   if( lambda_dpsi->fix == 0 ){
-    this->terms["Nploglp"] = this->pert_mass_model->dpsi->Sm*log10(lambda_dpsi->val)/2.0;
+    this->terms["Nplogl_p"] = this->pert_mass_model->dpsi->Sm*log10(lambda_dpsi->val)/2.0;
   }
 
   // Update all the needed algebraic tables, e.g. M_r, Mt_r, Mt_r*Cd*M_r + RtR, Cs and detCs (if needed), Cp and detCp (if needed)
@@ -622,16 +847,10 @@ void PertLikelihood::updateLikelihoodModel(){
 }
 
 //virtual
-double PertLikelihood::getLogLike(){
-  double val = terms["chi2"] + terms["reg"] + terms["Nilog2p"] + terms["Nslogls"] + terms["Nploglp"] + terms["detCd"] + terms["detCs"] + terms["detCp"] + terms["detA"];
-  this->terms["like"] = val;
-  return val;
-}
-
-//virtual
 void PertLikelihood::initialOutputLikelihoodModel(std::string output){
-  std::cout << "Sample_reg for source: " << this->source->sample_reg << " " << this->source->reg <<  std::endl;
-  std::cout << "Sample_reg for perturbations: " << this->pert_mass_model->dpsi->sample_reg << " " << this->pert_mass_model->dpsi->reg << std::endl;
+  this->pert_mass_model->dpsi->outputMask(output + "pert_dpsi_mask.fits");
+  //  std::cout << "Sample_reg for source: " << this->source->sample_reg << " " << this->source->reg <<  std::endl;
+  //  std::cout << "Sample_reg for perturbations: " << this->pert_mass_model->dpsi->sample_reg << " " << this->pert_mass_model->dpsi->reg << std::endl;
 }
 
 //virtual
@@ -639,37 +858,121 @@ void PertLikelihood::outputLikelihoodModel(std::string output){
   // Output reconstructed source
   this->source->outputSource(output + "pert_");
 
-
-
+  // *** For the following I need to replace the source from the smooth model with the one from this likelihood model
   // Replace source pointer in the smooth model with the new perturbed source
   BaseSourcePlane* dum_source = this->smooth_like->source;
   this->smooth_like->source = this->source;
 
-  // Create mock data (lensed MAP source)
-  this->smooth_like->getModel();
-  this->smooth_like->model->writeImage(output + "pert_vkl_image.fits");
-  
-  // Output residual image (diference between mydata and mock_data)
-  this->smooth_like->getResidual();
-  this->smooth_like->res->writeImage(output + "pert_vkl_residual.fits");
-  
   // Output errors of reconstructed source
   double* errors = (double*) calloc(this->source->Sm,sizeof(double));
   this->smooth_like->algebra->getSourceErrors(this->source->Sm,errors);
-  this->smooth_like->source->outputSourceErrors(errors,output);
+  this->smooth_like->source->outputSourceErrors(errors,output + "pert_");
   free(errors);
 
+  // Create mock data (lensed MAP source)
+  this->smooth_like->getModel();
+  this->smooth_like->model->writeImage(output + "pert_model.fits");
+  
+  // Output residual image (diference between mydata and mock_data)
+  this->smooth_like->getResidual();
+  this->smooth_like->res->writeImage(output + "pert_residual.fits");
+  
   // Replace source pointer in the smooth model with the previous source
   this->smooth_like->source = dum_source;
+  // *** I don't need to use the functions in the smooth model anymore.
+
+  /*
+  // Write the regularization matrix of the source as an image
+  ImagePlane* matrix_s = new ImagePlane(this->source->Sm,this->source->Sm,1.0,1.0);
+  for(int i=0;i<this->source->H.tri.size();i++){
+    int nx = this->source->H.tri[i].i;
+    int ny = this->source->H.tri[i].j;
+    matrix_s->img[nx*this->source->Sm + ny] = this->source->H.tri[i].v;
+  }
+  matrix_s->writeImage(output+"Hmatrix_source.fits");
+  delete(matrix_s);
+  */
+
+  /*
+  // Write the regularization matrix of the perturbations as an image
+  ImagePlane* matrix_p = new ImagePlane(this->pert_mass_model->dpsi->Sm,this->pert_mass_model->dpsi->Sm,1.0,1.0);
+  for(int i=0;i<this->pert_mass_model->dpsi->H.tri.size();i++){
+    int nx = this->pert_mass_model->dpsi->H.tri[i].i;
+    int ny = this->pert_mass_model->dpsi->H.tri[i].j;
+    matrix_p->img[nx*this->pert_mass_model->dpsi->Sm + ny] = this->pert_mass_model->dpsi->H.tri[i].v;
+  }
+  matrix_p->writeImage(output+"Hmatrix_pert.fits");
+  delete(matrix_p);
+  */
   
   // Output current perturbations correction
-  this->pert_mass_model->dpsi->outputSource(output + "perturbations_");
+  this->pert_mass_model->dpsi->outputSource(output + "pert_dpsi.fits");
+
+  // Output errors on perturbations
+  //  double* errors = (double*) calloc(this->pert_mass_model->dpsi->Sm,sizeof(double));
+  //  this->pert_mass_model->dpsi->outputSourceErrors(errors,output + "pert_dpsi_errors.fits");
+  //  free(errors);
 
   // Output convergence
   ImagePlane* kappa = new ImagePlane(this->pert_mass_model->dpsi->Si,this->pert_mass_model->dpsi->Sj,this->pert_mass_model->dpsi->width,this->pert_mass_model->dpsi->height);
   pert_mass_model->getConvergence(kappa);
-  kappa->writeImage(output + "convergence.fits");
+  kappa->writeImage(output + "pert_convergence.fits");
   delete(kappa);
+
+
+  // Output various quantities in json format
+  Json::Value json_output;
+  
+  // Print and write to json the parameters and their associated uncertainties from the parameter model
+  // 1: collapsed list of ALL the parameter names and MAP values
+  Json::Value pars;
+  std::vector<double> values;
+  std::vector<std::string> names;
+  this->getAllNamesValues(names,values);
+  for(int i=0;i<names.size();i++){
+    std::cout << names[i] << " " << values[i] << std::endl;
+    pars[names[i]] = values[i];
+  }
+  json_output["collapsed_all"] = pars;
+  
+  // 2: collapsed list of the ACTIVE parameter names and MAP, mean, 1-sigma lower and 1-sigma upper bounds
+  Json::Value collapsed_active;
+  for(int i=0;i<this->active_names.size();i++){
+    Json::Value active_par;
+    active_par["map"]     = this->maps[i];
+    active_par["mean"]    = this->means[i];
+    active_par["s1_low"]  = this->s1_low[i];
+    active_par["s1_high"] = this->s1_high[i];
+    collapsed_active[this->active_names[i]] = active_par;
+  }
+  json_output["collapsed_active"] = collapsed_active;
+  
+  // 3: same as above, but the non-linear parameter json structure is preserved
+  Json::Value json_active = this->getActiveJson();
+  json_output["json_active"] = json_active;
+
+  // 4: generic quantities computed in the code (perturbations part)
+  Json::Value other;
+  other["Ndata"]        = this->smooth_like->image->Nm;
+  other["Nmask"]        = this->smooth_like->image->Nmask;
+  other["Psize"]        = this->smooth_like->image->width/this->smooth_like->image->Ni;
+  other["Npert"]        = this->pert_mass_model->dpsi->Sm;
+  other["Npert_mask"]   = this->pert_mass_model->dpsi->Smask;
+  other["Ppert_size"]   = this->pert_mass_model->dpsi->width/this->pert_mass_model->dpsi->Sj;
+  other["Nsource"]      = this->source->Sm;
+  other["Nsource_mask"] = this->source->Smask;
+  json_output["generic"] = other;
+
+  // 5: likelihood terms
+  Json::Value terms;
+  for(std::unordered_map<std::string,double>::iterator it=this->terms.begin();it!=this->terms.end();it++){
+    terms[it->first] = it->second;
+  }
+  json_output["terms"] = terms;
+
+  std::ofstream jsonfile(output+"pert_output.json");
+  jsonfile << json_output;
+  jsonfile.close();
 }
 
 
@@ -786,14 +1089,6 @@ void PertIterationLikelihood::updateLikelihoodModel(){
   pert_pointer->updatePert();
 }
 
-//virtual
-double PertIterationLikelihood::getLogLike(){
-  double val = terms["chi2"] + terms["reg"] + terms["Nilog2p"] + terms["Nslogls"] + terms["Nploglp"] + terms["detCd"] + terms["detCs"] + terms["detCp"] + terms["detA"];
-  this->terms["like"] = val;
-  return val;
-}
-
-
 
 
 //virtual
@@ -811,11 +1106,11 @@ void PertIterationLikelihood::outputLikelihoodModel(std::string output){
 
   // Create mock data (lensed MAP source)
   this->smooth_like->getModel();
-  this->smooth_like->model->writeImage(output + "pert_vkl_image.fits");
+  this->smooth_like->model->writeImage(output + "pert_image.fits");
   
   // Output residual image (diference between mydata and mock_data)
   this->smooth_like->getResidual();
-  this->smooth_like->res->writeImage(output + "pert_vkl_residual.fits");
+  this->smooth_like->res->writeImage(output + "pert_residual.fits");
   
   // Output errors of reconstructed source
   double* errors = (double*) calloc(this->source->Sm,sizeof(double));
@@ -838,6 +1133,53 @@ void PertIterationLikelihood::outputLikelihoodModel(std::string output){
   pert_pointer->getConvergence(kappa);
   kappa->writeImage(output + "added_convergence.fits");
   delete(kappa);
+
+  /*
+  // Output various quantities in json format
+  Json::Value json_output;
+
+  // Print and write to json the MAP parameters from the parameter model
+  Json::Value pars;
+  std::vector<std::string> all_names = this->getAllNames();
+  std::vector<double> all_values = this->getAllValues();
+  for(int i=0;i<all_names.size();i++){
+    std::cout << all_names[i] << " " << all_values[i] << std::endl;
+    pars[all_names[i]] = all_values[i];
+  }
+  json_output["full_pars"] = pars;
+  
+  Json::Value full_active;
+  std::vector<std::string> names = this->getActiveNames();
+  std::vector<double> values = this->getActiveValues();
+  for(int i=0;i<names.size();i++){
+    collapsed_active[names[i]] = values[i];
+  }
+  json_output["collapsed_active"] = collapsed_active;
+  
+  // Write structured active parameter names and values
+  Json::Value json_active = this->getActiveJson();
+  json_output["json_active"] = json_active;
+
+  // Write generic parameters
+  Json::Value other;
+  other["Nsource"] = this->source->Sm;
+  other["Ndata"]   = this->image->Nm;
+  other["Nmask"]   = this->image->Nmask;
+  other["Psize"]   = this->image->width/this->image->Ni;
+  json_output["generic"] = other;
+
+  // Write likelihood terms
+  Json::Value terms;
+  std::map<std::string,double>::iterator it;
+  for(it=this->terms.begin();it!=this->terms.end();it++){
+    terms[it->first] = it->second;
+  }
+  json_output["terms"] = terms;
+
+  std::ofstream jsonfile(output+"pert_output.json");
+  jsonfile << json_output;
+  jsonfile.close();
+  */
 }
 
 

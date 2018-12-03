@@ -7,9 +7,12 @@ void Nothing::minimize(std::map<std::string,std::string> minimizer,BaseLikelihoo
   double dum = mypars->getLogLike();
   
   for(int i=0;i<mypars->active.size();i++){
-    mypars->means[i] = mypars->active[i]->val;
-    mypars->sdevs[i] = 0;
-    mypars->bests[i] = mypars->active[i]->val;
-    mypars->maps[i]  = mypars->active[i]->val;
+    mypars->maps[i]    = mypars->active[i]->val;
+    mypars->means[i]   = mypars->active[i]->val;
+    mypars->s1_low[i]  = 0;
+    mypars->s1_high[i] = 0;
   }
+}
+
+void Nothing::output(std::string output){
 }

@@ -5,6 +5,7 @@
 #include <vector>
 #include <fstream>
 #include <map>
+#include <unordered_map>
 
 #include "json/json.h"
 
@@ -15,42 +16,43 @@ class CollectionMassModels;
 class SmoothAlgebra;
 class PertAlgebra;
 class Pert;
-
+class BaseMinimizer;
 
 
 class BaseLikelihoodModel {
 public:
   std::string name;
   std::vector<Nlpar*> active;
-  std::map<std::string,double> terms;
-  double* means = NULL;
-  double* sdevs = NULL;
-  double* bests = NULL;
-  double* maps  = NULL;
+  std::vector<std::string> active_names;
+  std::unordered_map<std::string,double> terms;
+  double* maps    = NULL;
+  double* means   = NULL;
+  double* s1_low  = NULL;
+  double* s1_high = NULL;
 
   BaseLikelihoodModel(){};
   ~BaseLikelihoodModel(){
-    free(means);
-    free(sdevs);
-    free(bests);
     free(maps);
+    free(means);
+    free(s1_low);
+    free(s1_high);
   };
 
   std::vector<double> getActiveValues();
-  std::vector<std::string> getActiveNames();
+  std::vector<std::string> getActiveNlparNames();
   void updateActive(std::vector<double> values);
   void printActive();
-  void printTerms();
+  //  void printTerms();
+  double getLogLike();
 
-  virtual std::vector<std::string> getFullNames() = 0;
-  virtual std::vector<std::string> getActiveFullNames() = 0;
-  virtual std::vector<double> getValues() = 0;
-  virtual std::vector<Nlpar*> getPhysicalPars() = 0;
+  virtual void printTerms() = 0;
+  virtual void getAllNamesValues(std::vector<std::string>& names,std::vector<double>& values) = 0;
   virtual std::vector<Nlpar*> getMassModelPars(int i) = 0;
-  virtual Json::Value getActiveNamesValues() = 0;
+  virtual std::vector<Nlpar*> getPhysicalPars() = 0;
+  virtual Json::Value getActiveJson() = 0;
+
   virtual void initializeAlgebra() = 0;
   virtual void updateLikelihoodModel() = 0;
-  virtual double getLogLike() = 0;
   virtual void initialOutputLikelihoodModel(std::string output) = 0;
   virtual void outputLikelihoodModel(std::string output) = 0;
 };
@@ -80,15 +82,14 @@ public:
   void deriveLinearDpsi(Pert* pert_mass_model,ImagePlane* img_grid);
   
   //virtual
-  std::vector<std::string> getFullNames();
-  std::vector<std::string> getActiveFullNames();
+  void printTerms();
+  void getAllNamesValues(std::vector<std::string>& names,std::vector<double>& values);
   std::vector<Nlpar*> getPhysicalPars();
   std::vector<Nlpar*> getMassModelPars(int i);
-  std::vector<double> getValues();
-  Json::Value getActiveNamesValues();
+  Json::Value getActiveJson();
+
   void initializeAlgebra();
   void updateLikelihoodModel();
-  double getLogLike();
   void initialOutputLikelihoodModel(std::string output);
   void outputLikelihoodModel(std::string output);
 };
@@ -114,15 +115,14 @@ public:
   void pertResiduals(std::string output,ImagePlane* image,BaseSourcePlane* source,Pert* pert_mass_model);
 
   //virtual
-  std::vector<std::string> getFullNames(){};
-  std::vector<std::string> getActiveFullNames(){};
-  std::vector<double> getValues(){};
+  void printTerms();
+  void getAllNamesValues(std::vector<std::string>& names,std::vector<double>& values);
   std::vector<Nlpar*> getPhysicalPars(){};
   std::vector<Nlpar*> getMassModelPars(int i){};
-  Json::Value getActiveNamesValues(){};
+  Json::Value getActiveJson();
+
   void initializeAlgebra();
   void updateLikelihoodModel();
-  double getLogLike();
   void initialOutputLikelihoodModel(std::string output);
   void outputLikelihoodModel(std::string output);
 };
@@ -141,7 +141,6 @@ public:
   //virtual
   void initializeAlgebra();
   void updateLikelihoodModel();
-  double getLogLike();
   void initialOutputLikelihoodModel(std::string output);
   void outputLikelihoodModel(std::string output);
 };

@@ -71,22 +71,29 @@ for step in range (steps):
                         l = m.sqrt(lx**2. + ly**2.)
                         if steplist[step]*lmax/steps < l <= steplist [step + 1]*lmax/steps:
                                 bin = np.append(bin, absval2[y][x])
-        pspeclist = np.append(pspeclist, np.mean(bin)) #Adding each bin value to pspeclist
-        pspecerror = np.append(pspecerror, np.mean(bin)/np.sqrt(len(bin))) #adding the error: P(k)/Npixels per bin (sample variance)
-        #pspecerror = np.append(pspecerror, np.std(bin)) #adding the error: P(k)/Npixels per bin (sample variance)
+        if len(bin) > 0:
+                pspeclist = np.append(pspeclist, np.mean(bin)) #Adding each bin value to pspeclist
+                pspecerror = np.append(pspecerror, np.mean(bin)/np.sqrt(len(bin))) #adding the error: P(k)/Npixels per bin (sample variance)
+                #pspecerror = np.append(pspecerror, np.std(bin)) #adding the error: P(k)/Npixels per bin (sample variance)
+        else:
+                pspeclist = np.append(pspeclist,0.0)
+                pspecerror = np.append(pspecerror,0.0)
         #print len(bin)
 
-
-pspecs.append(pspeclist) #Adding the entire powerspectrum to the list
-pspecs.append(pspecerror)
-#print pspecerror
 
 #The frequency list with the k-values at the middle of each bin with unit (k/2*pi) arcsec inverse
 l_list = np.linspace(lmax/(2.*steps),lmax - lmax/(2.*steps),steps)
 
+#Filtering out zero elements
+ind = np.nonzero(pspeclist)
+bins = l_list[ind]
+vals = pspeclist[ind]
+errs = pspecerror[ind]
+
+
 
 #--------write the power spectrum-------------------------
-table=np.array([l_list,pspecs[0],pspecs[1]]).T
+table=np.array([bins,vals,errs]).T
 np.savetxt("ps.dat",table,fmt='%.8e',delimiter=' ',newline='\n')
 
 #--------plot the power spectrum--------------------------
@@ -96,8 +103,6 @@ plt.yscale('log')
 plt.ylim(0.01,10000)
 
 #plt.plot(l_list, pspecs[0])
-errors = np.empty(len(l_list))
-errors.fill(10.1)
-plt.errorbar(l_list, pspecs[0],yerr=pspecs[1])
+plt.errorbar(bins,vals,yerr=errs)
 plt.savefig('ps.png',bbox_inches='tight')
 #plt.show()

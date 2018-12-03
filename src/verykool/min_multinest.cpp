@@ -6,6 +6,7 @@
 #include <fstream>
 
 #include "multinest.h"
+#include "json/json.h"
 
 #include "nonLinearPars.hpp"
 #include "likelihoodModels.hpp"
@@ -56,8 +57,32 @@ void MultiNest::minimize(std::map<std::string,std::string> opt,BaseLikelihoodMod
 
   //  void* context  = 0;			// not required by MultiNest, any additional information user wants to pass
 
-  int counter = 0;
-  extras myextras = {pars,output,counter};
+  this->counter = 0;
+  extras myextras = {pars,output,this};
+
+
+  // Initial output from the minimizer:
+  // File with the parameter names
+  std::ofstream f_names(output + this->name + "_postdist.paramnames",std::ofstream::out);
+  for(int i=0;i<pars->active_names.size();i++){
+    f_names << pars->active_names[i];
+    f_names << " ";
+    f_names << pars->active_names[i];
+    f_names << std::endl;
+  }
+  f_names.close();
+
+  // File with the parameter ranges
+  std::ofstream f_ranges(output + this->name + "_postdist.ranges",std::ofstream::out);
+  for(int i=0;i<pars->active.size();i++){
+    f_ranges << pars->active_names[i];
+    f_ranges << " ";
+    f_ranges << pars->active[i]->min;
+    f_ranges << " ";
+    f_ranges << pars->active[i]->max;
+    f_ranges << std::endl;
+  }
+  f_ranges.close();
 
   nested::run(IS,mmodal,ceff,nlive,tol,efr,ndims,nPar,nClsPar,maxModes,updInt,Ztol,root,seed,pWrap,fb,resume,outfile,initMPI,logZero,maxiter,MultiNestLogLike,MultiNestDumper,&myextras);
 }
@@ -122,8 +147,8 @@ void MultiNestDumper(int& nSamples,int& nlive,int& nPar,double** physLive,double
   extras* e = (extras*) myextras; // need to cast back void pointer
   FILE* fh;
 
-  e->counter++;
-  e->pars->outputLikelihoodModel(e->output + std::to_string(e->counter) + "_");
+  e->minimizer->counter++;
+  e->pars->outputLikelihoodModel(e->output + std::to_string(e->minimizer->counter) + "_");
 
   /*
   // lastlive holds the parameter values for the last set of live points, and has the same structure as nlpars, with an array of nlive points for each parameter
@@ -146,85 +171,61 @@ void MultiNestDumper(int& nSamples,int& nlive,int& nPar,double** physLive,double
   fclose(fh);
   */
 
-
-  // Read the mn-resume file and write the number of total samples and replacements
-  int total_samples;
-  int replacements;
-  std::string dum;
-  std::ifstream infile(e->output + "mn-resume.dat");
-  infile >> dum >> replacements >> total_samples;
-  infile.close();
-  fh = fopen( (e->output + std::to_string(e->counter) + "_iterations.dat").c_str() ,"w");
-  fprintf(fh,"%d\n",total_samples);
-  fprintf(fh,"%d\n",replacements);
-  fclose(fh);
-
-
-
-  // postdist holds the posterior probability, loglike, and the parameters
+  // postdist holds the posterior probability, loglike, and the parameters, i.e. it is the restructured internal 'posterior' array
   int Ncols = nPar + 2;
   double postdist[nSamples][Ncols];
-
   for(int j=0;j<nSamples;j++){
+    postdist[j][0] = posterior[0][nSamples*(Ncols-2)+j];
+    postdist[j][1] = posterior[0][nSamples*(Ncols-1)+j];
     for(int i=0;i<Ncols-2;i++){
-      postdist[j][i] = e->pars->active[i]->pri->fromUnitCube( posterior[0][nSamples*i+j] );
+      postdist[j][i+2] = e->pars->active[i]->pri->fromUnitCube( posterior[0][nSamples*i+j] );
     }
-    postdist[j][Ncols-2] = posterior[0][nSamples*(Ncols-2)+j];
-    postdist[j][Ncols-1] = posterior[0][nSamples*(Ncols-1)+j];
   }
 
-
   // File for the corner plot
-  fh = fopen( (e->output + std::to_string(e->counter) + "_corner.txt").c_str() ,"w");
+  fh = fopen( (e->output + std::to_string(e->minimizer->counter) + "_" + e->minimizer->name + "_postdist.txt").c_str() ,"w");
   for(int j=0;j<nSamples;j++){
     fprintf(fh," %25.18e",1.0);
-    fprintf(fh," %25.18e",postdist[j][Ncols-1]);
-    for(int i=0;i<Ncols-2;i++){
+    fprintf(fh," %25.18e",postdist[j][1]);
+    for(int i=2;i<Ncols;i++){
       fprintf(fh," %25.18e",postdist[j][i]);
     }
     fprintf(fh,"\n");
   }
   fclose(fh);
 
-
-  std::ifstream  src((e->output + std::to_string(e->counter) + "_corner.txt").c_str(),std::ios::binary);
-  std::ofstream  dst((e->output + "corner.txt").c_str(), std::ios::binary);
-  dst << src.rdbuf();
-
-
-
-  // map_pars holds the maximum a-posteriori parameters and has the same structure as nlpars
-  for(int i=0;i<nPar;i++){
-    e->pars->means[i] = e->pars->active[i]->pri->fromUnitCube( paramConstr[0][i] );
-    e->pars->sdevs[i] = paramConstr[0][nPar+i] * e->pars->active[i]->ran;
-    e->pars->bests[i] = e->pars->active[i]->pri->fromUnitCube( paramConstr[0][i] );
-    e->pars->maps[i]  = e->pars->active[i]->pri->fromUnitCube( paramConstr[0][i] );
+  // Calculating the mean and the lower and upper 1-sigma bounds
+  std::vector<double> prob(nSamples);
+  for(int j=0;j<nSamples;j++){
+    prob[j] = postdist[j][1];
   }
-
-  /*
-  for(int i=2;i<nPar+2;i++){
-    double mean = 0.0;
-    double sdev = 0.0;
+  for(int i=0;i<Ncols-2;i++){
+    std::vector<double> par(nSamples);
     for(int j=0;j<nSamples;j++){
-      mean += postdist[j][0]*postdist[j][i];
+      par[j] = postdist[j][i+2];
     }
-    for(int j=0;j<nSamples;j++){
-      sdev += postdist[j][0]*pow(postdist[j][i]-mean,2);
-    }
-    sdev = sqrt(sdev);
-    std::cout << mean << " " << sdev << std::endl;
+    std::map<std::string,double> stats = Nlpar::getSigmaIntervals(par,prob,1);
+    e->pars->maps[i]    = e->pars->active[i]->pri->fromUnitCube( paramConstr[0][i] );
+    e->pars->means[i]   = stats["mean"];
+    e->pars->s1_low[i]  = stats["low"];
+    e->pars->s1_high[i] = stats["high"];
   }
-  */
 
-  // File with the mean, sdev, best-fit, and MAP parameters
-  fh = fopen( (e->output+"vkl_stats.txt").c_str() ,"w");
-  for(int i=0;i<nPar;i++){
-    fprintf(fh,"%25s %25.18e %25.18e %25.18e %25.18e\n",e->pars->active[i]->nam.c_str(),e->pars->means[i],e->pars->sdevs[i],e->pars->bests[i],e->pars->maps[i]);
-  }
-  fclose(fh);
+  e->minimizer->output(e->output + std::to_string(e->minimizer->counter) + "_");
 }
 
+void MultiNest::output(std::string output){
+  // Read the mn-resume file and write the number of total samples and replacements
+  std::string dum;
+  std::ifstream infile(output + "mn-resume.dat");
+  infile >> dum >> this->replacements >> this->total_samples;
+  infile.close();
 
-void MultiNest::output(){
-  // MultiNest completed
+  Json::Value min_out;
+  min_out["total_samples"] = this->total_samples;
+  min_out["replacements"]  = this->replacements;
+
+  std::ofstream jsonfile(output + this->name + "_minimizer_output.json");
+  jsonfile << min_out;
+  jsonfile.close();
 }

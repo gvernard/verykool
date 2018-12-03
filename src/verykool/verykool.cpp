@@ -52,13 +52,12 @@ int main(int argc,char* argv[]){
   // Initial output
   if( myrank == 0 ){
     smooth_like->initialOutputLikelihoodModel(init->output);
-    //myminimizer->output();
   }
 
   printf("%-25s","Starting smooth minimization ");
   fflush(stdout);
  
-  smooth_minimizer = FactoryMinimizer::getInstance()->createMinimizer(init->smooth_minimizer,smooth_like,init->output);
+  smooth_minimizer = FactoryMinimizer::getInstance()->createMinimizer("smooth",init->smooth_minimizer,smooth_like,init->output);
   smooth_minimizer->minimize(init->smooth_minimizer,smooth_like,init->output);
 
   printf("%+7s\n","...done");
@@ -68,7 +67,7 @@ int main(int argc,char* argv[]){
   // Finalize output etc
   if( myrank == 0 ){
     Initialization::finalizeLikelihoodModel(init->output,smooth_like);
-    //myminimizer->output();
+    //smooth_minimizer->output(init->output);
   }
 
   delete(smooth_minimizer);
@@ -103,7 +102,7 @@ int main(int argc,char* argv[]){
     printf("%-25s","Starting perturbation minimization ");
     fflush(stdout);
     
-    BaseMinimizer* pert_minimizer = FactoryMinimizer::getInstance()->createMinimizer(init->pert_minimizer,pert_like,init->output);
+    BaseMinimizer* pert_minimizer = FactoryMinimizer::getInstance()->createMinimizer("pert",init->pert_minimizer,pert_like,init->output);
     pert_minimizer->minimize(init->pert_minimizer,pert_like,init->output);
 
     printf("%+7s\n","...done");
@@ -113,7 +112,7 @@ int main(int argc,char* argv[]){
     
     if( myrank == 0 ){
       Initialization::finalizeLikelihoodModel(init->output,pert_like);
-      //myminimizer->output();
+      //pert_minimizer->output(init->output);
     }
     
     delete(pert_minimizer);

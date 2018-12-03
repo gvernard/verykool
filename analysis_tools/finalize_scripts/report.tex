@@ -1,0 +1,44 @@
+\documentclass[12pt]{article}
+\usepackage{amsmath,amssymb,graphicx,color,url}
+\usepackage[margin=1in]{geometry}
+
+\begin{document}
+
+
+
+\input{title.tex}
+
+\begin{figure}[!htb]
+	\centering
+	\includegraphics[width=\textwidth]{all.png}
+	\caption{Data and model reconstruction. \label{fig:all}}
+\end{figure}
+
+\input{table3.tex}
+\input{table1.tex}
+\input{table2.tex}
+
+
+\clearpage
+\pagebreak
+
+\IfFileExists{corner.pdf}{
+  \begin{figure}[!htb]
+    \centering
+    \includegraphics[width=\textwidth]{corner.pdf}
+    \caption{Corner plot. \label{fig:corner}}
+  \end{figure}
+}{
+  corner plot not available!
+}
+
+\clearpage
+\pagebreak
+
+
+
+
+
+
+
+\end{document}

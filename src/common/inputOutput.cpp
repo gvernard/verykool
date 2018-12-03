@@ -70,7 +70,7 @@ void Initialization::initialize_program(std::string path,std::string run,Initial
     ada->createAdaGrid(mydata,mycollection);
     ada->createDelaunay();
   }
-  if( init->source["reg"] == "covariance_kernel" ){
+  if( init->source["reg"] == "covariance_kernel" || init->source["reg"] == "covariance_kernel_in_identity_out" ){
     SmoothLikelihood* specific_pointer = dynamic_cast<SmoothLikelihood*>(smooth_like);
     mysource->sample_reg = Nlpar::getSampleReg(specific_pointer->reg);
     mysource->kernel = FactoryCovKernel::getInstance()->createCovKernel(init->source["kernel"],specific_pointer->reg);
@@ -171,7 +171,7 @@ void Initialization::parseInputJSON(std::string path,std::string run){
     this->source[jmembers[i]] = root["splane"][jmembers[i]].asString();
   }
   this->source["reg"] = root["reg"]["type"].asString();
-  if( this->source["reg"] == "covariance_kernel" ){
+  if( this->source["reg"] == "covariance_kernel" || this->source["reg"] == "covariance_kernel_in_identity_out" ){
     this->source["kernel"] = root["reg"]["subtype"].asString();
   }
 

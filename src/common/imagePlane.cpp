@@ -45,7 +45,7 @@ ImagePlane::ImagePlane(const std::string filepath,int i,int j,double h,double w)
   double di = height/Ni;
   double dj = width/Nj;
 
-  // xmax,xmin are the x coordinates of the leftmost and eightmost pixels.
+  // xmax,xmin are the x coordinates of the leftmost and rightmost pixels.
   // REMEMBER: xmax-xmin != width (Nj*dj).
   // Similarly for y.
   xmin = -j0*dj;
@@ -93,7 +93,7 @@ ImagePlane::ImagePlane(int i,int j,double h,double w){
   double di = height/Ni;
   double dj = width/Nj;
 
-  // xmax,xmin are the x coordinates of the leftmost and eightmost pixels.
+  // xmax,xmin are the x coordinates of the leftmost and rightmost pixels.
   // REMEMBER: xmax-xmin != width (Nj*dj).
   // Similarly for y.
   xmin = -j0*dj;

@@ -11,10 +11,10 @@ void Iterator::minimize(std::map<std::string,std::string> opt,BaseLikelihoodMode
 
   // This is just to fill the containers of the 'best' parameters
   for(int i=0;i<like_model->active.size();i++){
-    like_model->means[i] = like_model->active[i]->val;
-    like_model->sdevs[i] = 0;
-    like_model->bests[i] = like_model->active[i]->val;
-    like_model->maps[i]  = like_model->active[i]->val;
+    like_model->maps[i]    = like_model->active[i]->val;
+    like_model->means[i]   = like_model->active[i]->val;
+    like_model->s1_low[i]  = 0;
+    like_model->s1_high[i] = 0;
   }
 
   for(int i=0;i<maxiter;i++){
@@ -51,3 +51,5 @@ void Iterator::minimize(std::map<std::string,std::string> opt,BaseLikelihoodMode
   */
 }
 
+void Iterator::output(std::string output){
+}

@@ -18,11 +18,14 @@ class BaseLikelihoodModel;
 //================================================================================================================================================
 class BaseMinimizer {
 public:
-  BaseMinimizer(){};
+  std::string name;
+  BaseMinimizer(std::string name){
+    this->name = name;
+  };
   ~BaseMinimizer(){};
 
   virtual void minimize(std::map<std::string,std::string> minimizer,BaseLikelihoodModel* mypars,const std::string output) = 0;
-  virtual void output() = 0;
+  virtual void output(std::string output) = 0;
 };
 
 
@@ -31,34 +34,38 @@ public:
 //================================================================================================================================================
 class Nothing: public BaseMinimizer {
 public:
-  Nothing(){};
+  Nothing(std::string name) : BaseMinimizer(name) {};
   ~Nothing(){};
   
   void minimize(std::map<std::string,std::string> minimizer,BaseLikelihoodModel* mypars,const std::string output);
-  void output(){};
+  void output(std::string output);
 };
 
 
 // MultiNest class
 //================================================================================================================================================
+class MultiNest: public BaseMinimizer {
+public:
+  MultiNest(std::string name) : BaseMinimizer(name) {};
+  ~MultiNest(){};
+  int counter;
+  int total_samples;
+  int replacements;
+
+  void minimize(std::map<std::string,std::string> opt,BaseLikelihoodModel* pars,const std::string output);
+  void output(std::string output);
+};
+
 struct extras{
   BaseLikelihoodModel* pars;
   std::string output;
-  int counter;
+  MultiNest* minimizer;
 };
 
 // These two functions have to be declared outside the class (declaring them static does not work) because of the definition of the nested::run function (requires function pointer, not method pointer).
 void MultiNestLogLike(double* Cube,int& ndim,int& npars,double& lnew,void* e);
 void MultiNestDumper(int& nSamples,int& nlive,int& nPar,double** physLive,double** posterior,double** paramConstr,double& maxLogLike,double& logZ,double& INSlogZ,double& logZerr,void* e);
 
-class MultiNest: public BaseMinimizer {
-public:
-  MultiNest(){};
-  ~MultiNest(){};
-  
-  void minimize(std::map<std::string,std::string> opt,BaseLikelihoodModel* pars,const std::string output);
-  void output();
-};
 
 
 
@@ -66,11 +73,12 @@ public:
 //================================================================================================================================================
 class Iterator: public BaseMinimizer {
 public:
-  Iterator(){};
+  Iterator(std::string name) : BaseMinimizer(name) {};
   ~Iterator(){};
+  int counter;
   
   void minimize(std::map<std::string,std::string> opt,BaseLikelihoodModel* mypars,const std::string output);
-  void output(){};
+  void output(std::string output);
 };
 
 
@@ -136,16 +144,16 @@ public:
     return &dum;
   }
 
-  BaseMinimizer* createMinimizer(std::map<std::string,std::string> minimizer,BaseLikelihoodModel* likeModel,const std::string output){
+  BaseMinimizer* createMinimizer(std::string name,std::map<std::string,std::string> minimizer,BaseLikelihoodModel* likeModel,const std::string output){
 
     if( minimizer["type"] == "test" ){
       printf("%-25s","using given parameters");
       fflush(stdout);
-      return new Nothing();
+      return new Nothing(name);
     } else if( minimizer["type"] == "multinest" ){
       printf("%-25s","using MultiNest");
       fflush(stdout);
-      return new MultiNest();
+      return new MultiNest(name);
       //    } else if( minimizer["type"] == "simplex" ){
       //      printf("%-25s","using Simplex");
       //      fflush(stdout);
@@ -153,7 +161,7 @@ public:
     } else if( minimizer["type"] == "iterator" ){
       printf("%-25s","using Iterator");
       fflush(stdout);
-      return new Iterator();      
+      return new Iterator(name);
     } else {
       return NULL;
     }

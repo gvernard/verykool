@@ -9,5 +9,6 @@ analysis_tools/*.aux
 analysis_tools/*.gif
 analysis_tools/*.fits
 analysis_tools/create_gridded_source
+analysis_tools/finalize_scripts/analyzed_cases/
 scripts/report.txt
 *.pyc

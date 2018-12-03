@@ -132,6 +132,7 @@ Pert::Pert(int a,int b,double c,double d,std::string reg){
 Pert::Pert(int a,int b,ImagePlane* image,std::string reg){
   this->type = "pert";
   this->dpsi = new FixedSource(a,b,image->xmin,image->xmax,image->ymin,image->ymax,reg);
+  this->dpsi->inMask(image);
 
   this->dpsi_dx = (double*) calloc(this->dpsi->Sm,sizeof(double));
   this->dpsi_dy = (double*) calloc(this->dpsi->Sm,sizeof(double));

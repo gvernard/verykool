@@ -35,7 +35,8 @@ public:
   double* s_dx;                    // source derivative in x
   double* s_dy;                    // source derivative in y
   int* mask_vertices;              // source masked pixels indices (0 masked, 1, not masked)
-  std::vector<int> in_mask;        // vector of pixel indices that are in the mask
+  std::map<int,int> in_total;      // map matching the index of the pixel inside the mask with the one in the total source plane.
+  std::map<int,int> total_in;      // the opposite from above
   double* lambda_out;              // regularization parameters lambda_out for the source pixels outside the mask (0 inside the mask)
   int Smask;                       // number of source pixels in the image mask
   std::vector<double> bound_x;     // embedding polygon vertex x-coordinates
@@ -74,6 +75,7 @@ public:
   virtual void constructDs(ImagePlane* image) = 0;
   virtual void createInterpolationWeights(ImagePlane* image) = 0;
   virtual void inMask(ImagePlane* image) = 0;
+  virtual void outputMask(const std::string path) = 0;
 
   //non-virtual members
   void normalize();
@@ -97,7 +99,8 @@ public:
   virtual void constructDs(ImagePlane* image){};
   virtual void outputSource(const std::string path);
   virtual void outputSourceErrors(double* errors,const std::string path);
-  virtual void inMask(ImagePlane* image){};
+  virtual void inMask(ImagePlane* image);
+  virtual void outputMask(const std::string path);
 
   void setGridRect(double width,double height);
   void setGridRect(double xmin,double xmax,double ymin,double ymax);
@@ -154,6 +157,7 @@ public:
   virtual void outputSource(const std::string path);
   virtual void outputSourceErrors(double* errors,const std::string path);
   virtual void inMask(ImagePlane* image);
+  virtual void outputMask(const std::string path){};
 
   void createAdaGrid(ImagePlane* image,CollectionMassModels* mycollection);
   void createDelaunay();

@@ -21,7 +21,6 @@
 #include "massModels.hpp"
 #include "tableDefinition.hpp"
 
-typedef std::map<int,double>::iterator it_int_double;
 
 
 
@@ -109,6 +108,8 @@ FixedSource::FixedSource(int i,int j,double size,std::string reg_scheme){
   y    = (double*) calloc(Sm,sizeof(double));
   s_dx = (double*) calloc(Sm,sizeof(double));
   s_dy = (double*) calloc(Sm,sizeof(double));
+  lambda_out = (double*) calloc(Sm,sizeof(double));
+  mask_vertices = (int*) calloc(Sm,sizeof(int));
 
   this->setGridRect(size,size);
   this->boundPolygon();
@@ -120,7 +121,7 @@ FixedSource::FixedSource(int i,int j,double size,std::string reg_scheme){
     eigenSparseMemoryAllocForH = 8;
   } else if( reg == "curvature" ){
     eigenSparseMemoryAllocForH = 8;
-  } else if( reg == "covariance_kernel" ){
+  } else if( reg == "covariance_kernel" || reg == "covariance_kernel_in_identity_out" ){
     // I need to call constructH() in order to set the number of non-zero entries per sparse matrix row (this number varies for a random covariance kernel).
     // This happens at the initialization of the likelihood model (BaseLikelihoodModel->initializeAlgebra()) just before setting the algebra.
     // So, do nothing here.
@@ -141,6 +142,8 @@ FixedSource::FixedSource(int i,int j,double width,double height,std::string reg_
   y    = (double*) calloc(Sm,sizeof(double));
   s_dx = (double*) calloc(Sm,sizeof(double));
   s_dy = (double*) calloc(Sm,sizeof(double));
+  lambda_out = (double*) calloc(Sm,sizeof(double));
+  mask_vertices = (int*) calloc(Sm,sizeof(int));
 
   this->setGridRect(width,height);
   this->boundPolygon();
@@ -160,6 +163,8 @@ FixedSource::FixedSource(int i,int j,double xmin,double xmax,double ymin,double 
   y    = (double*) calloc(Sm,sizeof(double));
   s_dx = (double*) calloc(Sm,sizeof(double));
   s_dy = (double*) calloc(Sm,sizeof(double));
+  lambda_out = (double*) calloc(Sm,sizeof(double));
+  mask_vertices = (int*) calloc(Sm,sizeof(int));
 
   this->setGridRect(xmin,xmax,ymin,ymax);
   this->boundPolygon();
@@ -254,6 +259,65 @@ bool FixedSource::pointInPolygon(double x,double y){
   } else {
     return true;
   }
+}
+
+//virtual
+void FixedSource::inMask(ImagePlane* image){
+  double sxmin,sxmax,symin,symax,ix,iy;
+  double dw = this->width/this->Sj;
+  double dh = this->height/this->Si;
+  int flag_in_mask;
+
+  for(int i=0;i<this->Sm;i++){
+    sxmin = this->x[i];
+    sxmax = this->x[i] + dw;
+    symax = this->y[i];
+    symin = this->y[i] - dh;
+
+    flag_in_mask = 0;
+    for(int k=0;k<image->Nm;k++){
+      if( image->S.tri[k].v == 1 ){
+	ix = image->x[k];
+	iy = image->y[k];
+	if( sxmin < ix && ix <= sxmax && symin < iy && iy <= symax ){
+	  flag_in_mask = 1;
+	  break;
+	}
+      }
+    }
+    this->mask_vertices[i] = flag_in_mask;    
+  }
+
+  int mask_count = 0;
+  for(int i=0;i<this->Sm;i++){
+    if( this->mask_vertices[i] == 1 ){
+      this->in_total[mask_count] = i;
+      this->total_in[i] = mask_count;
+      this->lambda_out[i] = 0.0;
+      mask_count++;
+    } else {
+      this->lambda_out[i] = 0.0001;
+    }
+  }
+
+  this->lambda_out_sum = 0.0;
+  for(int i=0;i<this->Sm;i++){
+    if( this->lambda_out[i] != 0 ){
+      this->lambda_out_sum += log10(this->lambda_out[i]);
+    }
+  }
+
+  this->Smask = mask_count;
+}
+
+//virtual
+void FixedSource::outputMask(const std::string filename){
+  ImagePlane* mask = new ImagePlane(this->Si,this->Sj,this->width,this->height);
+  for(int i=0;i<this->Sm;i++){
+    mask->img[i] = this->mask_vertices[i];
+  }
+  mask->writeImage(filename);
+  delete(mask);
 }
 
 //virtual
@@ -406,7 +470,7 @@ void FixedSource::constructH(){
       tmp.push_back({  (Si-1)*Sj+j,    (Si-1)*Sj+j,     1.0   });
     }
 
-  } else if ( this->reg == "curvature" ){//-------------------> second order
+  } else if ( this->reg == "curvature" || this->reg == "curvature_in_identity_out" ){//-------------------> second order
 
     this->eigenSparseMemoryAllocForH = 8;
     int Si = this->Si;
@@ -505,7 +569,7 @@ void FixedSource::constructH(){
       tmp.push_back({  (Si-1)*Sj+j,    (Si-1)*Sj+j,      1.0   });
     }
 
-  } else if ( this->reg == "covariance_kernel" ){//-------------------> covariance matrix
+  } else if ( this->reg == "covariance_kernel"  || this->reg == "covariance_in_identity_out" ){//-------------------> covariance matrix
 
     int* nonZeroRow = (int*) calloc(this->Sm,sizeof(int));
     double cov,r;
@@ -535,16 +599,15 @@ void FixedSource::constructH(){
 
   }
 
-
   this->H.tri.swap(tmp);
 }
 
 
 //virtual
-void FixedSource::outputSource(const std::string path){
+void FixedSource::outputSource(const std::string fname){
   //Write PNG:
   //writeArrayPngPP(filename,this->Sj,this->Si,this->src);
-  std::string filename = path + "vkl_source.fits";
+  std::string filename = fname;
 
   //Write FITS:
   long naxis    = 2;
@@ -571,11 +634,15 @@ void FixedSource::outputSource(const std::string path){
   long fpixel(1);
   imageExt->write(fpixel,(long) Ntot,array);
   pFits->pHDU().addKey("EXPOSURE",13,"Total Exposure Time"); 
+  pFits->pHDU().addKey("WIDTH",this->width,"width of the image"); 
+  pFits->pHDU().addKey("HEIGHT",this->height,"height of the image"); 
   pFits->pHDU().write(fpixel,Ntot,array); 
 }
 
 //virtual
-void FixedSource::outputSourceErrors(double* errors,const std::string path){}
+void FixedSource::outputSourceErrors(double* errors,const std::string fname){
+  
+}
 
 
 //Derived class from BaseSourcePlane: FloatingSource
@@ -829,7 +896,7 @@ AdaptiveSource::AdaptiveSource(int a,std::string reg_scheme){
     eigenSparseMemoryAllocForH = 8;
   } else if( reg == "curvature" ){
     eigenSparseMemoryAllocForH = 8;
-  } else if( reg == "covariance_kernel" ){
+  } else if( reg == "covariance_kernel" || reg == "covariance_kernel_in_identity_out" ){
     // I need to call constructH() in order to set the number of non-zero entries per sparse matrix row (this number varies for a random covariance kernel).
     // This happens at the initialization of the likelihood model (BaseLikelihoodModel->initializeAlgebra()) just before setting the algebra.
     // So, do nothing here.
@@ -861,7 +928,7 @@ AdaptiveSource::AdaptiveSource(std::string m,int a,int b,std::string reg_scheme)
     eigenSparseMemoryAllocForH = 8;
   } else if( reg == "curvature" ){
     eigenSparseMemoryAllocForH = 8;
-  } else if( reg == "covariance_kernel" ){
+  } else if( reg == "covariance_kernel" || reg == "covariance_kernel_in_identity_out" ){
     // I need to call constructH() in order to set the number of non-zero entries per sparse matrix row (this number varies for a random covariance kernel).
     // This happens at the initialization of the likelihood model (BaseLikelihoodModel->initializeAlgebra()) just before setting the algebra.
     // So, do nothing here.
@@ -1004,17 +1071,29 @@ void AdaptiveSource::inMask(ImagePlane* image){
     int j0    = (int) floor( (this->spacing-1)/2.0 );
     int count = 0;//must go up to Sm
     int mask_count = 0;
-    this->in_mask.resize(0);
+    this->in_total.clear();
+    this->total_in.clear();
     for(int i=i0;i<image->Ni;i=i+this->spacing){
       for(int j=j0;j<image->Nj;j=j+this->spacing){
 	if( image->S.tri[i*image->Nj+j].v == 1 ){
 	  this->mask_vertices[count] = 1;
-	  this->lambda_out[count] = 0.01; // here calculate lambda_out[count] as a function of the noise of adjacent image pixels
-	  this->in_mask.push_back(count);
+	  this->lambda_out[count] = 0.0;
+	  this->in_total[mask_count] = count;
+	  this->total_in[count] = mask_count;
 	  mask_count++;
 	} else {
 	  this->mask_vertices[count] = 0;
-	  this->lambda_out[count] = 0.0;
+	  int sep = 1;
+	  double sum = 0.0;
+	  int max = 2*sep+1;
+	  for(int ii=0;ii<max;ii++){
+	    for(int jj=0;jj<max;jj++){
+	      sum += sqrt(1.0/image->C.tri[(i-sep+ii)*image->Nj+(j-sep+jj)].v); // the covariance matrix C holds 1/noise^2
+	    }
+	  }
+	  this->lambda_out[count] = (double) max*max/sum;
+	  //	  std::cout << this->lambda_out[count] << " " << sqrt(image->C.tri[i*image->Nj+j].v) << std::endl;
+	  //	  this->lambda_out[count] = 1.09;
 	}
 	count++;
       }
@@ -1022,12 +1101,11 @@ void AdaptiveSource::inMask(ImagePlane* image){
     this->Smask = mask_count;
 
     this->lambda_out_sum = 0.0;
-    for(int i=0;i<image->Nm;i++){
+    for(int i=0;i<this->Sm;i++){
       if( this->lambda_out[i] != 0 ){
 	this->lambda_out_sum += log10(this->lambda_out[i]);
       }
     }
-
 
   } else if( this->mode == "grid" ){
 
@@ -1208,7 +1286,7 @@ void AdaptiveSource::constructH(){
       tmp.push_back({i,i,1});
     }
 
-  } else if ( this->reg == "gradient" || this->reg == "curvature" ){
+  } else if ( this->reg == "gradient" || this->reg == "curvature" || this->reg == "curvature_in_identity_out" ){
 
     for(int i=0;i<this->Sm;i++){
 
@@ -1284,8 +1362,8 @@ void AdaptiveSource::constructH(){
 	}
 	
 	//Loop through weights and add entries to H
-	for(it_int_double iterator=weights.begin();iterator!=weights.end();iterator++){
-	  tmp.push_back({i,iterator->first,iterator->second});
+	for(std::map<int,double>::iterator it2=weights.begin();it2!=weights.end();it2++){
+	  tmp.push_back({i,it2->first,it2->second});
 	  //	  std::cout << i << " " << iterator->first << " " << iterator->second << std::endl;
 	}
 	//	std::cout << i << " " << weights.size() << " " << indices.size()/2.0;
@@ -1301,23 +1379,37 @@ void AdaptiveSource::constructH(){
       //      break;
     }
     
+    /*
   } else if ( this->reg == "curvature_in_identity_out" ){
-    
-    for(int i=0;i<this->Sm;i++){
-      
-      xypoint p0 = {this->x[i],this->y[i]};
-      std::vector<int> indices = this->opposite_edges_per_vertex[i];
-      
-      if( this->mask_vertices[i] == 0 ){
+
+    this->H.Ti = this->Smask;
+    this->H.Tj = this->Smask;
+  
+    for(std::map<int,int>::iterator it=this->in_total.begin();it!=in_total.end();it++){
+      int ind_in = it->first;
+      int ind_total = it->second;
+
+      xypoint p0 = {this->x[ind_total],this->y[ind_total]};
+      std::vector<int> indices = this->opposite_edges_per_vertex[ind_total];
+
+      // check if the neighbours of the target pixel are also in the mask
+      int flag_out_of_mask = 0;
+      for(int j=0;j<indices.size();j=j+2){
+	if( this->mask_vertices[indices[j]] == 0 ){
+	  flag_out_of_mask = 1;
+	  break;
+	}
+      }
+
+      if( flag_out_of_mask == 1 ){
 	
-	tmp.push_back({i,i,1.0});
-	
+	// this pixel has neighbours that are outside the mask
+	tmp.push_back({ind_in,ind_in,1.0});
+
       } else {
-	
-	tmp.push_back({i,i,1.0});
-	/*
+
 	std::map<int,double> weights;
-	  
+	
 	for(int j=0;j<indices.size();j=j+2){
 	  double ymin = 0.0;
 	  double ymax = 0.0;
@@ -1342,9 +1434,9 @@ void AdaptiveSource::constructH(){
 	    double l2 = ((p1.y-p0.y)*(pint.x-p1.x)+(p0.x-p1.x)*(pint.y-p1.y))/((p2.y-p1.y)*(p0.x-p1.x)+(p1.x-p2.x)*(p0.y-p1.y));
 	    double l1 = 1.0 - l2;
 	    double d  = fabs(p0.x-pint.x);
-	    weights[ i            ] -= 1.0/d;
-	    weights[ indices[j]   ] += l1/d;
-	    weights[ indices[j+1] ] += l2/d;
+	    weights[ ind_in                 ] -= 1.0/d;
+	    weights[ total_in[indices[j]]   ] += l1/d;
+	    weights[ total_in[indices[j+1]] ] += l2/d;
 	  }
 
 	  //Smoothing in the y-direction
@@ -1362,24 +1454,25 @@ void AdaptiveSource::constructH(){
 	    double l2 = ((p1.y-p0.y)*(pint.x-p1.x)+(p0.x-p1.x)*(pint.y-p1.y))/((p2.y-p1.y)*(p0.x-p1.x)+(p1.x-p2.x)*(p0.y-p1.y));
 	    double l1 = 1.0 - l2;
 	    double d  = fabs(p0.y-pint.y);
-	    weights[ i            ] -= 1.0/d;
-	    weights[ indices[j]   ] += l1/d;
-	    weights[ indices[j+1] ] += l2/d;
+	    weights[ ind_in                 ] -= 1.0/d;
+	    weights[ total_in[indices[j]]   ] += l1/d;
+	    weights[ total_in[indices[j+1]] ] += l2/d;
 	  }
 
 	}
 	
 	//Loop through weights and add entries to H
-	for(it_int_double iterator=weights.begin();iterator!=weights.end();iterator++){
-	  tmp.push_back({i,iterator->first,iterator->second});
+	for(std::map<int,double>::iterator it2=weights.begin();it2!=weights.end();it2++){
+	  tmp.push_back({ind_in,it2->first,it2->second});
 	}
 	weights.clear();
-	*/
+
       }
 
     }
+    */
 
-  } else if ( this->reg == "covariance_kernel" ){//-------------------> covariance matrix
+  } else if ( this->reg == "covariance_kernel" || this->reg == "covariance_kernel_in_identity_out" ){//-------------------> covariance matrix
 
     int* nonZeroRow = (int*) calloc(this->Sm,sizeof(int));
     double cov,r;
@@ -1409,6 +1502,45 @@ void AdaptiveSource::constructH(){
 
   }
 
+    /*
+  } else if ( this->reg == "covariance_kernel_in_identity_out" ){
+
+    int* nonZeroRow = (int*) calloc(this->Sm,sizeof(int));
+    for(int i=0;i<this->Sm;i++){
+      if( this->mask_vertices[i] == 0 ){
+	
+	tmp.push_back({i,i,1.0});
+	
+      } else {
+
+	double cov,r;
+	for(int j=0;j<this->Sm;j++){
+	  if( i != j ){
+	    r = hypot(this->x[j]-this->x[i],this->y[j]-this->y[i]);
+	    cov = this->kernel->getCovariance(r);
+	  } else {
+	    cov = this->kernel->getCovarianceSelf();
+	  }
+	  if( cov > this->kernel->cmax ){
+	    tmp.push_back({i,j,cov});
+	    nonZeroRow[i]++;
+	  }
+	}
+
+      }
+    }
+
+    int maxNonZero = nonZeroRow[0];
+    for(int i=1;i<this->Sm;i++){
+      if( nonZeroRow[i] > maxNonZero ){
+	maxNonZero = nonZeroRow[i];
+      }
+    }
+    free(nonZeroRow);
+    this->eigenSparseMemoryAllocForH = maxNonZero;
+
+  }
+    */
 
   this->H.tri.swap(tmp);
 }
@@ -1592,18 +1724,6 @@ void AdaptiveSource::outputSource(const std::string path){
   typedef Voronoi::Ccb_halfedge_circulator                                     Ccb_halfedge_circulator;
   typedef K::Point_2                                                           Point;
 
-  /*
-  // Write the regularization matrix of the source as an image
-  ImagePlane matrix(this->Sm,this->Sm,1.0,1.0);
-  for(int i=0;i<this->H.tri.size();i++){
-    int nx = this->H.tri[i].i;
-    int ny = this->H.tri[i].j;
-    matrix.img[nx*this->Sm + ny] = this->H.tri[i].v;
-  }
-  matrix.writeImage(path+"Hmatrix.fits");
-  */
-
-
   //Calculate the Voronoi graph
   Voronoi voronoi;
   std::vector<Point> points;
@@ -1614,7 +1734,7 @@ void AdaptiveSource::outputSource(const std::string path){
 
   //Locate the centres of the Voronoi cells and then get the vertices of the surrounding face
   //This code is based on an online example from the CGAL voronoi package
-  std::string filename = path + "vkl_voronoi.dat";
+  std::string filename = path + "source_voronoi.dat";
   FILE* fh = fopen(filename.c_str(),"w");
   for(int i=0;i<this->Sm;i++){
 
@@ -1650,7 +1770,7 @@ void AdaptiveSource::outputSource(const std::string path){
   fclose(fh);
 
   // Output the source vertices and values
-  std::string filename2 = path + "vkl_source_irregular.dat";
+  std::string filename2 = path + "source_irregular.dat";
   FILE* fh2 = fopen(filename2.c_str(),"w");
   for(int i=0;i<this->Sm;i++){
     fprintf(fh2,"%20.5f %20.5f %20.5f\n",this->src[i],this->x[i],this->y[i]);
@@ -1681,7 +1801,7 @@ void AdaptiveSource::outputSourceErrors(double* errors,const std::string path){
 
   //Locate the centres of the Voronoi cells and then get the vertices of the surrounding face
   //This code is based on an online example from the CGAL voronoi package
-  FILE* fh = fopen((path+"vkl_voronoi_errors.dat").c_str(),"w");
+  FILE* fh = fopen((path+"source_voronoi_errors.dat").c_str(),"w");
   for(int i=0;i<this->Sm;i++){
 
     int mask_flag = 0;
