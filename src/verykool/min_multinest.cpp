@@ -211,9 +211,10 @@ void MultiNestDumper(int& nSamples,int& nlive,int& nPar,double** physLive,double
     e->pars->s1_high[i] = stats["high"];
   }
 
-  e->minimizer->output(e->output + std::to_string(e->minimizer->counter) + "_");
+  e->minimizer->output(e->output);
 }
 
+//virtual
 void MultiNest::output(std::string output){
   // Read the mn-resume file and write the number of total samples and replacements
   std::string dum;
@@ -225,7 +226,17 @@ void MultiNest::output(std::string output){
   min_out["total_samples"] = this->total_samples;
   min_out["replacements"]  = this->replacements;
 
-  std::ofstream jsonfile(output + this->name + "_minimizer_output.json");
+  std::ofstream jsonfile(output + std::to_string(this->counter) + "_" + this->name + "_minimizer_output.json");
   jsonfile << min_out;
   jsonfile.close();
+}
+
+//non-virtual
+void MultiNest::finalizeMinimizer(std::string output){
+  std::ifstream src((output + std::to_string(this->counter) + this->name + "_postdist.txt").c_str(),std::ios::binary);
+  std::ofstream dst((output + this->name + "_postdist.txt").c_str(), std::ios::binary);
+  dst << src.rdbuf();
+  std::ifstream src2((output + std::to_string(this->counter) + this->name + "_minimizer_output.json").c_str(),std::ios::binary);
+  std::ofstream dst2((output + this->name + "_minimizer_output.json").c_str(), std::ios::binary);
+  dst2 << src2.rdbuf();
 }

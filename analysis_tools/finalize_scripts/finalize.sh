@@ -43,13 +43,27 @@ python plot_corner.py $path $run $lmodel $step
 
 
 #########################################
+echo ' >>> plotting residual power spectrum...'
+python plot_pow_spec.py ${out_path}residual.fits ${path}data/mask.fits
+mv ps.pdf residual_ps.pdf
+
+
+#########################################
+echo ' >>> plotting source (and pert) power spectrum...'
+python plot_source_pow_spec.py $path $run $lmodel $step
+if [ "$lmodel" = "pert" ]; then
+    python plot_dpsi_pow_spec.py $path $run $lmodel $step
+fi
+
+
+#########################################
 echo ' >>> producing latex tables...'
 php latex.php $path $run $lmodel $step
 
 
 #########################################
 echo ' >>> producing latex document...'
-pdflatex report.tex > /dev/null 
+pdflatex report.tex > /dev/null
 cp report.pdf ${path}${run}report.pdf
 mv report.pdf $target
 
@@ -79,10 +93,14 @@ mv masked_residual.fits $target/masked_residual.fits
 #########################################
 echo ' >>> collecting and packaging remaining files...'
 # move the plots after the latex document is produced
-mv all.png $target/
 mv all.pdf $target/
 if [ -f corner.pdf ]; then
     mv corner.pdf $target/
+fi
+mv source_ps.pdf $target/
+mv residual_ps.pdf $target/
+if [ -f dpsi_ps.pdf ]; then
+    mv dpsi_ps.pdf $target/
 fi
 
 cp ${path}data/mask.fits $target/

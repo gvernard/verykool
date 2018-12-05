@@ -4,7 +4,7 @@ echo | cat > scripts/report.txt
 
 
 
-path="VKL_MODELS/double_ring/dorota_larger/"
+path="VKL_MODELS/double_ring/dorotas_data/"
 
 # Scan the given path and create alist with all the names (except 'data')
 ##names=(`find $path -type d -exec basename {} \;`)
@@ -14,7 +14,7 @@ path="VKL_MODELS/double_ring/dorota_larger/"
 
 
 # Custom array of run names that are found in 'path'
-declare -a runs=("base_run_n4" "base_run_n5")
+declare -a runs=("n4" "n3" "n2" "n1")
 
 
 for run in "${runs[@]}"; do

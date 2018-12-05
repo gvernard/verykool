@@ -58,7 +58,7 @@ int main(int argc,char* argv[]){
 
   // Finalize output etc
   Initialization::finalizeLikelihoodModel(init->output,smooth_like);
-  //smooth_minimizer->output(init->output);
+  smooth_minimizer->finalizeMinimizer(init->output);
 
   delete(smooth_minimizer);
   //================= END:SMOOTH MODEL =========================
@@ -111,7 +111,7 @@ int main(int argc,char* argv[]){
     fflush(stdout);
 
     Initialization::finalizeLikelihoodModel(init->output,pert_like);
-    //pert_minimizer->output();
+    pert_minimizer->finalizeMinimizer(init->output);
     
     delete(pert_minimizer);
   }

@@ -1,4 +1,4 @@
-from getdist import plots,chains,mcsamples
+from getdist import plots,chains,MCSamples,loadMCSamples
 import numpy as np
 import sys
 import json
@@ -37,21 +37,20 @@ copyfile(out_path+"_postdist.ranges","plt_corner.ranges")
 ### get the active parameter names from verykool
 ###################################################################################################################
 names,labels = np.genfromtxt('plt_corner.paramnames',dtype='str',unpack=True)
+labels = [w.replace('_', '-') for w in labels]
 
 
 
 ### Create the corner plot
 ###################################################################################################################
-#g = plots.getSubplotPlotter(chain_dir=rootdir,analysis_settings={'ignore_rows': 110},subplot_size=4)
-#g = plots.getSubplotPlotter(chain_dir=rootdir,analysis_settings={"ignore_rows": 0.0,"smooth_scale_2D":0.9,"mult_bias_correction_order":1},subplot_size=4)
-g = plots.getSubplotPlotter(chain_dir=".",analysis_settings={"ignore_rows": 0.0,"smooth_scale_2D":0.9,"mult_bias_correction_order":1},subplot_size=4)
-##g.settings.axes_fontsize = 25
-##g.settings.lab_fontsize = 25
+ena = loadMCSamples("./plt_corner",settings={"ignore_rows": 0.0,"smooth_scale_2D":0.9,"mult_bias_correction_order":1})
+
+for i in range(0,len(ena.getParamNames().names)):
+    ena.getParamNames().names[i].label = labels[i]
+
+g = plots.getSubplotPlotter(subplot_size=4)
 g.settings.rcSizes()
-#g.triangle_plot(['plt_corner'],names,filled=True,smooth_scale_2D=3,smooth_scale_1D=3,mult_bias_correction_order=-1)
-g.triangle_plot(['plt_corner'],names,filled=True)
-
-
+g.triangle_plot([ena],filled=True)
 
 
 ### Plot the true values if available (mock data) or do nothing (if true data)

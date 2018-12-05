@@ -70,6 +70,7 @@ void BaseLikelihoodModel::printTerms(){
 
 //non-virtual
 double BaseLikelihoodModel::getLogLike(){
+  this->terms["evidence"] = 0.0;
   double sum = 0.0;
   for(std::unordered_map<std::string,double>::iterator it=this->terms.begin();it!=this->terms.end();it++){
     sum += it->second;
@@ -420,6 +421,12 @@ void SmoothLikelihood::updateLikelihoodModel(){
 
 //virtual
 void SmoothLikelihood::initialOutputLikelihoodModel(std::string output){
+  Json::Value json_initial;
+  json_initial["something"] = 3;
+
+  std::ofstream jsonfile(output+"smooth_initial_output.json");
+  jsonfile << json_initial;
+  jsonfile.close();
 }
 
 //virtual
@@ -849,6 +856,14 @@ void PertLikelihood::updateLikelihoodModel(){
 //virtual
 void PertLikelihood::initialOutputLikelihoodModel(std::string output){
   this->pert_mass_model->dpsi->outputMask(output + "pert_dpsi_mask.fits");
+
+  Json::Value json_initial;
+  json_initial["something"] = 3;
+
+  std::ofstream jsonfile(output+"pert_initial_output.json");
+  jsonfile << json_initial;
+  jsonfile.close();
+
   //  std::cout << "Sample_reg for source: " << this->source->sample_reg << " " << this->source->reg <<  std::endl;
   //  std::cout << "Sample_reg for perturbations: " << this->pert_mass_model->dpsi->sample_reg << " " << this->pert_mass_model->dpsi->reg << std::endl;
 }
@@ -1093,6 +1108,12 @@ void PertIterationLikelihood::updateLikelihoodModel(){
 
 //virtual
 void PertIterationLikelihood::initialOutputLikelihoodModel(std::string output){
+  Json::Value json_initial;
+  json_initial["something"] = 3;
+
+  std::ofstream jsonfile(output+"pert_initial_output.json");
+  jsonfile << json_initial;
+  jsonfile.close();
 }
 
 //virtual

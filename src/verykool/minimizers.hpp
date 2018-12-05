@@ -19,6 +19,7 @@ class BaseLikelihoodModel;
 class BaseMinimizer {
 public:
   std::string name;
+  std::string type;
   BaseMinimizer(std::string name){
     this->name = name;
   };
@@ -26,6 +27,7 @@ public:
 
   virtual void minimize(std::map<std::string,std::string> minimizer,BaseLikelihoodModel* mypars,const std::string output) = 0;
   virtual void output(std::string output) = 0;
+  virtual void finalizeMinimizer(std::string output) = 0;
 };
 
 
@@ -34,11 +36,14 @@ public:
 //================================================================================================================================================
 class Nothing: public BaseMinimizer {
 public:
-  Nothing(std::string name) : BaseMinimizer(name) {};
+  Nothing(std::string name) : BaseMinimizer(name) {
+    this->type = "nothing";
+  };
   ~Nothing(){};
   
   void minimize(std::map<std::string,std::string> minimizer,BaseLikelihoodModel* mypars,const std::string output);
   void output(std::string output);
+  void finalizeMinimizer(std::string output){};
 };
 
 
@@ -46,7 +51,9 @@ public:
 //================================================================================================================================================
 class MultiNest: public BaseMinimizer {
 public:
-  MultiNest(std::string name) : BaseMinimizer(name) {};
+  MultiNest(std::string name) : BaseMinimizer(name) {
+    this->type = "multinest";
+  };
   ~MultiNest(){};
   int counter;
   int total_samples;
@@ -54,6 +61,7 @@ public:
 
   void minimize(std::map<std::string,std::string> opt,BaseLikelihoodModel* pars,const std::string output);
   void output(std::string output);
+  void finalizeMinimizer(std::string output);
 };
 
 struct extras{
@@ -73,12 +81,15 @@ void MultiNestDumper(int& nSamples,int& nlive,int& nPar,double** physLive,double
 //================================================================================================================================================
 class Iterator: public BaseMinimizer {
 public:
-  Iterator(std::string name) : BaseMinimizer(name) {};
+  Iterator(std::string name) : BaseMinimizer(name) {
+    this->type = "iterator";
+  };
   ~Iterator(){};
   int counter;
   
   void minimize(std::map<std::string,std::string> opt,BaseLikelihoodModel* mypars,const std::string output);
   void output(std::string output);
+  void finalizeMinimizer(std::string output){};
 };
 
 

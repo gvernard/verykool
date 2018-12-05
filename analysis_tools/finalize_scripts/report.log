@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.1415926-2.5-1.40.14 (TeX Live 2013) (format=pdflatex 2018.10.2)  3 DEC 2018 12:25
+This is pdfTeX, Version 3.1415926-2.5-1.40.14 (TeX Live 2013) (format=pdflatex 2018.10.2)  4 DEC 2018 15:48
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -268,56 +268,69 @@ e
 * \@reversemarginfalse
 * (1in=72.27pt=25.4mm, 1cm=28.453pt)
 
-(./title.tex) <all.png, id=1, 859.2903pt x 542.025pt>
-File: all.png Graphic file (type png)
- <use all.png>
-Package pdftex.def Info: all.png used on input line 13.
-(pdftex.def)             Requested size: 469.75502pt x 296.31166pt.
-
-(./table3.tex
+(./title.tex) (./table3.tex
 LaTeX Font Info:    Try loading font information for U+msa on input line 1.
- (/usr/share/texlive/texmf-dist/tex/latex/amsfonts/umsa.fd
+
+(/usr/share/texlive/texmf-dist/tex/latex/amsfonts/umsa.fd
 File: umsa.fd 2013/01/14 v3.01 AMS symbols A
 )
 LaTeX Font Info:    Try loading font information for U+msb on input line 1.
 
 (/usr/share/texlive/texmf-dist/tex/latex/amsfonts/umsb.fd
 File: umsb.fd 2013/01/14 v3.01 AMS symbols B
-)) (./table1.tex)
-(./table2.tex) [1
+)) [1
 
-{/usr/share/texlive/texmf-var/fonts/map/pdftex/updmap/pdftex.map} <./all.png>] 
-<corner.pdf, id=13, 2561.9714pt x 2561.9714pt>
+{/usr/share/texlive/texmf-var/fonts/map/pdftex/updmap/pdftex.map}] (./table1.te
+x) (./table2.tex) <all.pdf, id=10, 859.82289pt x 541.37505pt>
+File: all.pdf Graphic file (type pdf)
+ <use all.pdf>
+Package pdftex.def Info: all.pdf used on input line 20.
+(pdftex.def)             Requested size: 469.75502pt x 295.77461pt.
+ [2] [3 <./all.pdf>]
+<residual_ps.pdf, id=83, 714.28967pt x 436.08824pt>
+File: residual_ps.pdf Graphic file (type pdf)
+ <use residual_ps.pdf>
+Package pdftex.def Info: residual_ps.pdf used on input line 32.
+(pdftex.def)             Requested size: 234.8775pt x 143.39719pt.
+
+<source_ps.pdf, id=84, 714.28967pt x 436.08824pt>
+File: source_ps.pdf Graphic file (type pdf)
+ <use source_ps.pdf>
+Package pdftex.def Info: source_ps.pdf used on input line 37.
+(pdftex.def)             Requested size: 234.8775pt x 143.39719pt.
+ [4 <./residual_ps.pdf> <./source_ps.pdf
+
+pdfTeX warning: pdflatex (file ./source_ps.pdf): PDF inclusion: multiple pdfs w
+ith page group included in a single page
+>] <corner.pdf, id=149, 2561.9714pt x 2561.9714pt>
 File: corner.pdf Graphic file (type pdf)
-
-<use corner.pdf>
-Package pdftex.def Info: corner.pdf used on input line 33.
+ <use corner.pdf>
+Package pdftex.def Info: corner.pdf used on input line 59.
 (pdftex.def)             Requested size: 469.75502pt x 469.7353pt.
- [2
+ [5
 
- <./corner.pdf>] (./report.aux)
 
-LaTeX Warning: Label(s) may have changed. Rerun to get cross-references right.
 
- ) 
+ <./corner.pdf>] (./report.aux) ) 
 Here is how much of TeX's memory you used:
- 2989 strings out of 494820
- 39867 string characters out of 3178049
- 101008 words of memory out of 3000000
- 6123 multiletter control sequences out of 15000+200000
+ 3003 strings out of 494820
+ 40094 string characters out of 3178049
+ 104048 words of memory out of 3000000
+ 6135 multiletter control sequences out of 15000+200000
  8891 words of font info for 34 fonts, out of 3000000 for 9000
  198 hyphenation exceptions out of 8191
- 38i,10n,32p,260b,253s stack positions out of 5000i,500n,10000p,200000b,50000s
-</usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmbx12.pfb></us
-r/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi12.pfb></usr/shar
-e/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi8.pfb></usr/share/texli
-ve/texmf-dist/fonts/type1/public/amsfonts/cm/cmr12.pfb></usr/share/texlive/texm
-f-dist/fonts/type1/public/amsfonts/cm/cmr17.pfb></usr/share/texlive/texmf-dist/
-fonts/type1/public/amsfonts/cm/cmsy10.pfb>
-Output written on report.pdf (2 pages, 702598 bytes).
+ 38i,10n,32p,283b,255s stack positions out of 5000i,500n,10000p,200000b,50000s
+</usr/share/texlive/texmf-dist/fonts/type1/pub
+lic/amsfonts/cm/cmbx12.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/am
+sfonts/cm/cmmi12.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts
+/cm/cmmi8.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmr
+12.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmr17.pfb>
+</usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmr8.pfb></usr/sh
+are/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy10.pfb>
+Output written on report.pdf (5 pages, 689425 bytes).
 PDF statistics:
- 49 PDF objects out of 1000 (max. 8388607)
- 35 compressed objects within 1 object stream
+ 189 PDF objects out of 1000 (max. 8388607)
+ 84 compressed objects within 1 object stream
  0 named destinations out of 1000 (max. 500000)
- 11 words of extra memory for PDF output out of 10000 (max. 10000000)
+ 21 words of extra memory for PDF output out of 10000 (max. 10000000)
 

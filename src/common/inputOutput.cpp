@@ -239,7 +239,7 @@ void Initialization::finalizeLikelihoodModel(std::string output,BaseLikelihoodMo
   likeModel->printTerms();
   printf("\n");
   likeModel->outputLikelihoodModel(output);
-  
+
   printf("%+7s\n","...done");
   std::cout << std::string(200,'=') << std::endl;
   fflush(stdout);  

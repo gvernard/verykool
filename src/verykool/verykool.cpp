@@ -67,7 +67,7 @@ int main(int argc,char* argv[]){
   // Finalize output etc
   if( myrank == 0 ){
     Initialization::finalizeLikelihoodModel(init->output,smooth_like);
-    //smooth_minimizer->output(init->output);
+    smooth_minimizer->finalizeMinimizer(init->output);
   }
 
   delete(smooth_minimizer);
@@ -98,7 +98,6 @@ int main(int argc,char* argv[]){
       pert_pointer->initializePert(smooth_pointer);      
     }
 
-
     printf("%-25s","Starting perturbation minimization ");
     fflush(stdout);
     
@@ -109,10 +108,9 @@ int main(int argc,char* argv[]){
     std::cout << std::string(200,'=') << std::endl;
     fflush(stdout);
 
-    
     if( myrank == 0 ){
       Initialization::finalizeLikelihoodModel(init->output,pert_like);
-      //pert_minimizer->output(init->output);
+      pert_minimizer->finalizeMinimizer(init->output);
     }
     
     delete(pert_minimizer);
