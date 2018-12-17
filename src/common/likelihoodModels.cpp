@@ -421,8 +421,15 @@ void SmoothLikelihood::updateLikelihoodModel(){
 
 //virtual
 void SmoothLikelihood::initialOutputLikelihoodModel(std::string output){
+  // generic quantities computed in the code (smooth part)
   Json::Value json_initial;
-  json_initial["something"] = 3;
+  json_initial["Ndata"]   = this->image->Nm;
+  json_initial["Nmask"]   = this->image->Nmask;
+  json_initial["Psize"]   = this->image->width/this->image->Ni;
+  json_initial["Nsource"] = this->source->Sm;
+  json_initial["Nsource_mask"] = this->source->Smask;
+  json_initial["reg_source"]        = this->source->reg;
+  json_initial["sample_reg_source"] = this->source->sample_reg;
 
   std::ofstream jsonfile(output+"smooth_initial_output.json");
   jsonfile << json_initial;
@@ -492,16 +499,7 @@ void SmoothLikelihood::outputLikelihoodModel(std::string output){
   Json::Value json_active = this->getActiveJson();
   json_output["json_active"] = json_active;
 
-  // 4: generic quantities computed in the code (smooth part)
-  Json::Value other;
-  other["Ndata"]   = this->image->Nm;
-  other["Nmask"]   = this->image->Nmask;
-  other["Psize"]   = this->image->width/this->image->Ni;
-  other["Nsource"] = this->source->Sm;
-  other["Nsource_mask"] = this->source->Smask;
-  json_output["generic"] = other;
-
-  // 5: likelihood terms
+  // 4: likelihood terms
   Json::Value terms;
   for(std::unordered_map<std::string,double>::iterator it=this->terms.begin();it!=this->terms.end();it++){
     terms[it->first] = it->second;
@@ -511,8 +509,6 @@ void SmoothLikelihood::outputLikelihoodModel(std::string output){
   std::ofstream jsonfile(output+"smooth_output.json");
   jsonfile << json_output;
   jsonfile.close();
-
-
 
   /*  
   // Write linear Dpsi
@@ -544,7 +540,6 @@ void SmoothLikelihood::outputLikelihoodModel(std::string output){
   */
 }
 
-
 void SmoothLikelihood::deriveLinearDpsi(Pert* pert_mass_model,ImagePlane* img_grid){
   // calculate the residuals (smooth modelling residuals)
   this->getModel();
@@ -570,6 +565,7 @@ void SmoothLikelihood::deriveLinearDpsi(Pert* pert_mass_model,ImagePlane* img_gr
 
   //  this->algebra->solveDpsi(pert_mass_model,this->image,this->source);
 }
+
 
 
 
@@ -800,17 +796,16 @@ void PertLikelihood::initializePert(SmoothLikelihood* smooth_like){
   for(int i=0;i<this->source->Sm;i++){
     this->source->src[i] = this->smooth_like->source->src[i];
   }
+
   // Get derivative and regularization matrix
   this->source->constructDs(this->smooth_like->image);
   this->source->constructH();
-
 
   // Initialize Pert
   this->pert_mass_model->createCrosses(this->smooth_like->image);
   this->pert_mass_model->dpsi->constructH();
 
-
-  this->initializeAlgebra();  
+  this->initializeAlgebra();
 }
 
 //virtual
@@ -857,15 +852,24 @@ void PertLikelihood::updateLikelihoodModel(){
 void PertLikelihood::initialOutputLikelihoodModel(std::string output){
   this->pert_mass_model->dpsi->outputMask(output + "pert_dpsi_mask.fits");
 
+  // generic quantities computed in the code (perturbations part)
   Json::Value json_initial;
-  json_initial["something"] = 3;
+  json_initial["Ndata"]        = this->smooth_like->image->Nm;
+  json_initial["Nmask"]        = this->smooth_like->image->Nmask;
+  json_initial["Psize"]        = this->smooth_like->image->width/this->smooth_like->image->Ni;
+  json_initial["Npert"]        = this->pert_mass_model->dpsi->Sm;
+  json_initial["Npert_mask"]   = this->pert_mass_model->dpsi->Smask;
+  json_initial["Ppert_size"]   = this->pert_mass_model->dpsi->width/this->pert_mass_model->dpsi->Sj;
+  json_initial["Nsource"]      = this->source->Sm;
+  json_initial["Nsource_mask"] = this->source->Smask;
+  json_initial["reg_source"]        = this->source->reg;
+  json_initial["sample_reg_source"] = this->source->sample_reg;
+  json_initial["reg_dpsi"]          = this->pert_mass_model->dpsi->reg;
+  json_initial["sample_reg_dpsi"]   = this->pert_mass_model->dpsi->sample_reg;
 
   std::ofstream jsonfile(output+"pert_initial_output.json");
   jsonfile << json_initial;
   jsonfile.close();
-
-  //  std::cout << "Sample_reg for source: " << this->source->sample_reg << " " << this->source->reg <<  std::endl;
-  //  std::cout << "Sample_reg for perturbations: " << this->pert_mass_model->dpsi->sample_reg << " " << this->pert_mass_model->dpsi->reg << std::endl;
 }
 
 //virtual
@@ -966,19 +970,7 @@ void PertLikelihood::outputLikelihoodModel(std::string output){
   Json::Value json_active = this->getActiveJson();
   json_output["json_active"] = json_active;
 
-  // 4: generic quantities computed in the code (perturbations part)
-  Json::Value other;
-  other["Ndata"]        = this->smooth_like->image->Nm;
-  other["Nmask"]        = this->smooth_like->image->Nmask;
-  other["Psize"]        = this->smooth_like->image->width/this->smooth_like->image->Ni;
-  other["Npert"]        = this->pert_mass_model->dpsi->Sm;
-  other["Npert_mask"]   = this->pert_mass_model->dpsi->Smask;
-  other["Ppert_size"]   = this->pert_mass_model->dpsi->width/this->pert_mass_model->dpsi->Sj;
-  other["Nsource"]      = this->source->Sm;
-  other["Nsource_mask"] = this->source->Smask;
-  json_output["generic"] = other;
-
-  // 5: likelihood terms
+  // 4: likelihood terms
   Json::Value terms;
   for(std::unordered_map<std::string,double>::iterator it=this->terms.begin();it!=this->terms.end();it++){
     terms[it->first] = it->second;
@@ -1052,10 +1044,6 @@ void PertIterationLikelihood::initializePert(SmoothLikelihood* smooth_like){
   this->initializeAlgebra();
 }
 
-
-
-
-
 //virtual
 void PertIterationLikelihood::initializeAlgebra(){
   this->algebra->setAlgebraInit(this->source,this->pert_mass_model);
@@ -1104,18 +1092,6 @@ void PertIterationLikelihood::updateLikelihoodModel(){
   pert_pointer->updatePert();
 }
 
-
-
-//virtual
-void PertIterationLikelihood::initialOutputLikelihoodModel(std::string output){
-  Json::Value json_initial;
-  json_initial["something"] = 3;
-
-  std::ofstream jsonfile(output+"pert_initial_output.json");
-  jsonfile << json_initial;
-  jsonfile.close();
-}
-
 //virtual
 void PertIterationLikelihood::outputLikelihoodModel(std::string output){
   // Output reconstructed source
@@ -1125,74 +1101,69 @@ void PertIterationLikelihood::outputLikelihoodModel(std::string output){
   BaseSourcePlane* dum_source = this->smooth_like->source;
   this->smooth_like->source = this->source;
 
+  // Output errors of reconstructed source
+  double* errors = (double*) calloc(this->source->Sm,sizeof(double));
+  this->smooth_like->algebra->getSourceErrors(this->source->Sm,errors);
+  this->smooth_like->source->outputSourceErrors(errors,output + "pert_");
+  free(errors);
+
   // Create mock data (lensed MAP source)
   this->smooth_like->getModel();
-  this->smooth_like->model->writeImage(output + "pert_image.fits");
+  this->smooth_like->model->writeImage(output + "pert_model.fits");
   
   // Output residual image (diference between mydata and mock_data)
   this->smooth_like->getResidual();
   this->smooth_like->res->writeImage(output + "pert_residual.fits");
   
-  // Output errors of reconstructed source
-  double* errors = (double*) calloc(this->source->Sm,sizeof(double));
-  this->smooth_like->algebra->getSourceErrors(this->source->Sm,errors);
-  this->smooth_like->source->outputSourceErrors(errors,output);
-  free(errors);
-
   // Replace source pointer in the smooth model with the previous source
   this->smooth_like->source = dum_source;
 
   // Output last perturbations (corrections)
-  this->pert_mass_model->dpsi->outputSource(output + "perturbations_");
+  this->pert_mass_model->dpsi->outputSource(output + "pert_dpsi.fits");
 
   // Output added perturbations
   Pert* pert_pointer = dynamic_cast<Pert*>(this->collection->models.back());
-  pert_pointer->dpsi->outputSource(output + "added_perturbations_"); // output additive perturbations
+  pert_pointer->dpsi->outputSource(output + "pert_added_dpsi.fits"); // output additive perturbations
 
   // Output convergence
   ImagePlane* kappa = new ImagePlane(pert_pointer->dpsi->Si,pert_pointer->dpsi->Sj,pert_pointer->dpsi->width,pert_pointer->dpsi->height);
   pert_pointer->getConvergence(kappa);
-  kappa->writeImage(output + "added_convergence.fits");
+  kappa->writeImage(output + "pert_added_convergence.fits");
   delete(kappa);
 
-  /*
   // Output various quantities in json format
   Json::Value json_output;
-
-  // Print and write to json the MAP parameters from the parameter model
-  Json::Value pars;
-  std::vector<std::string> all_names = this->getAllNames();
-  std::vector<double> all_values = this->getAllValues();
-  for(int i=0;i<all_names.size();i++){
-    std::cout << all_names[i] << " " << all_values[i] << std::endl;
-    pars[all_names[i]] = all_values[i];
-  }
-  json_output["full_pars"] = pars;
   
-  Json::Value full_active;
-  std::vector<std::string> names = this->getActiveNames();
-  std::vector<double> values = this->getActiveValues();
+  // Print and write to json the parameters and their associated uncertainties from the parameter model
+  // 1: collapsed list of ALL the parameter names and MAP values
+  Json::Value pars;
+  std::vector<double> values;
+  std::vector<std::string> names;
+  this->getAllNamesValues(names,values);
   for(int i=0;i<names.size();i++){
-    collapsed_active[names[i]] = values[i];
+    pars[names[i]] = values[i];
+  }
+  json_output["collapsed_all"] = pars;
+  
+  // 2: collapsed list of the ACTIVE parameter names and MAP, mean, 1-sigma lower and 1-sigma upper bounds
+  Json::Value collapsed_active;
+  for(int i=0;i<this->active_names.size();i++){
+    Json::Value active_par;
+    active_par["map"]     = this->maps[i];
+    active_par["mean"]    = this->means[i];
+    active_par["s1_low"]  = this->s1_low[i];
+    active_par["s1_high"] = this->s1_high[i];
+    collapsed_active[this->active_names[i]] = active_par;
   }
   json_output["collapsed_active"] = collapsed_active;
   
-  // Write structured active parameter names and values
+  // 3: same as above, but the non-linear parameter json structure is preserved
   Json::Value json_active = this->getActiveJson();
   json_output["json_active"] = json_active;
 
-  // Write generic parameters
-  Json::Value other;
-  other["Nsource"] = this->source->Sm;
-  other["Ndata"]   = this->image->Nm;
-  other["Nmask"]   = this->image->Nmask;
-  other["Psize"]   = this->image->width/this->image->Ni;
-  json_output["generic"] = other;
-
-  // Write likelihood terms
+  // 4: likelihood terms
   Json::Value terms;
-  std::map<std::string,double>::iterator it;
-  for(it=this->terms.begin();it!=this->terms.end();it++){
+  for(std::unordered_map<std::string,double>::iterator it=this->terms.begin();it!=this->terms.end();it++){
     terms[it->first] = it->second;
   }
   json_output["terms"] = terms;
@@ -1200,7 +1171,6 @@ void PertIterationLikelihood::outputLikelihoodModel(std::string output){
   std::ofstream jsonfile(output+"pert_output.json");
   jsonfile << json_output;
   jsonfile.close();
-  */
 }
 
 

@@ -356,7 +356,7 @@ void Pert::createCrosses(ImagePlane* image){
   int rel_ind[3];   // to hold the finite difference coefficients for 
   double coeffs[3];
   int cross_index;
-  
+
   for(int h=0;h<image->Nm;h++){
     // Step 1: find the i-j indices of the top-left point in the dpsi grid, in the dpsi pixel where the ray lies (in the image plane)
     j0 = floor( (image->x[h] - this->dpsi->xmin)/this->dj );

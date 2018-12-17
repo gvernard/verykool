@@ -16,15 +16,15 @@ if( count($argv) == 4 ){
 }
 
 
-$dum = file_get_contents($path . $run .  'vkl_input.json');
+$dum = file_get_contents($path . $run .  "vkl_input.json");
 $dum = preg_replace("#(/\*([^*]|[\r\n]|(\*+([^*/]|[\r\n])))*\*+/)|([\s\t]//.*)|(^//.*)#", '', $dum);
 $inp = json_decode($dum,true);
 
-$dum = file_get_contents($out_path . '_output.json');
-$out = json_decode($dum,true);
+$dum = file_get_contents($path . $run . "output/" . $lmodel . "_initial_output.json");
+$ini = json_decode($dum,true);
 
-$dum = file_get_contents($out_path . '_minimizer_output.json');
-$min = json_decode($dum,true);
+$dum = file_get_contents($out_path . "_output.json");
+$out = json_decode($dum,true);
 
 $use_truth = false;
 if( $use_truth ){
@@ -136,25 +136,41 @@ $str .= '\begin{tabular}{ r l l }';
 
 $str .= '\hline';
 
-$str .= ' $N_{data}$        & number of data pixels             & ' . $out["generic"]["Ndata"] . ' \\\\ ' . "\n";
-$str .= ' $N_{mask}$        & number of data pixels in the mask & ' . $out["generic"]["Nmask"] . ' \\\\ ' . "\n";
-$str .= ' $N_{source}$      & number of source pixels           & ' . $out["generic"]["Nsource"] . ' \\\\ ' . "\n";
-$str .= ' $N_{source mask}$ & number of source pixels in mask   & ' . $out["generic"]["Nsource_mask"] . ' \\\\ ' . "\n";
+$str .= ' $N_{data}$        & number of data pixels             & ' . $ini["Ndata"] . ' \\\\ ' . "\n";
+$str .= ' $N_{mask}$        & number of data pixels in the mask & ' . $ini["Nmask"] . ' \\\\ ' . "\n";
+$str .= ' $N_{source}$      & number of source pixels           & ' . $ini["Nsource"] . ' \\\\ ' . "\n";
+$str .= ' $N_{source mask}$ & number of source pixels in mask   & ' . $ini["Nsource_mask"] . ' \\\\ ' . "\n";
 if( $inp['noise_flag'] == 'uniform' ){
     $cov = trim(file_get_contents($path . "data/noise.dat"));
     $str .= ' $C_D$        & covariance of the data            & uniform(' . $cov . ') \\\\ ' . "\n";
 } else if( $inp['noise_flag'] == 'map' ){
     $str .= ' $C_D$        & covariance of the data            & map \\\\ ' . "\n";
 }
-$str .= ' $P_{data}$   & size of data pixels               & ' . sprintf("%10.4f",$out["generic"]["Psize"]) . ' \\\\ ' . "\n";
+$str .= ' $P_{data}$   & size of data pixels               & ' . sprintf("%10.4f",$ini["Psize"]) . ' \\\\ ' . "\n";
 $str .= '\hline ';
+
+if( $lmodel == "pert" ){
+    $str .= ' $N_{pert}$       & number of $\delta\psi$ pixels             & ' . $ini["Npert"] . ' \\\\ ' . "\n";
+    $str .= ' $N_{pert-mask}$  & number of $\delta\psi$ pixels in the mask & ' . $ini["Npert_mask"] . ' \\\\ ' . "\n";
+    $str .= ' $P_{pert}$       & size of $\delta\psi$ pixels               & ' . sprintf("%10.4f",$ini["Ppert_size"]) . ' \\\\ ' . "\n";
+}
+
 if( $lmodel == "smooth" and $inp["minimizer"]["type"] == "multinest"){
+    $dum = file_get_contents($out_path . '_minimizer_output.json');
+    $min = json_decode($dum,true);
     $str .= ' $N_{iter}$   & number of MultiNest iterations    & ' . $min['total_samples'] . ' \\\\ ' . "\n";
     $str .= ' $N_{repl}$   & number of live point replacements & ' . $min['replacements'] . ' \\\\ ' . "\n";
 }
 if( $lmodel == "pert" and $inp["perturbations"]["minimizer"]["type"] == "multinest"){
+    $dum = file_get_contents($out_path . '_minimizer_output.json');
+    $min = json_decode($dum,true);
     $str .= ' $N_{iter}$   & number of MultiNest iterations    & ' . $min['total_samples'] . ' \\\\ ' . "\n";
     $str .= ' $N_{repl}$   & number of live point replacements & ' . $min['replacements'] . ' \\\\ ' . "\n";
+}
+if( $lmodel == "pert" and $inp["minimizer"]["type"] == "iterator"){
+    $dum = file_get_contents($out_path . '_minimizer_output.json');
+    $min = json_decode($dum,true);
+    $str .= ' $N_{iter}$   & number of iterations    & ' . $min['itarations'] . ' \\\\ ' . "\n";
 }
 
 $str .= '\hline';

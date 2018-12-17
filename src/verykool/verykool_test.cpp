@@ -82,11 +82,8 @@ int main(int argc,char* argv[]){
   
   
 
-
   //=============== BEGIN:PERTURBATIONS =========================
   if( init->perturbations.size() > 0 ){
-    pert_like->initialOutputLikelihoodModel(init->output);
-
     //Initialize perturbations
     SmoothLikelihood* smooth_pointer = dynamic_cast<SmoothLikelihood*>(smooth_like);
 
@@ -99,6 +96,7 @@ int main(int argc,char* argv[]){
       pert_pointer->initializePert(smooth_pointer);      
     }
 
+    pert_like->initialOutputLikelihoodModel(init->output);
 
     printf("%-25s","Starting perturbation minimization ");
     fflush(stdout);

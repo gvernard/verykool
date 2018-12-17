@@ -336,8 +336,8 @@ else:
     max_pert_true = 0
 
 # Read reconstructed perturbations
-if os.path.isfile(out_path+'added_perturbations_vkl_source.fits'):
-    im_pert = fits.getdata(out_path+'added_perturbations_vkl_source.fits',ext=0)
+if os.path.isfile(out_path+'pert_added_dpsi.fits'):
+    im_pert = fits.getdata(out_path+'pert_added_dpsi.fits',ext=0)
     pert_title = "ADDED RECONSTRUCTION"
 else:
     im_pert = fits.getdata(out_path+'pert_dpsi.fits',ext=0)
@@ -406,10 +406,12 @@ else:
     max_conv_true = 0
 
 # Read reconstructed convergence
-if os.path.isfile(out_path+'added_convergence.fits'):
-    im_conv = fits.getdata(out_path+'added_convergence.fits',ext=0)
+if os.path.isfile(out_path+'pert_added_convergence.fits'):
+    im_conv = fits.getdata(out_path+'pert_added_convergence.fits',ext=0)
+    conv_title = "ADDED CONVERGENCE"
 else:
     im_conv = fits.getdata(out_path+'pert_convergence.fits',ext=0)
+    conv_title = "CONVERGENCE"
 im_conv = im_conv[::-1,:]
 
 # Set color scale
@@ -443,7 +445,7 @@ else:
 
 # Plot reconstructed convergence
 conv = fig.add_subplot(4,3,11)
-conv.set_title('CONVERGENCE')
+conv.set_title(conv_title)
 conv.set_xlabel('arcsec')
 conv.set_ylabel('arcsec')
 im = conv.imshow(im_conv,interpolation='none',cmap=mycmap_div,extent=[xmin,xmax,ymin,ymax],vmin=-limit,vmax=limit)
@@ -472,6 +474,6 @@ dum.axis('off')
 fig.suptitle('step: '+str(step),fontsize=10)
 plt.tight_layout(rect=[0, 0.0, 1, 0.95])
 #plt.tight_layout()
-#plt.savefig('all.png',bbox_inches='tight')
+plt.savefig('all.png',bbox_inches='tight')
 plt.savefig('all.pdf',bbox_inches='tight')
 #plt.show()

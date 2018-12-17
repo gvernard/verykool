@@ -27,10 +27,12 @@ else:
 
 
 
-
-copyfile(out_path+"_postdist.txt","plt_corner.txt")
-copyfile(out_path+"_postdist.paramnames","plt_corner.paramnames")
-copyfile(out_path+"_postdist.ranges","plt_corner.ranges")
+if os.path.isfile(out_path+"_postdist.txt"):
+    copyfile(out_path+"_postdist.txt","plt_corner.txt")
+    copyfile(out_path+"_postdist.paramnames","plt_corner.paramnames")
+    copyfile(out_path+"_postdist.ranges","plt_corner.ranges")
+else:
+    sys.exit()
 
 
 

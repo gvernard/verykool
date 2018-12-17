@@ -46,7 +46,7 @@ function determineLmodel($path,$run){
 
 function determineStep($path,$run,$lmodel){
     if( file_exists($path . $run . "output/".$lmodel."_model.fits") ){
-	$step = "";
+	$step = "dum";
     } else {
 	$dir = $path . $run . "output/";
 	$scanned_dir = array_diff(scandir($dir),array('..','.'));

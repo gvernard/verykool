@@ -361,7 +361,6 @@ void PertAlgebra::setAlgebraInit(BaseSourcePlane* source,Pert* pert_mass_model){
   Cs_dum.resize(0,0);
   HH_s.resize(0,0);
 
-
   // Read perturbations regularization matrix
   Eigen::SparseMatrix<double> HH_dpsi(pert_mass_model->dpsi->Sm,pert_mass_model->dpsi->Sm);
   HH_dpsi.reserve(Eigen::VectorXi::Constant(pert_mass_model->dpsi->Sm,pert_mass_model->dpsi->eigenSparseMemoryAllocForH));//overestimating the number of non-zero coefficients per HH_dpsi row (different number for 1st,2nd order derivative etc)
@@ -465,13 +464,13 @@ void PertAlgebra::constructNormalizingJmatrix(BaseSourcePlane* source,Pert* pert
 
 void PertAlgebra::constructDsDpsi(ImagePlane* image,BaseSourcePlane* source,Pert* pert_mass_model){
   Eigen::SparseMatrix<double> DsDpsi_dum(image->Nm,pert_mass_model->dpsi->Sm);
-  DsDpsi_dum.reserve(Eigen::VectorXi::Constant(pert_mass_model->dpsi->Sm,12));
+  DsDpsi_dum.reserve(Eigen::VectorXi::Constant(pert_mass_model->dpsi->Sm,24));
   int i0,j0,j_index;
   double dsx,dsy;
   int rel_i[12] = {-1,-1,0,0,0,0,1,1,1,1,2,2};
   int rel_j[12] = {0,1,-1,0,1,2,-1,0,1,2,0,1};
   double coeffs[12] = {0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0};
-
+  
   for(int h=0;h<image->Nm;h++){
     dsx = source->Ds.tri[2*h].v;
     dsy = source->Ds.tri[2*h+1].v;
@@ -491,7 +490,7 @@ void PertAlgebra::constructDsDpsi(ImagePlane* image,BaseSourcePlane* source,Pert
     coeffs[9]  = image->crosses[h]->coeff_x[7]*dsx;
     coeffs[10] = image->crosses[h]->coeff_y[3]*dsy;
     coeffs[11] = image->crosses[h]->coeff_y[7]*dsy;
-
+    
     for(int q=0;q<12;q++){
       if( coeffs[q] != 0.0 ){
 	j_index = (i0 + rel_i[q])*pert_mass_model->dpsi->Sj + (j0 + rel_j[q]);
@@ -499,7 +498,9 @@ void PertAlgebra::constructDsDpsi(ImagePlane* image,BaseSourcePlane* source,Pert
       }
       coeffs[q] = 0.0; // need to reset the vector "coeffs"
     }
+    
   }
+
   this->DsDpsi = DsDpsi_dum;
   DsDpsi_dum.resize(0,0);
 }

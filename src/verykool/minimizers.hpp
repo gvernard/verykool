@@ -75,8 +75,6 @@ void MultiNestLogLike(double* Cube,int& ndim,int& npars,double& lnew,void* e);
 void MultiNestDumper(int& nSamples,int& nlive,int& nPar,double** physLive,double** posterior,double** paramConstr,double& maxLogLike,double& logZ,double& INSlogZ,double& logZerr,void* e);
 
 
-
-
 // Iterator class
 //================================================================================================================================================
 class Iterator: public BaseMinimizer {
@@ -85,11 +83,12 @@ public:
     this->type = "iterator";
   };
   ~Iterator(){};
-  int counter;
+  int iterations;
+  int output_counter;
   
   void minimize(std::map<std::string,std::string> opt,BaseLikelihoodModel* mypars,const std::string output);
   void output(std::string output);
-  void finalizeMinimizer(std::string output){};
+  void finalizeMinimizer(std::string output);
 };
 
 

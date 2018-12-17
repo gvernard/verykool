@@ -10,5 +10,7 @@ analysis_tools/*.gif
 analysis_tools/*.fits
 analysis_tools/create_gridded_source
 analysis_tools/finalize_scripts/analyzed_cases/
+analysis_tools/finalize_scripts/*.pdf
+analysis_tools/finalize_scripts/*.png
 scripts/report.txt
 *.pyc

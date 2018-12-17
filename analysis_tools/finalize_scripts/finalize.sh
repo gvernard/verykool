@@ -12,7 +12,12 @@ if [ "$#" -eq 4 ]; then
     out_path=${path}${run}output/${step}_${lmodel}_
 else
     read lmodel step <<<$(php get_lmodel_step.php $path $run $3)
-    out_path=${path}${run}output/${lmodel}_
+    if [ "$step" = "dum" ]; then
+	step=""
+	out_path=${path}${run}output/${lmodel}_
+    else
+	out_path=${path}${run}output/${step}_${lmodel}_
+    fi
 fi
 if [ "$lmodel" = "problem" ]; then
     echo "Could not determine lmodel and step, exiting."

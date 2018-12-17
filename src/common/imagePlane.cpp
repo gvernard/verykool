@@ -49,9 +49,9 @@ ImagePlane::ImagePlane(const std::string filepath,int i,int j,double h,double w)
   // REMEMBER: xmax-xmin != width (Nj*dj).
   // Similarly for y.
   xmin = -j0*dj;
-  xmax = (this->Nj-1-j0)*dj;
+  xmax = (this->Nj-j0)*dj;
   ymin = -i0*di;
-  ymax = (this->Ni-1-i0)*di;
+  ymax = (this->Ni-i0)*di;
 
   for(int i=0;i<Ni;i++){
     for(int j=0;j<Nj;j++){

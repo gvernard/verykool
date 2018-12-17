@@ -58,7 +58,6 @@ public:
 };
 
 
-
 class SmoothLikelihood : public BaseLikelihoodModel {
 public:
   std::vector<Nlpar*> physical;
@@ -95,7 +94,6 @@ public:
 };
 
 
-
 class PertLikelihood : public BaseLikelihoodModel {
 public:
   std::vector<Nlpar*> reg_s;
@@ -128,7 +126,6 @@ public:
 };
 
 
-
 class PertIterationLikelihood : public PertLikelihood {
 public:
   CollectionMassModels* collection;
@@ -141,44 +138,10 @@ public:
   //virtual
   void initializeAlgebra();
   void updateLikelihoodModel();
-  void initialOutputLikelihoodModel(std::string output);
   void outputLikelihoodModel(std::string output);
 };
 
 
-/*
-class PertIterationLikelihood : public BaseLikelihoodModel {
-public:
-  std::vector<Nlpar*> reg_s;
-  std::vector<Nlpar*> reg_dpsi;
-  std::string reg_s_type;
-  std::string reg_dpsi_type;
-  SmoothLikelihood* smooth_like;
-  BaseSourcePlane* source;
-  Pert* pert_mass_model;
-  PertAlgebra* algebra;
-  CollectionMassModels* collection;
-
-  PertIterationLikelihood(std::vector<Nlpar*> reg_s,std::vector<Nlpar*> reg_dpsi,std::string a,std::string b,BaseSourcePlane* c,Pert* d,CollectionMassModels* e);
-  ~PertIterationLikelihood();
-
-  //non-virtual
-  void initializePert(SmoothLikelihood* smooth_like);
-
-  //virtual
-  std::vector<std::string> getFullNames(){};
-  std::vector<std::string> getActiveFullNames(){};
-  std::vector<double> getValues(){};
-  std::vector<Nlpar*> getPhysicalPars(){};
-  std::vector<Nlpar*> getMassModelPars(int i){};
-  Json::Value getActiveNamesValues(){};
-  void initializeAlgebra();
-  void updateLikelihoodModel();
-  double getLogLike();
-  void initialOutputLikelihoodModel(std::string output);
-  void outputLikelihoodModel(std::string output);
-};
-*/
 
 
 class FactoryLikelihoodModel {//This is a singleton class.
