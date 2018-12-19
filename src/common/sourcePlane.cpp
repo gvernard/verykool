@@ -1773,7 +1773,9 @@ void AdaptiveSource::outputSource(const std::string path){
   std::string filename2 = path + "source_irregular.dat";
   FILE* fh2 = fopen(filename2.c_str(),"w");
   for(int i=0;i<this->Sm;i++){
-    fprintf(fh2,"%20.5f %20.5f %20.5f\n",this->src[i],this->x[i],this->y[i]);
+    if( this->mask_vertices[i] == 1 ){
+      fprintf(fh2,"%20.5f %20.5f %20.5f\n",this->src[i],this->x[i],this->y[i]);
+    }
   }  
   fclose(fh2);
 }

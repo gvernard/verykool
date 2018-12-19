@@ -8,7 +8,6 @@
 #include "imagePlane.hpp"
 #include "sourcePlane.hpp"
 #include "tableDefinition.hpp"
-
 #include "eigenAlgebra.hpp"
 
 
@@ -561,6 +560,9 @@ void Pert::getConvergence(ImagePlane* kappa){
   int Ni = kappa->Ni;
   int Nj = kappa->Nj;
 
+  double dx2 = pow( fabs(kappa->x[1]  - kappa->x[0]), 2);
+  double dy2 = pow( fabs(kappa->y[Nj] - kappa->y[0]), 2);
+
 
   // Calculate second derivatives:
 
@@ -594,8 +596,8 @@ void Pert::getConvergence(ImagePlane* kappa){
     kappa->img[i*Nj] = 0.0;
     kappa->img[i*Nj+1] = 0.0;
     for(int j=2;j<Nj-2;j++){
-      ddx = 1.0*this->dpsi->src[i*Nj+j-1] - 2.0*this->dpsi->src[i*Nj+j] + 1.0*this->dpsi->src[i*Nj+j+1];
-      ddy = 1.0*this->dpsi->src[(i-1)*Nj+j] - 2.0*this->dpsi->src[i*Nj+j] + 1.0*this->dpsi->src[(i+1)*Nj+j];
+      ddx = (1.0*this->dpsi->src[i*Nj+j-1]   - 2.0*this->dpsi->src[i*Nj+j] + 1.0*this->dpsi->src[i*Nj+j+1]   )/dx2;
+      ddy = (1.0*this->dpsi->src[(i-1)*Nj+j] - 2.0*this->dpsi->src[i*Nj+j] + 1.0*this->dpsi->src[(i+1)*Nj+j] )/dy2;
       kappa->img[i*Nj+j] = 0.5*(ddx + ddy);
     }
     /*

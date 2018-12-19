@@ -325,5 +325,5 @@ plt.colorbar(col,cax=cax,format="%6.4f")
 
 plt.tight_layout()
 plt.savefig('all.pdf',bbox_inches='tight')
-#plt.savefig('all.png',bbox_inches='tight')
+plt.savefig('all.png',bbox_inches='tight')
 #plt.show()

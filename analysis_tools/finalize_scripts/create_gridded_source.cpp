@@ -76,7 +76,6 @@ int main(int argc,char* argv[]){
 
 
 
-
   FixedSource* splane = new FixedSource(res,res,size,"identity");
   
   //set a fixed source profile

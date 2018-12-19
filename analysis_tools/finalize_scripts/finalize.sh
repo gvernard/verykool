@@ -99,6 +99,7 @@ mv masked_residual.fits $target/masked_residual.fits
 echo ' >>> collecting and packaging remaining files...'
 # move the plots after the latex document is produced
 mv all.pdf $target/
+mv all.png $target/
 if [ -f corner.pdf ]; then
     mv corner.pdf $target/
 fi

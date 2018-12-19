@@ -331,6 +331,7 @@ plt.colorbar(col,cax=cax,format="%6.4f")
 if os.path.isfile(data_path+'perturbations.fits'):
     im_pert_true = fits.getdata(data_path+'perturbations.fits',ext=0)
     im_pert_true = im_pert_true[::-1,:]
+#    im_pert_true /= np.power(6.05/121,2)
     max_pert_true = np.amax([abs(np.amax(im_pert_true)),abs(np.amin(im_pert_true))])
 else:
     max_pert_true = 0
@@ -343,11 +344,10 @@ else:
     im_pert = fits.getdata(out_path+'pert_dpsi.fits',ext=0)
     pert_title = "RECONSTRUCTION"
 im_pert = im_pert[::-1,:]
+#im_pert /= np.power(6.05/40,2)
 
 # Set color scale
 limit = np.amax([max_pert_true,abs(np.amax(im_pert)),abs(np.amin(im_pert))])
-
-
 
 # Plot original perturbations if they exist
 if os.path.isfile(data_path+'perturbations.fits'):
