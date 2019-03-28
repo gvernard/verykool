@@ -6,6 +6,7 @@
 #include <fstream>
 #include <map>
 #include <unordered_map>
+#include <iostream>
 
 #include "json/json.h"
 
@@ -29,6 +30,8 @@ public:
   double* means   = NULL;
   double* s1_low  = NULL;
   double* s1_high = NULL;
+  ImagePlane* model;
+  ImagePlane* res;
 
   BaseLikelihoodModel(){};
   ~BaseLikelihoodModel(){
@@ -68,24 +71,23 @@ public:
   BaseSourcePlane* source;
   CollectionMassModels* collection;
   SmoothAlgebra* algebra;
-  ImagePlane* model;
-  ImagePlane* res;
 
   SmoothLikelihood(std::vector<Nlpar*> a,std::vector<Nlpar*> b,std::vector< std::vector<Nlpar*> > d,std::vector<std::string> e,ImagePlane* f,BaseSourcePlane* g,CollectionMassModels* h);
   ~SmoothLikelihood();
 
   //non-virtual
+  void updateCovKernelLimits();
   std::vector<Nlpar*> getRegPars();
-  void getModel();
-  void getResidual();
   void deriveLinearDpsi(Pert* pert_mass_model,ImagePlane* img_grid);
-  
+
   //virtual
   void printTerms();
   void getAllNamesValues(std::vector<std::string>& names,std::vector<double>& values);
   std::vector<Nlpar*> getPhysicalPars();
   std::vector<Nlpar*> getMassModelPars(int i);
   Json::Value getActiveJson();
+  void getModel();
+  void getResidual();
 
   void initializeAlgebra();
   void updateLikelihoodModel();
@@ -118,6 +120,8 @@ public:
   std::vector<Nlpar*> getPhysicalPars(){};
   std::vector<Nlpar*> getMassModelPars(int i){};
   Json::Value getActiveJson();
+  void getModel();
+  void getResidual();
 
   void initializeAlgebra();
   void updateLikelihoodModel();

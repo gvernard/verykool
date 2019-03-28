@@ -30,7 +30,7 @@ class MidpointNormalize(colors.Normalize):
         return np.ma.masked_array(np.interp(value, x, y))
 
 
-
+plt.switch_backend('agg')
 
 path = sys.argv[1]
 run  = sys.argv[2]

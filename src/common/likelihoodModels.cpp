@@ -119,23 +119,6 @@ SmoothLikelihood::SmoothLikelihood(std::vector<Nlpar*> a,std::vector<Nlpar*> b,s
     }
   }
 
-  // Update limits of source covariance kernel, if applicable
-  if( this->source->reg == "covariance_kernel" || this->source->reg == "covariance_kernel_in_identity_out" ){
-    if( this->source->type == "fixed" ){
-      if( this->source->kernel->type == "modgauss" ){
-	Nlpar* nlpar_sdev = Nlpar::getParByName("sdev",this->active);
-	FixedSource* fixed = dynamic_cast<FixedSource*>(this->source); // needed to access width
-	nlpar_sdev->min = fixed->width/(this->source->Sj*log(this->source->kernel->cmax));
-	nlpar_sdev->max = 50.0*this->image->width;
-      }
-    } else if( this->source->type == "adaptive" ){
-      if( this->source->kernel->type == "modgauss" ){
-	Nlpar* nlpar_sdev = Nlpar::getParByName("sdev",this->active);
-	nlpar_sdev->max = 50.0*this->image->width;
-      }
-    }
-  }
-
   this->maps    = (double*) malloc(this->active.size()*sizeof(double));
   this->means   = (double*) malloc(this->active.size()*sizeof(double));
   this->s1_low  = (double*) malloc(this->active.size()*sizeof(double));
@@ -181,16 +164,36 @@ SmoothLikelihood::~SmoothLikelihood(){
 
 
 //non-virtual
+void SmoothLikelihood::updateCovKernelLimits(){
+  /*
+  // Update limits of source covariance kernel, if applicable
+  if( this->source->type == "fixed" ){
+    if( this->source->kernel->type == "modgauss" || this->source->kernel->type == "gauss" ){
+      Nlpar* nlpar_sdev = Nlpar::getParByName("sdev",this->active);
+      FixedSource* fixed = dynamic_cast<FixedSource*>(this->source); // needed to access width
+      nlpar_sdev->min = fixed->width/(this->source->Sj*log(this->source->kernel->cmax));
+      nlpar_sdev->max = 50.0*this->image->width;
+    }
+  } else if( this->source->type == "adaptive" ){
+    if( this->source->kernel->type == "modgauss" || this->source->kernel->type == "gauss" ){
+      Nlpar* nlpar_sdev = Nlpar::getParByName("sdev",this->active);
+      nlpar_sdev->max = 50.0*this->image->width;
+    }
+  }
+  */
+}
+
+//non-virtual
 std::vector<Nlpar*> SmoothLikelihood::getRegPars(){
   return this->reg;
 }
 
-//non-virtual
+//virtual
 void SmoothLikelihood::getModel(){
   this->algebra->getMockData(this->model,this->source);
 }
 
-//non-virtual
+//virtual
 void SmoothLikelihood::getResidual(){
   for(int i=0;i<this->image->Nm;i++){
     this->res->img[i] = this->image->img[i] - this->model->img[i];
@@ -384,7 +387,9 @@ void SmoothLikelihood::updateLikelihoodModel(){
   }
   this->collection->setPhysicalPars(this->physical);
   if( this->source->sample_reg ){
+    std::string suffix = Nlpar::removeSuffix(this->reg);
     this->source->kernel->setParameters(this->reg);
+    Nlpar::addSuffix(this->reg,suffix);
   }
 
   // Deflect the rays in the updated mass model
@@ -447,7 +452,7 @@ void SmoothLikelihood::outputLikelihoodModel(std::string output){
   this->source->outputSourceErrors(errors,output + "smooth_");
   free(errors);
 
-  /*
+  /*  
   // Write the regularization matrix of the source as an image
   ImagePlane* matrix_s = new ImagePlane(this->source->Sm,this->source->Sm,1.0,1.0);
   for(int i=0;i<this->source->H.tri.size();i++){
@@ -748,6 +753,35 @@ Json::Value PertLikelihood::getActiveJson(){
   return all;
 }
 
+//virtual
+void PertLikelihood::getModel(){
+  BaseSourcePlane* tmp_source = this->source->clone(); // This is the right way to copy a derived class, e.g. "this->source = new BaseSourcePlane(*c)" does not work, and "this->source = c" only copies the pointer.
+  for(int i=0;i<this->source->Sm;i++){
+    tmp_source->src[i] = this->source->src[i];
+  }
+
+  // Add perturbations to the mass collection
+  this->pert_mass_model->updatePert();
+  this->smooth_like->collection->models.push_back(this->pert_mass_model);
+  this->smooth_like->collection->all_defl(this->smooth_like->image);
+
+  tmp_source->createInterpolationWeights(this->smooth_like->image);
+  tmp_source->constructL(this->smooth_like->image);
+
+  this->algebra->getMockData(this->model,tmp_source,this->smooth_like->algebra->B);
+
+  // Remove perturbations from the mass collection
+  this->smooth_like->collection->models.pop_back();
+  this->smooth_like->collection->all_defl(this->smooth_like->image);
+}
+
+//virtual
+void PertLikelihood::getResidual(){
+  for(int i=0;i<this->smooth_like->image->Nm;i++){
+    this->res->img[i] = this->smooth_like->image->img[i] - this->model->img[i];
+  }
+}
+
 //non-virtual
 void PertLikelihood::initializePert(SmoothLikelihood* smooth_like){
   // This function needs to be called after a SmoothLikelihood model has been run,
@@ -755,20 +789,23 @@ void PertLikelihood::initializePert(SmoothLikelihood* smooth_like){
 
   // Add pointer to smooth likelihood model
   this->smooth_like = smooth_like;
+  this->model = new ImagePlane(*this->smooth_like->image);
+  this->res   = new ImagePlane(*this->smooth_like->image);
 
   // Update limits of source covariance kernel, if applicable
+  /*
   if( this->source->reg == "covariance_kernel" || this->source->reg == "covariance_kernel_in_identity_out" ){
     if( this->source->type == "fixed" ){
       if( this->source->kernel->type == "modgauss" ){
-	Nlpar* nlpar_sdev = Nlpar::getParByName("sdev",this->active);
+	Nlpar* nlpar_sdev = Nlpar::getParByName("sdev_s",this->active);
 	FixedSource* fixed = dynamic_cast<FixedSource*>(this->source); // needed to access width
 	nlpar_sdev->min = fixed->width/(this->source->Sj*log(this->source->kernel->cmax));
-	nlpar_sdev->max = 50.0*this->smooth_like->image->width;
+	nlpar_sdev->max = 50.0*smooth_like->image->width;
       }
     } else if( this->source->type == "adaptive" ){
       if( this->source->kernel->type == "modgauss" ){
-	Nlpar* nlpar_sdev = Nlpar::getParByName("sdev",this->active);
-	nlpar_sdev->max = 50.0*this->smooth_like->image->width;
+	Nlpar* nlpar_sdev = Nlpar::getParByName("sdev_s",this->active);
+	nlpar_sdev->max = 50.0*smooth_like->image->width;
       }
     }
   }
@@ -776,11 +813,12 @@ void PertLikelihood::initializePert(SmoothLikelihood* smooth_like){
   // Update limits of perturbations covariance kernel, if applicable
   if( this->pert_mass_model->dpsi->reg == "covariance_kernel" || this->pert_mass_model->dpsi->reg == "covariance_kernel_in_identity_out" ){
     if( this->pert_mass_model->dpsi->kernel->type == "modgauss" ){
-      Nlpar* nlpar_sdev = Nlpar::getParByName("sdev",this->active);
+      Nlpar* nlpar_sdev = Nlpar::getParByName("sdev_dpsi",this->active);
       nlpar_sdev->min = this->pert_mass_model->dpsi->width/(this->pert_mass_model->dpsi->Sj*log(this->pert_mass_model->dpsi->kernel->cmax));
-      nlpar_sdev->max = 50.0*this->smooth_like->image->width;
+      nlpar_sdev->max = 50.0*smooth_like->image->width;
     }
   }
+  */
 
   // Use source from smooth likelihood model
   if( this->source->type == "adaptive" ){
@@ -818,14 +856,18 @@ void PertLikelihood::updateLikelihoodModel(){
   // Update covariance kernel for the source (f needed)
   // For identity,gradient, and curvature, (no sampling of the regularization by definition) H stays the same at every call and lambda values are accessed in setAlgebraRuntime
   if( this->source->sample_reg ){
+    std::string suffix = Nlpar::removeSuffix(this->reg_s);
     this->source->kernel->setParameters(this->reg_s);
+    Nlpar::addSuffix(this->reg_s,suffix);
     this->source->constructH();
   }
 
   // Update covariance kernel for the perturbations (if needed)
   // For identity,gradient, and curvature, (no sampling of the regularization by definition) H stays the same at every call and lambda values are accessed in setAlgebraRuntime
   if( this->pert_mass_model->dpsi->sample_reg ){
+    std::string suffix = Nlpar::removeSuffix(this->reg_dpsi);
     this->pert_mass_model->dpsi->kernel->setParameters(this->reg_dpsi);
+    Nlpar::addSuffix(this->reg_dpsi,suffix);
     this->pert_mass_model->dpsi->constructH();
   }
 
@@ -889,12 +931,12 @@ void PertLikelihood::outputLikelihoodModel(std::string output){
   free(errors);
 
   // Create mock data (lensed MAP source)
-  this->smooth_like->getModel();
-  this->smooth_like->model->writeImage(output + "pert_model.fits");
+  this->getModel();
+  this->model->writeImage(output + "pert_model.fits");
   
   // Output residual image (diference between mydata and mock_data)
-  this->smooth_like->getResidual();
-  this->smooth_like->res->writeImage(output + "pert_residual.fits");
+  this->getResidual();
+  this->res->writeImage(output + "pert_residual.fits");
   
   // Replace source pointer in the smooth model with the previous source
   this->smooth_like->source = dum_source;
@@ -1062,7 +1104,9 @@ void PertIterationLikelihood::updateLikelihoodModel(){
   this->source->constructL(this->smooth_like->image);
   // Update covariance kernel for the source (f needed)
   if( this->source->sample_reg ){
+    std::string suffix = Nlpar::removeSuffix(this->reg_s);
     this->source->kernel->setParameters(this->reg_s);
+    Nlpar::addSuffix(this->reg_s,suffix);
   }
   // Construct a new H for the source if needed
   if( this->source->type == "adaptive" || this->source->sample_reg ){
@@ -1074,7 +1118,9 @@ void PertIterationLikelihood::updateLikelihoodModel(){
   // Update covariance kernel for the perturbations (if needed)
   // For identity,gradient, and curvature, (no sampling of the regularization by definition) H stays the same at every call and lambda values are accessed in setAlgebraRuntime
   if( this->pert_mass_model->dpsi->sample_reg ){
+    std::string suffix = Nlpar::removeSuffix(this->reg_dpsi);
     this->pert_mass_model->dpsi->kernel->setParameters(this->reg_dpsi);
+    Nlpar::addSuffix(this->reg_dpsi,suffix);
     this->pert_mass_model->dpsi->constructH();
   }
 

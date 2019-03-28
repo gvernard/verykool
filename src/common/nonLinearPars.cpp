@@ -187,6 +187,26 @@ bool Nlpar::getSampleReg(std::vector<Nlpar*> pars){
   }
   return false;
 }
+
+std::string Nlpar::removeSuffix(std::vector<Nlpar*> pars){
+  std::size_t found = pars[0]->nam.find("_");
+  std::string suffix = "";
+  if( found != std::string::npos ){
+    suffix = pars[0]->nam.substr(found);
+  }
+
+  for(int i=0;i<pars.size();i++){
+    std::string token = pars[i]->nam.substr(0,pars[i]->nam.find("_"));
+    pars[i]->nam = token;
+  }
+
+  return suffix;
+}
+void Nlpar::addSuffix(std::vector<Nlpar*> pars,std::string suffix){
+  for(int i=0;i<pars.size();i++){
+    pars[i]->nam += suffix;
+  }
+}
 //===============================================================================================================
 
 

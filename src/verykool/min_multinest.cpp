@@ -233,10 +233,10 @@ void MultiNest::output(std::string output){
 
 //non-virtual
 void MultiNest::finalizeMinimizer(std::string output){
-  std::ifstream src((output + std::to_string(this->counter) + this->name + "_postdist.txt").c_str(),std::ios::binary);
+  std::ifstream src((output + std::to_string(this->counter) + "_" + this->name + "_postdist.txt").c_str(),std::ios::binary);
   std::ofstream dst((output + this->name + "_postdist.txt").c_str(), std::ios::binary);
   dst << src.rdbuf();
-  std::ifstream src2((output + std::to_string(this->counter) + this->name + "_minimizer_output.json").c_str(),std::ios::binary);
+  std::ifstream src2((output + std::to_string(this->counter) + "_" + this->name + "_minimizer_output.json").c_str(),std::ios::binary);
   std::ofstream dst2((output + this->name + "_minimizer_output.json").c_str(), std::ios::binary);
   dst2 << src2.rdbuf();
 }

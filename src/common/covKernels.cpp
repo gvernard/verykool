@@ -30,17 +30,19 @@ GaussKernel::GaussKernel(std::vector<Nlpar*> pars){
   this->setParameters(pars);
 }
 double GaussKernel::getCovariance(double r){
-  double cov = this->fac*exp(-r*r/(2*this->sdev*this->sdev));
+  //  double cov = this->fac*exp(-r*r/(2*this->sdev*this->sdev));
+  double cov = exp(-r*r/(2*this->sdev*this->sdev));
   return cov;
 }
 double GaussKernel::getCovarianceSelf(){
-  double cov = this->fac;
+  //  double cov = this->fac;
+  double cov = 1.1;
   return cov;
 }
 void GaussKernel::setParameters(std::vector<Nlpar*> pars){
   this->cmax = Nlpar::getValueByName("cmax",pars);
   this->sdev = Nlpar::getValueByName("sdev",pars);
-  this->fac  = 1.0/(this->sdev*sqrt(2*M_PI));
+  //  this->fac  = 1.0/(this->sdev*sqrt(2*M_PI));
 }
 
 

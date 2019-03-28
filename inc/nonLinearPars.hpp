@@ -42,6 +42,8 @@ public:
   static double getValueByName(std::string nam,std::vector<Nlpar*> pars);
   static Nlpar* getParByName(std::string nam,std::vector<Nlpar*> pars);
   static bool getSampleReg(std::vector<Nlpar*> pars);
+  static std::string removeSuffix(std::vector<Nlpar*> pars);
+  static void addSuffix(std::vector<Nlpar*> pars,std::string suffix);
 
   static std::map<std::string,double> getSigmaIntervals(const std::vector<double>& x,const std::vector<double>& p,int sigma_interval);
   static bool compareFunc(const std::pair<double,double> &a,const std::pair<double,double> &b);

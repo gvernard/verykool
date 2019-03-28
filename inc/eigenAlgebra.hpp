@@ -67,6 +67,7 @@ public:
   void constructDsDpsi(ImagePlane* image,BaseSourcePlane* source,Pert* pert_mass_model);
   void constructNormalizingJmatrix(BaseSourcePlane* source,Pert* pert_mass_model,Eigen::SparseMatrix<double>& J_out,double lambda_s,double lambda_dpsi);
   void solvePerturbationsResiduals(std::string output,Pert* pert_mass_model);
+  void getMockData(ImagePlane* mockdata,BaseSourcePlane* source,Eigen::SparseMatrix<double> B);
 
   PertLikelihood* likeModel;
   Eigen::SparseMatrix<double> DsDpsi;

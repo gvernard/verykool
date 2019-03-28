@@ -8,7 +8,7 @@ $run  = $argv[3];
 // select suitable program output
 $exec = "python";
 switch($prog){
-    case "plot_all.py":
+    case "plot_all_smooth.py":
 	$out = "all.png";
 	break;
     case "plot_all_pert.py":

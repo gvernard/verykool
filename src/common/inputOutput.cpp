@@ -70,10 +70,13 @@ void Initialization::initialize_program(std::string path,std::string run,Initial
     ada->createAdaGrid(mydata,mycollection);
     ada->createDelaunay();
   }
-  if( init->source["reg"] == "covariance_kernel" || init->source["reg"] == "covariance_kernel_in_identity_out" ){
+  if( mysource->reg == "covariance_kernel" || mysource->reg == "covariance_kernel_in_identity_out" ){
     SmoothLikelihood* specific_pointer = dynamic_cast<SmoothLikelihood*>(smooth_like);
     mysource->sample_reg = Nlpar::getSampleReg(specific_pointer->reg);
+    std::string suffix = Nlpar::removeSuffix(specific_pointer->reg);
     mysource->kernel = FactoryCovKernel::getInstance()->createCovKernel(init->source["kernel"],specific_pointer->reg);
+    Nlpar::addSuffix(specific_pointer->reg,suffix);
+    specific_pointer->updateCovKernelLimits();
   }
   mysource->constructH();
 
@@ -94,13 +97,17 @@ void Initialization::initialize_program(std::string path,std::string run,Initial
     PertLikelihood* specific_pointer = dynamic_cast<PertLikelihood*>(pert_like);
     if( init->perturbations["reg_s"] == "covariance_kernel" ){
       specific_pointer->source->sample_reg = Nlpar::getSampleReg(specific_pointer->reg_s);
+      std::string suffix = Nlpar::removeSuffix(specific_pointer->reg_s);
       specific_pointer->source->kernel = FactoryCovKernel::getInstance()->createCovKernel(init->perturbations["kernel_s"],specific_pointer->reg_s);
+      Nlpar::addSuffix(specific_pointer->reg_s,suffix);
     }   
 
     // Set kernel and sample_reg for perturbations
     if( init->perturbations["reg_dpsi"] == "covariance_kernel" ){
       specific_pointer->pert_mass_model->dpsi->sample_reg = Nlpar::getSampleReg(specific_pointer->reg_dpsi);
+      std::string suffix = Nlpar::removeSuffix(specific_pointer->reg_dpsi);
       specific_pointer->pert_mass_model->dpsi->kernel = FactoryCovKernel::getInstance()->createCovKernel(init->perturbations["kernel_dpsi"],specific_pointer->reg_dpsi);
+      Nlpar::addSuffix(specific_pointer->reg_dpsi,suffix);
     }
   }
 

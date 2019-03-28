@@ -346,8 +346,17 @@ else:
 im_pert = im_pert[::-1,:]
 #im_pert /= np.power(6.05/40,2)
 
+# Read mask
+if pars["maskpath"] == "0":
+    mask_dpsi = np.ones(im_pert.shape)
+else:
+    mask_dpsi = fits.getdata(out_path+'pert_dpsi_mask.fits',ext=0)
+
+
 # Set color scale
-limit = np.amax([max_pert_true,abs(np.amax(im_pert)),abs(np.amin(im_pert))])
+limit = np.amax([max_pert_true,abs(np.amax(im_pert*np.flipud(mask_dpsi))),abs(np.amin(im_pert*np.flipud(mask_dpsi)))])
+#np.ma.masked_where(mask>0,mask)
+
 
 # Plot original perturbations if they exist
 if os.path.isfile(data_path+'perturbations.fits'):
@@ -364,8 +373,8 @@ if os.path.isfile(data_path+'perturbations.fits'):
     #fig.colorbar(im,cax=cax,ticks=MultipleLocator(0.2),format="%4.1f")
     fig.colorbar(im,cax=cax,format="%5.2f")
     if pars["maskpath"] != "0":
-        pert_true.contour(mask,levels=[0.5],extent=[xmin,xmax,ymin,ymax],colors='#001A47')
-        pert_true.imshow(np.flipud(np.ma.masked_where(mask>0,mask)),interpolation='none',cmap='Greys',extent=[xmin,xmax,ymin,ymax])
+        pert_true.contour(mask_dpsi,levels=[0.5],extent=[xmin,xmax,ymin,ymax],colors='#001A47')
+        pert_true.imshow(np.flipud(np.ma.masked_where(mask_dpsi>0,mask_dpsi)),interpolation='none',cmap='Greys',extent=[xmin,xmax,ymin,ymax])
 else:
     pert_true = fig.add_subplot(4,3,7)
     pert_true.axis('off')
@@ -387,8 +396,8 @@ cax = divider.append_axes("right",size="5%",pad=0.05)
 #cax.yaxis.set_major_locator(matplotlib.ticker.MaxNLocator(4))
 fig.colorbar(im,cax=cax,format="%5.2f")
 if pars["maskpath"] != "0":
-    pert.contour(mask,levels=[0.5],extent=[xmin,xmax,ymin,ymax],colors='#001A47')
-    pert.imshow(np.flipud(np.ma.masked_where(mask>0,mask)),interpolation='none',cmap='Greys',extent=[xmin,xmax,ymin,ymax])
+    pert.contour(mask_dpsi,levels=[0.5],extent=[xmin,xmax,ymin,ymax],colors='#001A47')
+    pert.imshow(np.flipud(np.ma.masked_where(mask_dpsi>0,mask_dpsi)),interpolation='none',cmap='Greys',extent=[xmin,xmax,ymin,ymax])
 
 
 dum = fig.add_subplot(4,3,9)
@@ -435,8 +444,8 @@ if os.path.isfile(data_path+'convergence.fits'):
     #fig.colorbar(im,cax=cax,ticks=MultipleLocator(0.2),format="%4.1f")
     fig.colorbar(im,cax=cax,format="%5.2f")
     if pars["maskpath"] != "0":
-        conv_true.contour(mask,levels=[0.5],extent=[xmin,xmax,ymin,ymax],colors='#001A47')
-        conv_true.imshow(np.flipud(np.ma.masked_where(mask>0,mask)),interpolation='none',cmap='Greys',extent=[xmin,xmax,ymin,ymax])
+        conv_true.contour(mask_dpsi,levels=[0.5],extent=[xmin,xmax,ymin,ymax],colors='#001A47')
+        conv_true.imshow(np.flipud(np.ma.masked_where(mask_dpsi>0,mask_dpsi)),interpolation='none',cmap='Greys',extent=[xmin,xmax,ymin,ymax])
 else:
     conv_true = fig.add_subplot(4,3,10)
     conv_true.axis('off')
@@ -458,8 +467,8 @@ cax = divider.append_axes("right",size="5%",pad=0.05)
 #cax.yaxis.set_major_locator(matplotlib.ticker.MaxNLocator(4))
 fig.colorbar(im,cax=cax,format="%5.2f")
 if pars["maskpath"] != "0":
-    conv.contour(mask,levels=[0.5],extent=[xmin,xmax,ymin,ymax],colors='#001A47')
-    conv.imshow(np.flipud(np.ma.masked_where(mask>0,mask)),interpolation='none',cmap='Greys',extent=[xmin,xmax,ymin,ymax])
+    conv.contour(mask_dpsi,levels=[0.5],extent=[xmin,xmax,ymin,ymax],colors='#001A47')
+    conv.imshow(np.flipud(np.ma.masked_where(mask_dpsi>0,mask_dpsi)),interpolation='none',cmap='Greys',extent=[xmin,xmax,ymin,ymax])
 
 
 

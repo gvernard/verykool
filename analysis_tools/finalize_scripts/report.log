@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.1415926-2.5-1.40.14 (TeX Live 2013) (format=pdflatex 2018.10.2)  18 DEC 2018 21:34
+This is pdfTeX, Version 3.1415926-2.5-1.40.14 (TeX Live 2013) (format=pdflatex 2018.10.2)  28 MAR 2019 16:06
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -281,40 +281,49 @@ File: umsb.fd 2013/01/14 v3.01 AMS symbols B
 )) [1
 
 {/usr/share/texlive/texmf-var/fonts/map/pdftex/updmap/pdftex.map}] (./table1.te
-x) (./table2.tex) <all.pdf, id=10, 859.82289pt x 541.37505pt>
+x) (./table2.tex) <all.pdf, id=11, 860.91075pt x 1129.52188pt>
 File: all.pdf Graphic file (type pdf)
  <use all.pdf>
 Package pdftex.def Info: all.pdf used on input line 20.
-(pdftex.def)             Requested size: 469.75502pt x 295.77461pt.
- [2] [3 <./all.pdf>]
-<residual_ps.pdf, id=84, 407.54256pt x 303.14453pt>
+(pdftex.def)             Requested size: 469.75502pt x 616.30972pt.
+ [2] [3 <./all.pdf>] <residual_ps.pdf, id=128, 407.54256pt x 303.14453pt>
 File: residual_ps.pdf Graphic file (type pdf)
  <use residual_ps.pdf>
 Package pdftex.def Info: residual_ps.pdf used on input line 32.
 (pdftex.def)             Requested size: 234.8775pt x 174.71379pt.
 
-<source_ps.pdf, id=85, 713.6581pt x 436.08824pt>
+<source_ps.pdf, id=129, 715.08078pt x 438.12082pt>
 File: source_ps.pdf Graphic file (type pdf)
  <use source_ps.pdf>
 Package pdftex.def Info: source_ps.pdf used on input line 37.
-(pdftex.def)             Requested size: 234.8775pt x 143.52362pt.
+(pdftex.def)             Requested size: 234.8775pt x 143.9051pt.
+
+<dpsi_ps.pdf, id=130, 715.49081pt x 438.12082pt>
+File: dpsi_ps.pdf Graphic file (type pdf)
+ <use dpsi_ps.pdf>
+Package pdftex.def Info: dpsi_ps.pdf used on input line 47.
+(pdftex.def)             Requested size: 234.8775pt x 143.82489pt.
  [4 <./residual_ps.pdf> <./source_ps.pdf
 
 pdfTeX warning: pdflatex (file ./source_ps.pdf): PDF inclusion: multiple pdfs w
 ith page group included in a single page
+> <./dpsi_ps.pdf
+
+pdfTeX warning: pdflatex (file ./dpsi_ps.pdf): PDF inclusion: multiple pdfs wit
+h page group included in a single page
 >] [5
 
 
 
 ] (./report.aux) ) 
 Here is how much of TeX's memory you used:
- 2999 strings out of 494820
- 40032 string characters out of 3178049
- 104048 words of memory out of 3000000
- 6131 multiletter control sequences out of 15000+200000
+ 3003 strings out of 494820
+ 40099 string characters out of 3178049
+ 102048 words of memory out of 3000000
+ 6135 multiletter control sequences out of 15000+200000
  8891 words of font info for 34 fonts, out of 3000000 for 9000
  198 hyphenation exceptions out of 8191
- 38i,10n,32p,284b,255s stack positions out of 5000i,500n,10000p,200000b,50000s
+ 38i,10n,32p,283b,255s stack positions out of 5000i,500n,10000p,200000b,50000s
 </usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm
 /cmbx12.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi1
 2.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi8.pfb><
@@ -322,10 +331,10 @@ Here is how much of TeX's memory you used:
 are/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmr8.pfb></usr/share/texl
 ive/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy10.pfb></usr/share/texlive/te
 xmf-dist/fonts/type1/public/amsfonts/cm/cmsy8.pfb>
-Output written on report.pdf (5 pages, 1161178 bytes).
+Output written on report.pdf (5 pages, 242084 bytes).
 PDF statistics:
- 164 PDF objects out of 1000 (max. 8388607)
- 68 compressed objects within 1 object stream
+ 249 PDF objects out of 1000 (max. 8388607)
+ 95 compressed objects within 1 object stream
  0 named destinations out of 1000 (max. 500000)
- 16 words of extra memory for PDF output out of 10000 (max. 10000000)
+ 21 words of extra memory for PDF output out of 10000 (max. 10000000)
 

@@ -700,3 +700,14 @@ void PertAlgebra::solvePerturbationsResiduals(std::string output,Pert* pert_mass
 
   res_img.writeImage(output + "res_dpsi.fits");
 }
+
+void PertAlgebra::getMockData(ImagePlane* mockdata,BaseSourcePlane* source,Eigen::SparseMatrix<double> B){
+  Eigen::Map<Eigen::VectorXd> s(source->src,source->Sm);
+
+  Eigen::SparseMatrix<double> LL(source->L.Ti,source->L.Tj);
+  LL.reserve(Eigen::VectorXi::Constant(source->L.Ti,4));//setting the non-zero coefficients per row of the lensing matrix (4 for bi-linear interpolation scheme, etc)
+  for(int i=0;i<source->L.tri.size();i++){  LL.insert(source->L.tri[i].i,source->L.tri[i].j) = source->L.tri[i].v;  }
+
+  Eigen::VectorXd tmp = B*LL*s;
+  Eigen::Map<Eigen::VectorXd>(mockdata->img,tmp.size()) = tmp;
+}
