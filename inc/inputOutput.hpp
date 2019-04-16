@@ -21,7 +21,7 @@ public:
   std::string imgpath;        //path to image data
   std::string psfpath;        //path to PSF data
   std::string maskpath;       //path to mask
-  std::string covpath;        //path to covariance matrix of the data
+  std::string noisepath;      //path to covariance matrix of the data
   std::string output;         //path to output directory
 
   std::string noise_flag;     //flag describing the kind of noise in the cov.dat file (uniform, noise map, correlated noise)

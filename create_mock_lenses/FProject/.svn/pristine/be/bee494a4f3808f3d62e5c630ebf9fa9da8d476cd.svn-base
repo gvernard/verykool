@@ -1,0 +1,28 @@
+#include "massModelFuncs.hpp"
+
+void sis_defl(double b,double q,double pa,double xl,double yl,double xin,double yin,double* xout,double* yout){
+  //  double x_t = (xin-xl);
+  //  double y_t = (yin-yl);
+  double x_t = (xin-xl)*cos(pa) - (yin-yl)*sin(pa);
+  double y_t = (xin-xl)*sin(pa) + (yin-yl)*cos(pa);
+
+
+  if( fabs(x_t) < 0.0001 && fabs(y_t) < 0.0001 ){
+
+    *xout = xin;
+    *yout = yin;
+
+  } else {
+    double fac   = sqrt(1.-q*q);
+    double omega = sqrt(q*q*x_t*x_t + y_t*y_t);
+    double fac2  = fac/omega;
+
+    double ax_t = (b*q/fac)*atan(x_t*fac2);
+    double ay_t = (b*q/fac)*atanh(y_t*fac2);
+    double ax = ax_t*cos(-pa) - ay_t*sin(-pa);
+    double ay = ax_t*sin(-pa) + ay_t*cos(-pa);
+
+    *xout = xin - ax;
+    *yout = yin - ay;
+  }
+}

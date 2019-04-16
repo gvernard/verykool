@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.1415926-2.5-1.40.14 (TeX Live 2013) (format=pdflatex 2018.10.2)  28 MAR 2019 16:06
+This is pdfTeX, Version 3.1415926-2.5-1.40.14 (TeX Live 2013) (format=pdflatex 2018.10.2)  11 APR 2019 10:49
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -286,23 +286,23 @@ File: all.pdf Graphic file (type pdf)
  <use all.pdf>
 Package pdftex.def Info: all.pdf used on input line 20.
 (pdftex.def)             Requested size: 469.75502pt x 616.30972pt.
- [2] [3 <./all.pdf>] <residual_ps.pdf, id=128, 407.54256pt x 303.14453pt>
+ [2] [3 <./all.pdf>] <residual_ps.pdf, id=110, 407.54256pt x 303.14453pt>
 File: residual_ps.pdf Graphic file (type pdf)
  <use residual_ps.pdf>
 Package pdftex.def Info: residual_ps.pdf used on input line 32.
 (pdftex.def)             Requested size: 234.8775pt x 174.71379pt.
 
-<source_ps.pdf, id=129, 715.08078pt x 438.12082pt>
+<source_ps.pdf, id=111, 715.08078pt x 438.12082pt>
 File: source_ps.pdf Graphic file (type pdf)
  <use source_ps.pdf>
 Package pdftex.def Info: source_ps.pdf used on input line 37.
 (pdftex.def)             Requested size: 234.8775pt x 143.9051pt.
 
-<dpsi_ps.pdf, id=130, 715.49081pt x 438.12082pt>
+<dpsi_ps.pdf, id=112, 715.62633pt x 438.12082pt>
 File: dpsi_ps.pdf Graphic file (type pdf)
  <use dpsi_ps.pdf>
 Package pdftex.def Info: dpsi_ps.pdf used on input line 47.
-(pdftex.def)             Requested size: 234.8775pt x 143.82489pt.
+(pdftex.def)             Requested size: 234.8775pt x 143.79814pt.
  [4 <./residual_ps.pdf> <./source_ps.pdf
 
 pdfTeX warning: pdflatex (file ./source_ps.pdf): PDF inclusion: multiple pdfs w
@@ -331,10 +331,10 @@ Here is how much of TeX's memory you used:
 are/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmr8.pfb></usr/share/texl
 ive/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy10.pfb></usr/share/texlive/te
 xmf-dist/fonts/type1/public/amsfonts/cm/cmsy8.pfb>
-Output written on report.pdf (5 pages, 242084 bytes).
+Output written on report.pdf (5 pages, 222497 bytes).
 PDF statistics:
- 249 PDF objects out of 1000 (max. 8388607)
- 95 compressed objects within 1 object stream
+ 226 PDF objects out of 1000 (max. 8388607)
+ 87 compressed objects within 1 object stream
  0 named destinations out of 1000 (max. 500000)
  21 words of extra memory for PDF output out of 10000 (max. 10000000)
 

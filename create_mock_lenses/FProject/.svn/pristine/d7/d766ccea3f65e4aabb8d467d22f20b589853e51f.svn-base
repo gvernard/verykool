@@ -1,0 +1,8 @@
+#ifndef MASS_MODEL_FUNCS_HPP
+#define MASS_MODEL_FUNCS_HPP
+
+#include <math.h>
+
+void sis_defl(double b,double q,double pa,double xl,double yl,double xin,double yin,double* xout,double* yout);
+
+#endif /* MASS_MODEL_FUNCS_HPP */

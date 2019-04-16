@@ -13,4 +13,4 @@ mask   = fits.getdata(sys.argv[2],ext=0)
 newdata = np.multiply(mask,data)
 
 newhdu  = fits.PrimaryHDU(newdata,header=header)
-newhdu.writeto('masked_residual.fits',clobber=True)
+newhdu.writeto('masked_residual.fits',overwrite=True)

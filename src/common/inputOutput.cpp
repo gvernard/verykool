@@ -31,7 +31,7 @@ void Initialization::initialize_program(std::string path,std::string run,Initial
   // Initializing components: image plane --------------------------------------------------------------------------------------------------------------------------
   mydata = new ImagePlane(init->imgpath,stoi(init->image["pix_x"]),stoi(init->image["pix_y"]),stof(init->image["siz_x"]),stof(init->image["siz_y"]));
   mydata->readB(init->psfpath,stoi(init->psf["pix_x"]),stoi(init->psf["pix_y"]),stoi(init->psf["crop_x"]),stoi(init->psf["crop_y"]));
-  mydata->readC(init->noise_flag,init->covpath);
+  mydata->readC(init->noise_flag,init->noisepath);
   mydata->readS(init->maskpath);
 
 
@@ -213,7 +213,7 @@ void Initialization::parseInputJSON(std::string path,std::string run){
 
   //Parameters for the noise
   this->noise_flag = root["noise_flag"].asString();
-  this->covpath    = path+root["covpath"].asString();
+  this->noisepath  = path+root["noisepath"].asString();
 
   //Parameters for the minimizer/sampler
   jmembers = root["minimizer"].getMemberNames();

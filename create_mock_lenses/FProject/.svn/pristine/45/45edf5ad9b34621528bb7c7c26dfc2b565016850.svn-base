@@ -1,0 +1,29 @@
+{
+//    "output"  : "/Users/users/gvernard/myCodes/FProject/output/",
+    "output"  : "/net/argo/data/users/gvernard/RESULTS/VeryKooL_DATA/mysim2/data/",
+
+    "iplane"  : {"pix_x": 200, "pix_y": 200, "siz_x": 4., "siz_y": 4.},
+
+    "splane"  : {"type": "fixed", "sx": 100, "sy": 100, "size": 0.5},
+//    "splane"  : {"type": "floating", "sx": 200, "sy": 200, "size": 1.0, "x0": 0.0, "y0": 0.0},
+    "triangles" : {"Nx" : 50, "Ny" : 50, "sel_radius" : 0.05},
+
+    "sources" : [
+	{"type": "gaussian", "randomize": 0, "x0": -0.2,  "y0":  0.1,  "pa": 0, "q": 1., "reff": 0.040, "ieff": 1.},
+	{"type": "gaussian", "randomize": 0, "x0": -0.05, "y0":  0.12, "pa": 0, "q": 1., "reff": 0.040, "ieff": 1.},
+	{"type": "gaussian", "randomize": 0, "x0":  0.1,  "y0":  0.1,  "pa": 0, "q": 1., "reff": 0.040, "ieff": 1.},
+	{"type": "gaussian", "randomize": 0, "x0":  0.1,  "y0": -0.1,  "pa": 0, "q": 1., "reff": 0.12,  "ieff": 1.}
+//	{"type": "gaussian", "randomize": 0, "x0":   0.3,  "y0":  0.0,  "pa": 0, "q": 1., "reff": 0.05,   "ieff": 1.}
+//	{"type": "gaussian", "randomize": 1, "x0":   0.4,  "y0":  0.4,  "pa": 0, "q": 1., "reff": 0.04,   "ieff": 1.}
+//	{"type": "sersic", "randomize": 0, "x0": 0, "y0": 0.0, "pa": 45, "q": 0.5, "reff": 0.5, "ieff": 1., "index": 2.}
+    ],
+
+    "mmodel"  : "sie",
+    "nlpars"  : [
+	{"name": "b",   "fixed": 0, "per": 0, "value": 1.3,  "error": 0, "min":  0,    "max": 3,     "prior": "uni"},
+	{"name": "q",   "fixed": 0, "per": 0, "value": 0.86, "error": 0, "min":  0.5,  "max": 0.999, "prior": "uni"},
+	{"name": "pa",  "fixed": 0, "per": 1, "value": 170,  "error": 0, "min":  0,    "max": 180,   "prior": "uni"},
+	{"name": "xl",  "fixed": 0, "per": 0, "value": 0.0,  "error": 0, "min": -0.5,  "max": 0.5,   "prior": "uni"},
+	{"name": "yl",  "fixed": 0, "per": 0, "value": 0.0,  "error": 0, "min": -0.5,  "max": 0.5,   "prior": "uni"}
+    ]
+}

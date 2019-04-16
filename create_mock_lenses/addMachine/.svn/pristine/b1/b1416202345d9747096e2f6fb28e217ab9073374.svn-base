@@ -1,0 +1,23 @@
+from scipy import signal
+import numpy as np
+from astropy.io import fits
+import matplotlib.pyplot as plt
+
+
+hdulist = fits.open('/net/argo/data/users/gvernard/RESULTS/VeryKooL_DATA/mysim1/data/image_clean.fits')
+img = hdulist[0]
+hdulist = fits.open('/net/argo/data/users/gvernard/RESULTS/VeryKooL_DATA/saikat1/data/psf.fits')
+psf = hdulist[0]
+
+
+#print img.data.shape
+#print psf.data.shape
+
+
+conv = signal.convolve(img.data,psf.data,mode='same')
+
+
+
+hdu = fits.PrimaryHDU()
+hdu.data = conv
+hdu.writeto('conv.fits',clobber=True)

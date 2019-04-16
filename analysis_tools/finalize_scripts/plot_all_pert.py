@@ -354,7 +354,8 @@ else:
 
 
 # Set color scale
-limit = np.amax([max_pert_true,abs(np.amax(im_pert*np.flipud(mask_dpsi))),abs(np.amin(im_pert*np.flipud(mask_dpsi)))])
+#limit = np.amax([max_pert_true,abs(np.amax(im_pert*np.flipud(mask_dpsi))),abs(np.amin(im_pert*np.flipud(mask_dpsi)))])
+limit = max_pert_true
 #np.ma.masked_where(mask>0,mask)
 
 

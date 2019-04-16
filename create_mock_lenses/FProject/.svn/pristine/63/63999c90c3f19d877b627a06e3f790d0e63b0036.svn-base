@@ -1,0 +1,92 @@
+import numpy as np
+
+import matplotlib.pyplot as plt
+import matplotlib
+from matplotlib.patches import Polygon
+from matplotlib.collections import PatchCollection
+
+fig, ax = plt.subplots()
+
+
+t    = np.loadtxt('triangles.dat')
+rows = t.shape[0]
+tris = []
+for i in range(0,rows):
+    polygon = Polygon([[t[i,0],t[i,3]],[t[i,1],t[i,4]],[t[i,2],t[i,5]]],True)
+    tris.append(polygon)
+
+#p = PatchCollection(tris,cmap=matplotlib.cm.Set1,alpha=0.1,linewidth=0)
+#colors = 100*np.random.rand(len(tris))
+#p.set_array(np.array(colors))
+p = PatchCollection(tris,facecolor='none')
+
+ax.add_collection(p)
+
+
+
+
+n    = np.loadtxt('insiders.dat')
+rows = n.shape[0]
+ins  = []
+for i in range(0,rows):
+    polygon = Polygon([[n[i,0],n[i,3]],[n[i,1],n[i,4]],[n[i,2],n[i,5]]],True)
+    ins.append(polygon)
+
+p = PatchCollection(ins,cmap=matplotlib.cm.Set1,facecolor='none')
+
+ax.add_collection(p)
+
+
+
+o    = np.loadtxt('overlaps.dat')
+rows = o.shape[0]
+ovrs = []
+for i in range(0,rows):
+    polygon = Polygon([[o[i,0],o[i,3]],[o[i,1],o[i,4]],[o[i,2],o[i,5]]],True)
+    ovrs.append(polygon)
+
+p = PatchCollection(ovrs,alpha=0.2,color='black',facecolor='blue',linewidth=2.0)
+
+ax.add_collection(p)
+
+
+
+
+
+e    = np.loadtxt('ellipses.dat')
+rows = e.shape[0]
+ells = []
+for i in range(0,rows,2):
+    arr = np.zeros((e[i,:].shape[0],2))
+    for j in range(e[i,:].shape[0]):
+        arr[j,0] = e[i,j]
+        arr[j,1] = e[i+1,j]
+
+    polygon = Polygon(arr,True)
+    ells.append(polygon)
+
+p = PatchCollection(ells,color='#cc0030',facecolor='none')
+
+ax.add_collection(p)
+
+
+
+
+
+#centers = np.loadtxt('centers.dat')
+#ax.plot(centers[:,0],centers[:,1],'ro')
+
+
+
+
+
+
+
+ax.set_aspect('equal')
+myrange = 2
+plt.ylim(-myrange,myrange)
+plt.xlim(-myrange,myrange)
+
+
+plt.savefig('triangles.png')
+#plt.show()

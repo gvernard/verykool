@@ -1,0 +1,29 @@
+#include <iostream>
+#include <string>
+
+#include "../VeryKooL/imagePlane.hpp"
+
+
+
+int main(){
+
+
+  std::string imgpath1 = "/net/argo/data/users/gvernard/RESULTS/VeryKooL_DATA/mysim1/data/image_clean.fits";
+  std::string imgpath2 = "output/image.fits";
+
+  ImagePlane img1(imgpath1,200,200,4,4);
+  ImagePlane img2(imgpath2,200,200,4,4);
+
+  double diff;
+  for(int i=0;i<img1.Ni*img1.Nj;i++){
+    diff = img1.img[i] - img2.img[i];
+    if( diff != 0 ){ 
+      std::cout << i << std::endl;
+    }
+  }
+  
+
+
+
+  return 0;
+}
