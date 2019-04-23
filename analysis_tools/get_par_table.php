@@ -1,16 +1,23 @@
 <?php 
 
 $path = $argv[1];
-$case = $argv[2];
+$run  = $argv[2];
 
-if( count($argv) > 3 ){
-    $step = $argv[3] . "_";
-} else {
+if( count($argv) == 4 ){
+    $lmodel = $argv[3];
     $step = "";
+    $out_path = $path . $run . "output/" . $lmodel;
+} else if( count($argv) == 5 ){
+    $lmodel = $argv[3];
+    $step = $argv[4];
+    $out_path = $path . $run . "output/" . $step . "_" . $lmodel;
+} else {
+    echo "Either 3 or 4 command line arguments required: path, run, lmodel, <step>\n";
+    echo count($argv) . " provided, exiting!!!\n";
 }
 
-$json = json_decode(file_get_contents($path . $case . "output/".$step."vkl_output.json"),true);
-$dum = $json["full_pars"];
+$json = json_decode(file_get_contents($out_path . "_output.json"),true);
+$dum = $json["collapsed_all"];
 $keys = array_keys($dum);
 $pars = array_values($dum);
 

@@ -7,17 +7,43 @@
 
 
 \input{title.tex}
-
-\begin{figure}[!htb]
-	\centering
-	\includegraphics[width=\textwidth]{all.png}
-	\caption{Data and model reconstruction. \label{fig:all}}
-\end{figure}
-
 \input{table3.tex}
+
+\clearpage
+\pagebreak
+
 \input{table1.tex}
 \input{table2.tex}
 
+\begin{figure}[!htb]
+	\centering
+	\includegraphics[width=\textwidth]{all.pdf}
+	\caption{Data and model reconstruction. \label{fig:all}}
+\end{figure}
+
+
+
+\clearpage
+\pagebreak
+
+
+\begin{figure}
+  \centering
+  \includegraphics[width=0.5\textwidth]{residual_ps.pdf}
+  \caption{Residual power spectrum plot. \label{fig:residual_ps}}
+\end{figure}
+\begin{figure}
+  \centering
+  \includegraphics[width=0.5\textwidth]{source_ps.pdf}
+  \caption{Source power spectrum plot. \label{fig:source_ps}}
+\end{figure}
+\IfFileExists{dpsi_ps.pdf}{
+  \begin{figure}
+    \centering
+    \includegraphics[width=0.5\textwidth]{dpsi_ps.pdf}
+    \caption{Perturbations power spectrum plot. \label{fig:dpsi_ps}}
+  \end{figure}
+}
 
 \clearpage
 \pagebreak
@@ -31,10 +57,6 @@
 }{
   corner plot not available!
 }
-
-\clearpage
-\pagebreak
-
 
 
 

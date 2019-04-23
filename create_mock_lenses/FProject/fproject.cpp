@@ -85,7 +85,7 @@ int main(int argc,char* argv[]){
 
   //=============== BEGIN:INITIALIZATION =======================
   //Initialize image plane
-  ImagePlane mysim(jiplane["pix_x"].asInt(),jiplane["pix_y"].asInt(),jiplane["width"].asDouble(),jiplane["height"].asDouble());
+  ImagePlane mysim(jiplane["inf_x"].asInt(),jiplane["inf_y"].asInt(),jiplane["width"].asDouble(),jiplane["height"].asDouble());
 
   //Initialize mass model physical parameters
   std::vector<Nlpar*> ext_nlpars;

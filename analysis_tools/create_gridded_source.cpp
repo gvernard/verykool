@@ -12,12 +12,28 @@
 
 
 int main(int argc,char* argv[]){
-  std::string out_path = argv[1];
-  int res = std::stoi(argv[2]);
+  std::string path = argv[1];
+  std::string run  = argv[2];
+  int res = std::stoi(argv[3]);
+  std::string step;
+  std::string lmodel;
+  std::string out_path;
+  if( argc == 5 ){
+    lmodel = argv[4];
+    step = "";
+    out_path = path + run + "output/" + lmodel;
+  } else if( argc == 6 ){
+    lmodel = argv[4];
+    step = argv[5];
+    out_path = path + run + "output/" + step + "_" + lmodel;
+  } else {
+    std::cout <<  "Either 4 or 5 command line arguments required: path, run, resolution, lmodel, <step>" << std::endl;
+    std::cout << argc << " provided, exiting!!!" << std::endl;
+  }
 
-  myDelaunay* source = new myDelaunay(out_path + "vkl_source_irregular.dat");
 
 
+  myDelaunay* source = new myDelaunay(out_path + "_source_irregular.dat");
 
   // define size of the source plane here
   double sum = 0.0;
@@ -60,14 +76,13 @@ int main(int argc,char* argv[]){
 
 
 
-
   FixedSource* splane = new FixedSource(res,res,size,"identity");
   
   //set a fixed source profile
   source->profile(splane->Sj,splane->Si,splane->x,splane->y,splane->src);
   
   // output source profile
-  splane->outputSource(""); // writes to "vkl_source.fits" at the current directory
+  splane->outputSource("source_model.fits");
   
   // add size (in physical units) of the source plane fits file to its header
   std::map<std::string,std::string> header;
@@ -76,7 +91,7 @@ int main(int argc,char* argv[]){
   header["size"] = buffer;
   header["WIDTH"] = buffer;
   header["HEIGHT"] = buffer;
-  addFitsHeader("vkl_source.fits",header);
+  addFitsHeader("source_model.fits",header);
   
   
   delete(source);

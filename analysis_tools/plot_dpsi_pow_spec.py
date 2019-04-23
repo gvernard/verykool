@@ -7,17 +7,20 @@ import matplotlib
 import matplotlib.pyplot as plt
 
 
-
 path = sys.argv[1]
 run  = sys.argv[2]
-if len(sys.argv) > 3:
-    step = sys.argv[3]
-    out_path  = path+run+'output/'+str(step)+'_'
-else:
+if len(sys.argv) == 4:
+    lmodel = str(sys.argv[3])
     step = ''
-    out_path  = path+run+'output/'
-
-
+    out_path = path + run + "output/" + lmodel
+elif len(sys.argv) == 5:
+    lmodel = str(sys.argv[3])
+    step = str(sys.argv[4])
+    out_path = path + run + "output/" + step + "_" + lmodel
+else:
+    print "Either 3 or 4 command line arguments required: path, run, lmodel, <step>"
+    print len(sys.argv)," provided, exiting!!!"
+    sys.exit()
 
 
 fig = plt.figure(figsize=(10,6.2))
@@ -25,10 +28,10 @@ plt.xscale('log')
 plt.yscale('log')
 
 # reconstructed perturbations (need to create gridded source first)
-os.system("python plot_pow_spec.py "+out_path+"perturbations_vkl_source.fits "+path+run+"output/mask_source.fits")
+os.system("python plot_pow_spec.py "+out_path+"_dpsi.fits "+path+run+"output/pert_dpsi_mask.fits")
 #os.system("python plot_pow_spec.py "+out_path+"perturbations_vkl_source.fits")
 x,y,e = np.loadtxt("ps.dat",unpack=True)
-plt.errorbar(x,y,yerr=e,label='reconstruction',color='blue')
+plt.errorbar(x,y,yerr=e,label='reconstruction',color='red')
 
 # true perturbations
 if os.path.isfile(path+"data/perturbations.fits"):
@@ -37,14 +40,15 @@ if os.path.isfile(path+"data/perturbations.fits"):
     x,y,e = np.loadtxt("ps.dat",unpack=True)
     plt.errorbar(x,y,yerr=e,label='truth',color='black')
 
-plt.legend()
+plt.legend(fontsize=17)
 plt.xlabel(r'$k [arcsec^{-1}]$',fontsize=17)
 plt.ylabel(r'$P(k)$',fontsize=17)
+plt.xlim(0.4,5)
 
 plt.tight_layout()
-plt.savefig('pert_ps.pdf',bbox_inches='tight')
+plt.savefig('dpsi_ps.pdf',bbox_inches='tight')
 #plt.show()
 
 os.remove("ps.dat")
-os.remove("ps.png")
+os.remove("ps.pdf")
 

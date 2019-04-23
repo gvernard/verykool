@@ -8,11 +8,11 @@ $run  = $argv[3];
 // select suitable program output
 $exec = "python";
 switch($prog){
-    case "plot_all.py":
+    case "plot_all_smooth.py":
 	$out = "all.png";
 	break;
     case "plot_all_pert.py":
-	$out = "pert_all.png";
+	$out = "all.png";
 	break;
     case "plot_corner.py":
 	$out = "corner.pdf";
@@ -24,9 +24,9 @@ switch($prog){
 
 
 // scan run output directory to find the steps
-$dir = $path . $run . "/output/";
+$dir = $path . $run . "output/";
 $scanned_dir = array_diff(scandir($dir),array('..','.'));
-$dum_arr = preg_grep("/_vkl_voronoi.dat/i",$scanned_dir);
+$dum_arr = preg_grep("/_model.fits/i",$scanned_dir);
 $steps = array();
 foreach($dum_arr as $dum){
     $tmp = explode('_',$dum);

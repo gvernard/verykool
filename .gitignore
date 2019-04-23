@@ -9,8 +9,8 @@ lib/
 *.fits
 *.pyc
 *.aux
-analysis_tools/finalize_scripts/analyzed_cases/
-analysis_tools/finalize_scripts/create_gridded_source
+analysis_tools/analyzed_cases/
+analysis_tools/movies/
 analysis_tools/create_gridded_source
 scripts/report.txt
 

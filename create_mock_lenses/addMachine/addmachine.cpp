@@ -16,14 +16,6 @@
 
 
 
-void conUniCov(int ci,int cj,double* cov,double sigma){
-  for(int i=0;i<ci;i++){
-    for(int j=0;j<cj;j++){
-      cov[j*ci+i] = sigma;
-    }
-  }
-}
-
 void addUniNoiz(int seed,double sigma,int Ni,int Nj,double* data){
   const double two_pi = 2.0*3.14159265358979323846;
   double z1,z2,u1,u2;
@@ -69,21 +61,18 @@ void addMapRealization(double factor,double* noise,int Ni,int Nj,double* data){
 int main(int argc,char* argv[]){
 
   //=============== BEGIN:PARSE INPUT =======================
-
-  //Read in the JSON input
+  // Read in the JSON input
   Json::Value root;
-  if( argc > 1 ){//read json object from file
+  if( argc > 1 ){
     std::ifstream fin(argv[1]);
     fin >> root;
-  } else {//read json object from standard input
-    std::cin >> root;
   }
 
   std::string output     = root["output"].asString();
   std::string imgpath    = root["imgpath"].asString();
   std::string psfpath    = root["psfpath"].asString();
 
-  //Read the noise properties as a map of strings
+  // Read the noise properties as a map of strings
   std::map<std::string,std::string> noise;
   const Json::Value::Members jmembers = root["noise"].getMemberNames();
   for(int i=0;i<jmembers.size();i++){
@@ -91,15 +80,17 @@ int main(int argc,char* argv[]){
   }
   std::string noise_flag = noise["noise_flag"];
 
-  //Read the image properties as a map of strings
+  // Read the image properties as a map of strings
   std::map<std::string,std::string> image;
   const Json::Value iplane = root["iplane"];
   image["pix_x"] = iplane["pix_x"].asString();
   image["pix_y"] = iplane["pix_y"].asString();
   image["width"] = iplane["width"].asString();
   image["height"] = iplane["height"].asString();
+  image["inf_x"] = iplane["inf_x"].asString();
+  image["inf_y"] = iplane["inf_y"].asString();
 
-  //Read the psf properties as a map of strings
+  // Read the psf properties as a map of strings
   std::map<std::string,std::string> psf;
   const Json::Value jpsf = root["psf"];
   psf["pix_x"]  = jpsf["pix_x"].asString();
@@ -112,46 +103,25 @@ int main(int argc,char* argv[]){
 
 
   //=============== BEGIN:INITIALIZATION =======================
-  //Read clean image data
-  ImagePlane mydata(imgpath,stoi(image["pix_x"]),stoi(image["pix_y"]),stof(image["width"]),stof(image["height"]));
-
-
-  //Get the maximum value of the image before any convolution
-  double maxdata = *std::max_element(mydata.img,mydata.img+mydata.Ni*mydata.Nj);
-
-  /*
-  for(int i=0;i<mydata.Ni;i++){
-    for(int j=0;j<mydata.Nj;j++){
-      if( i<mydata.Ni/2. ){
-	mydata.img[i*mydata.Nj+j] = 1;
-      } else {
-	mydata.img[i*mydata.Nj+j] = 0;
-      }
-    }
-  }
-  */
+  // Read clean image data
+  ImagePlane mydata(imgpath,stoi(image["inf_x"]),stoi(image["inf_y"]),stof(image["width"]),stof(image["height"]));
   //================= END:INITIALIZATION =======================
 
 
 
 
   //=============== BEGIN:PROCESS IMAGE =======================
-  //Convolve image with psf
-  int Ni = mydata.Ni;
-  int Nj = mydata.Nj;
-
+  // Convolve image with psf
   if( psfpath != "0" ){
-    //Read the Psf
-    ImagePlane mypsf(psfpath,stoi(psf["pix_x"]),stoi(psf["pix_y"]),1.,1.);//last two arguments are dummy
+    int Ni = mydata.Ni;
+    int Nj = mydata.Nj;
+    ImagePlane mypsf(psfpath,stoi(psf["pix_x"]),stoi(psf["pix_y"]),1.0,1.0); // last two arguments are dummy
 
-    //Create psf kernel
+    // Create psf kernel
     int Pi     = stoi(psf["pix_x"]);
     int Pj     = stoi(psf["pix_y"]);
     int Ncropx = stoi(psf["crop_x"]);
     int Ncropy = stoi(psf["crop_y"]);
-
-
-
     int loffx,roffx,toffy,boffy;
 
     loffx = floor(Ncropx/2.0);
@@ -167,7 +137,6 @@ int main(int argc,char* argv[]){
       boffy = floor(Ncropy/2.0) + 1;
     }
 
-
     double* blur = (double*) calloc(Ncropx*Ncropy,sizeof(double));
     int offset = (floor(Pi/2.0)-toffy)*Pi + (floor(Pj/2.0)-loffx);
     for(int i=0;i<Ncropy;i++){
@@ -175,11 +144,10 @@ int main(int argc,char* argv[]){
 	blur[i*Ncropx+j] = mypsf.img[offset+i*Pi+j];
       }
     }
-
         
     int bNx = Ncropx/2.0;
     int bNy = Ncropy/2.0;
-    double* kernel = (double*) calloc(mydata.Ni*mydata.Nj,sizeof(double));
+    double* kernel = (double*) calloc(Ni*Nj,sizeof(double));
     for(int j=0;j<bNy;j++){
       for(int i=0;i<bNx;i++){
 	kernel[j*Ni+i]                    = blur[bNy*2*bNx+bNx+j*2*bNx+i];
@@ -189,7 +157,8 @@ int main(int argc,char* argv[]){
       }
     }
     
-    //Convolve with psf kernel
+
+    // Convolve with psf kernel
     fftw_complex* f_image  = (fftw_complex*) fftw_malloc(Ni*Nj*sizeof(fftw_complex));
     fftw_complex* f_kernel = (fftw_complex*) fftw_malloc(Ni*Nj*sizeof(fftw_complex));
     
@@ -219,54 +188,60 @@ int main(int argc,char* argv[]){
     fftw_free(f_image);
     fftw_free(f_kernel);
     
-    //Normalize output
+    // Normalize output
     for(int i=0;i<Ni*Nj;i++){
       mydata.img[i] /= (Ni*Nj);
     }
+  }
 
 
 
+  // Bin image from 'infinite' to observed resolution
+  ImagePlane obs_img(stoi(image["pix_x"]),stoi(image["pix_y"]),stof(image["width"]),stof(image["height"]));
+  double inf_dx = stof(image["width"])/stoi(image["inf_x"]);
+  double inf_dy = stof(image["height"])/stoi(image["inf_y"]);
+  double obs_dx = stof(image["width"])/stoi(image["pix_x"]);
+  double obs_dy = stof(image["height"])/stoi(image["pix_y"]);
+  for(int i=0;i<mydata.Ni;i++){
+    int ii = (int) floor(i*inf_dy/obs_dy);
+    for(int j=0;j<mydata.Nj;j++){
+      int jj = (int) floor(j*inf_dx/obs_dx);
+      obs_img.img[ii*obs_img.Nj + jj] += mydata.img[i*mydata.Nj + j];
+    }
   }
 
     
 
 
-  //Add different kinds of noise to the image if needed
+  // Add different kinds of noise to the image
   if( noise_flag == "uniform" ){
+    double maxdata = *std::max_element(obs_img.img,obs_img.img+obs_img.Ni*obs_img.Nj);
     double sigma = maxdata/stof(noise["sn"]);
-    addUniNoiz(stoi(noise["seed"]),sigma,Ni,Nj,mydata.img);
+    addUniNoiz(stoi(noise["seed"]),sigma,obs_img.Ni,obs_img.Nj,obs_img.img);
     std::ofstream myfile(output+"noise.dat",std::ios::out);
     myfile << sigma << std::endl;
     myfile.close();
   } else if( noise_flag == "map" ){
     ImagePlane sigmas(noise["file"],stoi(image["pix_x"]),stoi(image["pix_y"]),stof(image["width"]),stof(image["height"]));
-    addMapNoiz(stoi(noise["seed"]),sigmas.img,Ni,Nj,mydata.img);
+    addMapNoiz(stoi(noise["seed"]),sigmas.img,obs_img.Ni,obs_img.Nj,obs_img.img);
     sigmas.writeImage(output+"noise.fits");
   } else if( noise_flag == "realization" ){
     ImagePlane noise_realization(noise["file"],stoi(image["pix_x"]),stoi(image["pix_y"]),stof(image["width"]),stof(image["height"]));
-    addMapRealization(stof(noise["factor"]),noise_realization.img,Ni,Nj,mydata.img);
+    addMapRealization(stof(noise["factor"]),noise_realization.img,obs_img.Ni,obs_img.Nj,obs_img.img);
     noise_realization.writeImage(output+"noise.fits");
   } else if( noise_flag == "correlated" ){
 
   } else {
 
   }
-
-
-    //Create covariance map
-    //    ImagePlane mycov(Ni,Nj,1.,1.);//the last two arguments are dummy
-    //    conUniCov(Ni,Nj,mycov.img,sigma);
-    //Write covariance map
-    //    mycov.writeFits(output+"cov.fits");
-
   //================= END:PROCESS IMAGE =======================
 
 
 
 
   //=============== BEGIN:OUTPUT =======================
-  //Write image with added noise
-  mydata.writeImage(output+"image.fits");
+  // Write image with added noise
+  obs_img.writeImage(output+"image.fits");
   //================= END:OUTPUT =======================
 
 

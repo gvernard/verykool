@@ -1,0 +1,393 @@
+{
+    "splane": {
+	"type": "list",
+	"input_list": [
+	    {
+		"label": "D<sub>x</sub>",
+		"name": "pix_x",
+		"type": "number",
+		"step": 1,
+		"legend": "Image width in pixels"
+	    },
+	    {
+		"label": "D<sub>y</sub>",
+		"name": "pix_y",
+		"type": "number",
+		"step": 1,
+		"legend": "Image height in pixels"
+	    },
+	    {
+		"label": "W",
+		"name": "width",
+		"type": "number",
+		"legend": "Image width in arcsec"
+	    },
+	    {
+		"label": "H",
+		"name": "height",
+		"type": "number",
+		"legend": "Image height in arcsec"
+	    }
+	]
+    },
+
+    "print_all": {
+	"type": "list",
+	"input_list": [
+	    {
+		"label": "Print all",
+		"name": "print_all",
+		"type": "checkbox",
+		"legend": "Print intermediate files from FProject"
+	    }	    
+	]
+    },
+
+    "triangles": {
+	"type": "list",
+	"input_list": [
+	    {
+		"label": "N<sub>x</sub>",
+		"name": "Nx",
+		"type": "number",
+		"step": 1,
+		"legend": "X-dimension of grid of pixels to cast back to create triangles"
+	    },    
+	    {
+		"label": "N<sub>y</sub>",
+		"name": "Ny",
+		"type": "number",
+		"step": 1,
+		"legend": "Y-dimension of grid of pixels to cast back to create triangles"
+	    },  
+	    {
+		"label": "R<sub>sel</sub>",
+		"name": "sel_radius",
+		"type": "number",
+		"min": 0,
+		"legend": "Radius within which to exclude triangles"
+	    }
+	]
+    },
+
+    "physical": {
+	"type": "list",
+	"input_list": [
+	    {
+		"label": "&gamma;",
+		"name": "g",
+		"type": "nlpar",
+		"legend": "Magnitude of the external shear"
+	    },
+	    {
+		"label": "&phi;",
+		"name": "phi",
+		"type": "nlpar",
+		"legend": "Direction of the external shear (degrees, east of north)"
+	    }
+	]
+    },
+
+
+
+
+
+
+
+
+
+
+    "lenses": {
+	"type": "select",
+	"select_list": [
+	    {
+		"name": "sie",
+		"description": ""
+	    },
+	    {
+		"name": "spemd",
+		"description": ""
+	    }
+	]
+    },
+
+    "sie": {
+	"type": "list",
+	"input_list": [
+	    {
+		"label": "b",
+		"name": "b",
+		"type": "nlpar",
+		"legend": "Einstein radius in arcsec"
+	    },
+	    {
+		"label": "q",
+		"name": "q",
+		"type": "nlpar",
+		"legend": "Axis ratio (minor/major, major is always on the x-axis)"
+	    },
+	    {
+		"label": "pa",
+		"name": "pa",
+		"type": "nlpar",
+		"legend": "Position angle of the major axis (degrees, east of north)"
+	    },
+	    {
+		"label": "x<sub>0</sub>",
+		"name": "x0",
+		"type": "nlpar",
+		"legend": "Lens center abscissa in arcsec"
+	    },
+	    {
+		"label": "y<sub>0</sub>",
+		"name": "y0",
+		"type": "nlpar",
+		"legend": "Lens center ordinate in arcsec"
+	    }
+	]
+    },
+
+    "spemd": {
+	"type": "list",
+	"input_list": [
+	    {
+		"label": "b",
+		"name": "b",
+		"type": "nlpar",
+		"legend": "Einstein radius in arcsec"
+	    },
+	    {
+		"label": "q",
+		"name": "q",
+		"type": "nlpar",
+		"min": 0,
+		"max": 1,
+		"legend": "Axis ratio (minor/major, major is always on the x-axis)"
+	    },
+	    {
+		"label": "pa",
+		"name": "pa",
+		"type": "nlpar",
+		"legend": "Position angle of the major axis (degrees, east of north)"
+	    },
+	    {
+		"label": "x<sub>0</sub>",
+		"name": "x0",
+		"type": "nlpar",
+		"legend": "Lens center abscissa in arcsec"
+	    },
+	    {
+		"label": "y<sub>0</sub>",
+		"name": "y0",
+		"type": "nlpar",
+		"legend": "Lens center ordinate in arcsec"
+	    },
+	    {
+		"label": "e",
+		"name": "e",
+		"type": "nlpar",
+		"legend": "Exponent"
+	    },
+	    {
+		"label": "s",
+		"name": "s",
+		"type": "nlpar",
+		"min": 0,
+		"legend": "Core radius in arcsec"
+	    }
+	]
+    },
+
+
+
+
+
+
+
+    
+
+
+    "perturbations": {
+	"type": "select",
+	"select_list": [
+	    {
+		"name": "grf",
+		"description": ""
+	    }
+	]
+    },
+
+    "grf": {
+	"type": "list",
+	"input_list": [
+	    {
+		"label": "slope",
+		"name": "slope",
+		"type": "number",
+		"legend": "Slope of the power spectrum"
+	    },
+	    {
+		"label": "log<sub>10</sub>(var)",
+		"name": "logvar",
+		"type": "number",
+		"legend": "Logarithm of the variance of the random field"
+	    },
+	    {
+		"label": "seed",
+		"name": "seed",
+		"type": "number",
+		"step": 1,
+		"legend": "Seed for the random number generator"
+	    },
+	    {
+		"label": "N<sub>j</sub>",
+		"name": "Nj",
+		"type": "number",
+		"step": 1,
+		"legend": "Width of the perturbations field in pixels"
+	    },
+	    {
+		"label": "N<sub>i</sub>",
+		"name": "Ni",
+		"type": "number",
+		"step": 1,
+		"legend": "Height of the perturbations field in pixels"
+	    }
+	]
+    },
+
+
+
+    
+
+
+
+    "sources": {
+	"type": "select",
+	"select_list": [
+	    {
+		"name": "gauss",
+		"description": ""
+	    },
+	    {
+		"name": "fromfits",
+		"description": ""
+	    },
+	    {
+		"name": "delaunay",
+		"description": ""
+	    }
+	]
+    },
+
+    "gauss": {
+	"type": "list",
+	"input_list": [
+	    {
+		"label": "x<sub>0</sub>",
+		"name": "x0",
+		"type": "number",
+		"legend": "Source center abscissa in arcsec"
+	    }, 
+	    {
+		"label": "y<sub>0</sub>",
+		"name": "y0",
+		"type": "number",
+		"legend": "Source center ordinate in arcsec"
+	    },
+	    {
+		"label": "q",
+		"name": "q",
+		"type": "number",
+		"min": 0,
+		"max": 1,
+		"legend": "Axis ratio (minor/major, major is always on the x-axis)"
+	    }, 
+	    {
+		"label": "pa",
+		"name": "pa",
+		"type": "number",
+		"legend": "Position angle of the major axis (degrees, east of north)"
+	    }, 
+	    {
+		"label": "I<sub>0</sub>",
+		"name": "i_eff",
+		"type": "number",
+		"min": 0,
+		"legend": "Scaling factor for the profile brightness (value at the central pixel)"
+	    }, 
+	    {
+		"label": "&sigma;",
+		"name": "r_eff",
+		"type": "number",
+		"min": 0,
+		"legend": "Standard deviation on the x-axis"
+	    }	    
+	]
+    },
+
+    "fromfits": {
+	"type": "list",
+	"input_list": [
+	    {
+		"label": "filename",
+		"name": "filename",
+		"type": "file",
+		"legend": "Select a .fits file for the source"
+	    },
+	    {
+		"label": "N<sub>j</sub>",
+		"name": "Nj",
+		"type": "number",
+		"step": 1,
+		"legend": "Pixel resolution in x"
+	    },
+	    {
+		"label": "N<sub>i</sub>",
+		"name": "Ni",
+		"type": "number",
+		"step": 1,
+		"legend": "Pixel resolution in y"
+	    },
+	    {
+		"label": "W",
+		"name": "width",
+		"type": "number",
+		"min": 0,
+		"legend": "Width of the image in arcsec"
+	    },
+	    {
+		"label": "H",
+		"name": "height",
+		"type": "number",
+		"min": 0,
+		"legend": "Height of the image in arcsec"
+	    },
+	    {
+		"label": "x<sub>0</sub>",
+		"name": "x0",
+		"type": "number",
+		"legend": "Source center abscissa in arcsec"
+	    },
+	    {
+		"label": "y<sub>0</sub>",
+		"name": "y0",
+		"type": "number",
+		"legend": "Source center ordinate in arcsec"
+	    }
+	]
+    },
+
+    "delaunay": {
+	"type": "list",
+	"input_list": [
+	    {
+		"label": "filename",
+		"name": "filename",
+		"type": "file",
+		"legend": "Select a file with an irregular grid for the source.</br>Each line must have: the coordinates and the brightness of each grid point, separated by whitespace."
+	    }
+	]
+    }
+
+}

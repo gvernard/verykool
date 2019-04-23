@@ -101,7 +101,7 @@ srcyticks = np.append(srcyticks,srcrange)
 im_data  = fits.getdata(data_path+'image.fits',ext=0)
 im_data  = im_data[::-1,:]
 # Read model
-im_model = fits.getdata(out_path+'pert_vkl_image.fits',ext=0)
+im_model = fits.getdata(out_path+'pert_model.fits',ext=0)
 im_model = im_model[::-1,:]
 # Read mask
 if pars["maskpath"] == "0":
@@ -160,7 +160,7 @@ if pars["maskpath"] != "0":
 # Residual image between data and model
 #########################################################################################################################
 # Read residuals
-im_res = fits.getdata(out_path+'pert_vkl_residual.fits',ext=0)
+im_res = fits.getdata(out_path+'pert_residual.fits',ext=0)
 im_res = im_res[::-1,:]
 if pars["maskpath"] != "0":
     im_res = im_res*np.flipud(np.array(mask))
@@ -202,7 +202,7 @@ else:
     max_true = 0
 
 # Read reconstructed adaptive source
-f        = open(out_path+'pert_vkl_voronoi.dat')
+f        = open(out_path+'pert_source_voronoi.dat')
 content  = [x.strip('\n') for x in f.readlines()]
 zvalues  = []
 polygons = []
@@ -278,7 +278,7 @@ plt.colorbar(col,cax=cax,format="%5.2f")
 
 # Errors on reconstructed adaptive source
 #########################################################################################################################
-f        = open(out_path+'vkl_voronoi_errors.dat')
+f        = open(out_path+'pert_source_voronoi_errors.dat')
 content  = [x.strip('\n') for x in f.readlines()]
 zvalues  = []
 polygons = []
@@ -331,25 +331,32 @@ plt.colorbar(col,cax=cax,format="%6.4f")
 if os.path.isfile(data_path+'perturbations.fits'):
     im_pert_true = fits.getdata(data_path+'perturbations.fits',ext=0)
     im_pert_true = im_pert_true[::-1,:]
+#    im_pert_true /= np.power(6.05/121,2)
     max_pert_true = np.amax([abs(np.amax(im_pert_true)),abs(np.amin(im_pert_true))])
 else:
     max_pert_true = 0
 
 # Read reconstructed perturbations
-if os.path.isfile(out_path+'added_perturbations_vkl_source.fits'):
-    im_pert = fits.getdata(out_path+'added_perturbations_vkl_source.fits',ext=0)
+if os.path.isfile(out_path+'pert_added_dpsi.fits'):
+    im_pert = fits.getdata(out_path+'pert_added_dpsi.fits',ext=0)
     pert_title = "ADDED RECONSTRUCTION"
-    im_conv = fits.getdata(out_path+'added_convergence.fits',ext=0)
 else:
-    im_pert = fits.getdata(out_path+'perturbations_vkl_source.fits',ext=0)
+    im_pert = fits.getdata(out_path+'pert_dpsi.fits',ext=0)
     pert_title = "RECONSTRUCTION"
-    im_conv = fits.getdata(out_path+'convergence.fits',ext=0)
 im_pert = im_pert[::-1,:]
-im_conv = im_conv[::-1,:]
+#im_pert /= np.power(6.05/40,2)
+
+# Read mask
+if pars["maskpath"] == "0":
+    mask_dpsi = np.ones(im_pert.shape)
+else:
+    mask_dpsi = fits.getdata(out_path+'pert_dpsi_mask.fits',ext=0)
+
 
 # Set color scale
-limit = np.amax([max_pert_true,abs(np.amax(im_pert)),abs(np.amin(im_pert))])
-
+#limit = np.amax([max_pert_true,abs(np.amax(im_pert*np.flipud(mask_dpsi))),abs(np.amin(im_pert*np.flipud(mask_dpsi)))])
+limit = max_pert_true
+#np.ma.masked_where(mask>0,mask)
 
 
 # Plot original perturbations if they exist
@@ -367,8 +374,8 @@ if os.path.isfile(data_path+'perturbations.fits'):
     #fig.colorbar(im,cax=cax,ticks=MultipleLocator(0.2),format="%4.1f")
     fig.colorbar(im,cax=cax,format="%5.2f")
     if pars["maskpath"] != "0":
-        pert_true.contour(mask,levels=[0.5],extent=[xmin,xmax,ymin,ymax],colors='#001A47')
-        pert_true.imshow(np.flipud(np.ma.masked_where(mask>0,mask)),interpolation='none',cmap='Greys',extent=[xmin,xmax,ymin,ymax])
+        pert_true.contour(mask_dpsi,levels=[0.5],extent=[xmin,xmax,ymin,ymax],colors='#001A47')
+        pert_true.imshow(np.flipud(np.ma.masked_where(mask_dpsi>0,mask_dpsi)),interpolation='none',cmap='Greys',extent=[xmin,xmax,ymin,ymax])
 else:
     pert_true = fig.add_subplot(4,3,7)
     pert_true.axis('off')
@@ -390,8 +397,8 @@ cax = divider.append_axes("right",size="5%",pad=0.05)
 #cax.yaxis.set_major_locator(matplotlib.ticker.MaxNLocator(4))
 fig.colorbar(im,cax=cax,format="%5.2f")
 if pars["maskpath"] != "0":
-    pert.contour(mask,levels=[0.5],extent=[xmin,xmax,ymin,ymax],colors='#001A47')
-    pert.imshow(np.flipud(np.ma.masked_where(mask>0,mask)),interpolation='none',cmap='Greys',extent=[xmin,xmax,ymin,ymax])
+    pert.contour(mask_dpsi,levels=[0.5],extent=[xmin,xmax,ymin,ymax],colors='#001A47')
+    pert.imshow(np.flipud(np.ma.masked_where(mask_dpsi>0,mask_dpsi)),interpolation='none',cmap='Greys',extent=[xmin,xmax,ymin,ymax])
 
 
 dum = fig.add_subplot(4,3,9)
@@ -409,10 +416,12 @@ else:
     max_conv_true = 0
 
 # Read reconstructed convergence
-if os.path.isfile(out_path+'added_convergence.fits'):
-    im_conv = fits.getdata(out_path+'added_convergence.fits',ext=0)
+if os.path.isfile(out_path+'pert_added_convergence.fits'):
+    im_conv = fits.getdata(out_path+'pert_added_convergence.fits',ext=0)
+    conv_title = "ADDED CONVERGENCE"
 else:
-    im_conv = fits.getdata(out_path+'convergence.fits',ext=0)
+    im_conv = fits.getdata(out_path+'pert_convergence.fits',ext=0)
+    conv_title = "CONVERGENCE"
 im_conv = im_conv[::-1,:]
 
 # Set color scale
@@ -436,8 +445,8 @@ if os.path.isfile(data_path+'convergence.fits'):
     #fig.colorbar(im,cax=cax,ticks=MultipleLocator(0.2),format="%4.1f")
     fig.colorbar(im,cax=cax,format="%5.2f")
     if pars["maskpath"] != "0":
-        conv_true.contour(mask,levels=[0.5],extent=[xmin,xmax,ymin,ymax],colors='#001A47')
-        conv_true.imshow(np.flipud(np.ma.masked_where(mask>0,mask)),interpolation='none',cmap='Greys',extent=[xmin,xmax,ymin,ymax])
+        conv_true.contour(mask_dpsi,levels=[0.5],extent=[xmin,xmax,ymin,ymax],colors='#001A47')
+        conv_true.imshow(np.flipud(np.ma.masked_where(mask_dpsi>0,mask_dpsi)),interpolation='none',cmap='Greys',extent=[xmin,xmax,ymin,ymax])
 else:
     conv_true = fig.add_subplot(4,3,10)
     conv_true.axis('off')
@@ -446,7 +455,7 @@ else:
 
 # Plot reconstructed convergence
 conv = fig.add_subplot(4,3,11)
-conv.set_title('CONVERGENCE')
+conv.set_title(conv_title)
 conv.set_xlabel('arcsec')
 conv.set_ylabel('arcsec')
 im = conv.imshow(im_conv,interpolation='none',cmap=mycmap_div,extent=[xmin,xmax,ymin,ymax],vmin=-limit,vmax=limit)
@@ -459,8 +468,8 @@ cax = divider.append_axes("right",size="5%",pad=0.05)
 #cax.yaxis.set_major_locator(matplotlib.ticker.MaxNLocator(4))
 fig.colorbar(im,cax=cax,format="%5.2f")
 if pars["maskpath"] != "0":
-    conv.contour(mask,levels=[0.5],extent=[xmin,xmax,ymin,ymax],colors='#001A47')
-    conv.imshow(np.flipud(np.ma.masked_where(mask>0,mask)),interpolation='none',cmap='Greys',extent=[xmin,xmax,ymin,ymax])
+    conv.contour(mask_dpsi,levels=[0.5],extent=[xmin,xmax,ymin,ymax],colors='#001A47')
+    conv.imshow(np.flipud(np.ma.masked_where(mask_dpsi>0,mask_dpsi)),interpolation='none',cmap='Greys',extent=[xmin,xmax,ymin,ymax])
 
 
 
@@ -475,5 +484,6 @@ dum.axis('off')
 fig.suptitle('step: '+str(step),fontsize=10)
 plt.tight_layout(rect=[0, 0.0, 1, 0.95])
 #plt.tight_layout()
-plt.savefig('pert_all.png',bbox_inches='tight')
+plt.savefig('all.png',bbox_inches='tight')
+plt.savefig('all.pdf',bbox_inches='tight')
 #plt.show()

@@ -4,10 +4,12 @@
             "pix_x": 80,
             "pix_y": 80,
             "width": 3.5,
-            "height": 3.5
+            "height": 3.5,
+	    "inf_x": 1000,
+	    "inf_y": 1000
 	}
     },
-
+/*
     "perturbations":{
 	"type":"grf",
 	"logvar": -2,
@@ -15,7 +17,7 @@
 	"Ni": 80,
 	"Nj": 80
     },
-
+*/
     "fproject":{
 	"splane": {
             "type": "fixed",
@@ -121,7 +123,7 @@
     },
 
     "addmachine":{
-	"psfpath": "/Users/users/gvernard/myCodes/newCreateMockLenses/example_mock_creation/psf.fits",
+	"psfpath": "/Users/users/gvernard/myGit/VeryKooL/create_mock_lenses/example_mock_creation/psf.fits",
 	"psf": {
             "pix_x": 74,
             "pix_y": 74,
