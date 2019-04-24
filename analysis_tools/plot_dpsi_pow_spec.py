@@ -34,8 +34,8 @@ x,y,e = np.loadtxt("ps.dat",unpack=True)
 plt.errorbar(x,y,yerr=e,label='reconstruction',color='red')
 
 # true perturbations
-if os.path.isfile(path+"data/perturbations.fits"):
-    os.system("python plot_pow_spec.py "+path+"data/perturbations.fits "+path+"data/mask.fits")
+if os.path.isfile(path+"data/dpsi.fits"):
+    os.system("python plot_pow_spec.py "+path+"data/dpsi.fits "+path+"data/mask.fits")
     #os.system("python plot_pow_spec.py "+path+"data/perturbations.fits")
     x,y,e = np.loadtxt("ps.dat",unpack=True)
     plt.errorbar(x,y,yerr=e,label='truth',color='black')

@@ -23,7 +23,7 @@ if [ "$lmodel" = "problem" ]; then
     echo "Could not determine lmodel and step, exiting."
     exit
 fi
-echo "Step: " $step 
+#echo "Step: " $step 
 
 
 #########################################
@@ -69,7 +69,6 @@ php latex.php $path $run $lmodel $step
 #########################################
 echo ' >>> producing latex document...'
 pdflatex report.tex > /dev/null
-cp report.pdf ${path}${run}report.pdf
 mv report.pdf $target
 
 
@@ -120,6 +119,8 @@ if [ "$lmodel" = "pert" ]; then
     cp ${path}${run}output/smooth_residual.fits $target/smooth_residual.fits
 fi
 
+rm -r ${path}${run}analysis
+cp -r $target/ ${path}${run}analysis
 
 
 conda deactivate

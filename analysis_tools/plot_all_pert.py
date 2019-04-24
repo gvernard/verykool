@@ -328,8 +328,8 @@ plt.colorbar(col,cax=cax,format="%6.4f")
 # True perturbations (in case of mock data) and reconstructed perturbations. They need to share the same color scale
 #########################################################################################################################
 # Read true perturbations file if it exists
-if os.path.isfile(data_path+'perturbations.fits'):
-    im_pert_true = fits.getdata(data_path+'perturbations.fits',ext=0)
+if os.path.isfile(data_path+'dpsi.fits'):
+    im_pert_true = fits.getdata(data_path+'dpsi.fits',ext=0)
     im_pert_true = im_pert_true[::-1,:]
 #    im_pert_true /= np.power(6.05/121,2)
     max_pert_true = np.amax([abs(np.amax(im_pert_true)),abs(np.amin(im_pert_true))])
@@ -358,9 +358,8 @@ else:
 limit = max_pert_true
 #np.ma.masked_where(mask>0,mask)
 
-
 # Plot original perturbations if they exist
-if os.path.isfile(data_path+'perturbations.fits'):
+if os.path.isfile(data_path+'dpsi.fits'):
     pert_true = fig.add_subplot(4,3,7)
     pert_true.set_title('TRUE PERTURBATIONS')
     pert_true.set_xlabel('arcsec')
@@ -408,8 +407,8 @@ dum.axis('off')
 # True convergence (in case of mock data) and reconstructed convergence. They need to share the same color scale
 #########################################################################################################################
 # Read true convergence file if it exists
-if os.path.isfile(data_path+'convergence.fits'):
-    im_conv_true = fits.getdata(data_path+'convergence.fits',ext=0)
+if os.path.isfile(data_path+'kappa.fits'):
+    im_conv_true = fits.getdata(data_path+'kappa.fits',ext=0)
     im_conv_true = im_conv_true[::-1,:]
     max_conv_true = np.amax([abs(np.amax(im_conv_true)),abs(np.amin(im_conv_true))])
 else:
@@ -430,8 +429,8 @@ limit = np.amax([max_conv_true,abs(np.amax(im_conv)),abs(np.amin(im_conv))])
 
 
 
-# Plot original perturbations if they exists
-if os.path.isfile(data_path+'convergence.fits'):
+# Plot original convergence if it exists
+if os.path.isfile(data_path+'kappa.fits'):
     conv_true = fig.add_subplot(4,3,10)
     conv_true.set_title('TRUE CONVERGENCE')
     conv_true.set_xlabel('arcsec')

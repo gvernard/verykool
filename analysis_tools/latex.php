@@ -37,7 +37,7 @@ if( $use_truth ){
 // 1st latex part: Title
 $str = '';
 $str .= '\section*{\hfil Name: '.str_replace('_',' ',$run).' \hfil}';
-file_put_contents('title.tex',$str);
+file_put_contents('generated_tex_files/title.tex',$str);
 
 
 
@@ -76,7 +76,7 @@ $str .= '\end{tabular}';
 $str .= '\end{center}';
 $str .= '\label{tab:1}';
 $str .= '\end{table*}';
-file_put_contents('table1.tex',$str);
+file_put_contents('generated_tex_files/table1.tex',$str);
 
 
 
@@ -120,7 +120,7 @@ $str .= '\end{tabular}';
 $str .= '\end{center}';
 $str .= '\label{tab:2}';
 $str .= '\end{table*}';
-file_put_contents('table2.tex',$str);
+file_put_contents('generated_tex_files/table2.tex',$str);
 
 
 
@@ -178,7 +178,7 @@ $str .= '\end{tabular}';
 $str .= '\end{center}';
 $str .= '\label{tab:3}';
 $str .= '\end{table*}';
-file_put_contents('table3.tex',$str);
+file_put_contents('generated_tex_files/table3.tex',$str);
 
 
 

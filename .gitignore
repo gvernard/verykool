@@ -10,6 +10,7 @@ lib/
 *.pyc
 *.aux
 analysis_tools/analyzed_cases/
+analysis_tools/generated_tex_files/
 analysis_tools/movies/
 analysis_tools/create_gridded_source
 scripts/report.txt
