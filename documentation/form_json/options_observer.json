@@ -1,0 +1,201 @@
+{
+    "iplane": {
+	"type": "list",
+	"input_list": [
+	    {
+		"label": "D<sub>x</sub>",
+		"name": "pix_x",
+		"type": "number",
+		"step": 1,
+		"legend": "Image width in pixels"
+	    },
+	    {
+		"label": "D<sub>y</sub>",
+		"name": "pix_y",
+		"type": "number",
+		"step": 1,
+		"legend": "Image height in pixels"
+	    },
+	    {
+		"label": "W",
+		"name": "width",
+		"type": "number",
+		"legend": "Image width in arcsec"
+	    },
+	    {
+		"label": "H",
+		"name": "height",
+		"type": "number",
+		"legend": "Image height in arcsec"
+	    },
+	    {
+		"label": "Inf<sub>x</sub>",
+		"name": "inf_x",
+		"type": "hidden",
+		"value": 1500,
+		"legend": "Lensed image width in pixels without lensing effects"
+	    },
+	    {
+		"label": "Inf<sub>x</sub>",
+		"name": "inf_y",
+		"type": "hidden",
+		"value": 1500,
+		"legend": "Lensed image height in pixels without lensing effects"
+	    }
+	]
+    },
+
+
+    "noise": {
+	"type": "select",
+	"select_list": [
+	    {
+		"name": "uniform",
+		"label": "Uniform",
+		"description": "Uniform noise drawn from the same Gaussian distribution (&sigma; determined by S/N below)",
+		"type": "list",
+		"input_list": [
+		    {
+			"label": "seed",
+			"name": "seed",
+			"type": "number",
+			"step": 1,
+			"legend": "Seed for the random number generator"
+		    },
+		    {
+			"label": "S/N",
+			"name": "sn",
+			"type": "number",
+			"legend": "Signal to noise ratio at the maximum lensed image brightness"
+		    }
+		]
+	    },
+	    {
+		"name": "noise_map",
+		"label": "Noise map",
+		"description": "An image, 'map', of the individual &sigma; per pixel, assuming Gaussian noise",
+		"type": "list",
+		"input_list": [
+		    {
+			"label": "filename",
+			"name": "filename",
+			"type": "file",
+			"legend": "File (.fits) containing the standard deviation for the noise in each pixel"
+		    }
+		]
+	    },
+	    {
+		"name": "noise_realization",
+		"label": "Noise realization",
+		"description": "A specific realization of the noise (brightness values)",
+		"type": "list",
+		"input_list": [
+		    {
+			"label": "Noise map",
+			"name": "noise_map",
+			"type": "file",
+			"legend": "File (.fits) containing the standard deviation for the noise in each pixel"
+		    },
+		    {
+			"label": "Noise realization",
+			"name": "file",
+			"type": "file",
+			"legend": "File (.fits) containing a specific noise realization for each pixel"
+		    },
+		    {
+			"label": "factor",
+			"name": "factor",
+			"type": "number",
+			"min": 0,
+			"legend": "Optional factor to scale the noise realization"
+		    }
+		]
+	    }
+	]
+    },
+
+    "psf": {
+	"type": "list",
+	"input_list": [
+	    {
+		"label": "PSF",
+		"name": "psfpath",
+		"type": "file",
+		"legend": "File (.fits) containing the point spread function (same pixel size as the image)"
+	    },
+	    {
+		"label": "P<sub>x</sub>",
+		"name": "pix_x",
+		"type": "number",
+		"step": 1,
+		"legend": "Width of the PSF in pixels"
+	    },
+	    {
+		"label": "P<sub>y</sub>",
+		"name": "pix_y",
+		"type": "number",
+		"step": 1,
+		"legend": "Height of the PSF in pixels"
+	    },
+	    {
+		"label": "C<sub>x</sub>",
+		"name": "crop_x",
+		"type": "number",
+		"step": 1,
+		"legend": "X-size of the central region to crop"
+	    },
+	    {
+		"label": "C<sub>y</sub>",
+		"name": "crop_y",
+		"type": "number",
+		"step": 1,
+		"legend": "Y-size of the central region to crop"
+	    }
+	]
+    },
+
+    "mask": {
+	"name": "mask",
+	"label": "mask",
+	"description": "Select a mask for the data",
+	"type": "select",
+	"select_list": [
+
+	    {
+		"label": "Automatic",
+		"name": "automatic",
+		"description": "Produce a mask automatically",
+		"type": "list",
+		"input_list": [
+		    {
+			"label": "Smear factor",
+			"name": "smear",
+			"type": "number",
+			"legend": "Smear the resulting image brightness by a 2-d Gaussian filter of this size (in arcsec)"
+		    },
+		    {
+			"label": "Threshold",
+			"name": "threshold",
+			"type": "number",
+			"legend": "Accept pixels above this threshold in brightness after smearing"
+		    }
+		]
+	    },
+
+	    {
+		"label": "Upload",
+		"name": "upload",
+		"description": "Upload an existing mask",
+		"type": "list",
+		"input_list": [
+		    {
+			"label": "Mask",
+			"name": "maskpath",
+			"type": "file",
+			"legend": "File (.fits) containing the mask (same pixel size as the image)"
+		    }
+		]
+	    }
+	]
+    }
+}

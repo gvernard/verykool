@@ -1,0 +1,194 @@
+{
+    "print_all": {
+	"type": "list",
+	"input_list": [
+	    {
+		"label": "Print all",
+		"name": "print_all",
+		"type": "checkbox",
+		"legend": "Print intermediate files from FProject"
+	    }	    
+	]
+    },
+
+    "physical": {
+	"type": "nlpar_list",
+	"input_list": [
+	    {
+		"label": "&gamma;",
+		"name": "g",
+		"type": "nlpar",
+		"legend": "Magnitude of the external shear"
+	    },
+	    {
+		"label": "&phi;",
+		"name": "phi",
+		"type": "nlpar",
+		"legend": "Direction of the external shear (degrees, east of north)"
+	    }
+	]
+    },
+
+
+    "lenses": {
+	"type": "select",
+	"select_list": [
+	    {
+		"label": "SIE",
+		"name": "sie",
+		"description": "Singular Isothermal Ellipsoid.",
+		"type": "nlpar_list",
+		"input_list": [
+		    {
+			"label": "b",
+			"name": "b",
+			"type": "nlpar",
+			"legend": "Einstein radius in arcsec"
+		    },
+		    {
+			"label": "q",
+			"name": "q",
+			"type": "nlpar",
+			"legend": "Axis ratio (minor/major, major is always on the x-axis)"
+		    },
+		    {
+			"label": "pa",
+			"name": "pa",
+			"type": "nlpar",
+			"legend": "Position angle of the major axis (degrees, east of north)"
+		    },
+		    {
+			"label": "x<sub>0</sub>",
+			"name": "x0",
+			"type": "nlpar",
+			"legend": "Lens center abscissa in arcsec"
+		    },
+		    {
+			"label": "y<sub>0</sub>",
+			"name": "y0",
+			"type": "nlpar",
+			"legend": "Lens center ordinate in arcsec"
+		    }
+		]
+	    },
+	    {
+		"label": "SPEMD",
+		"name": "spemd",
+		"description": "Softened Power-law Elliptical Mass Distribution.",
+		"type": "nlpar_list",
+		"input_list": [
+		    {
+			"label": "b",
+			"name": "b",
+			"type": "nlpar",
+			"legend": "Einstein radius in arcsec"
+		    },
+		    {
+			"label": "q",
+			"name": "q",
+			"type": "nlpar",
+			"min": 0,
+			"max": 1,
+			"legend": "Axis ratio (minor/major, major is always on the x-axis)"
+		    },
+		    {
+			"label": "pa",
+			"name": "pa",
+			"type": "nlpar",
+			"legend": "Position angle of the major axis (degrees, east of north)"
+		    },
+		    {
+			"label": "x<sub>0</sub>",
+			"name": "x0",
+			"type": "nlpar",
+			"legend": "Lens center abscissa in arcsec"
+		    },
+		    {
+			"label": "y<sub>0</sub>",
+			"name": "y0",
+			"type": "nlpar",
+			"legend": "Lens center ordinate in arcsec"
+		    },
+		    {
+			"label": "e",
+			"name": "e",
+			"type": "nlpar",
+			"legend": "Exponent"
+		    },
+		    {
+			"label": "s",
+			"name": "s",
+			"type": "nlpar",
+			"min": 0,
+			"legend": "Core radius in arcsec"
+		    }
+		]	
+	    }
+	]
+    },
+
+
+
+    "perturbations": {
+	"type": "select",
+	"select_list": [
+	    {
+		"label": "GRF",
+		"name": "grf",
+		"description": "Gaussian Random Field.",
+		"type": "list",
+		"input_list": [
+		    {
+			"label": "slope",
+			"name": "slope",
+			"type": "number",
+			"legend": "Slope of the power spectrum"
+		    },
+		    {
+			"label": "log<sub>10</sub>(var)",
+			"name": "logvar",
+			"type": "number",
+			"legend": "Logarithm of the variance of the random field"
+		    },
+		    {
+			"label": "seed",
+			"name": "seed",
+			"type": "number",
+			"step": 1,
+			"legend": "Seed for the random number generator"
+		    },
+		    {
+			"label": "N<sub>j</sub>",
+			"name": "Nj",
+			"type": "number",
+			"step": 1,
+			"legend": "Width of the perturbations field in pixels"
+		    },
+		    {
+			"label": "N<sub>i</sub>",
+			"name": "Ni",
+			"type": "number",
+			"step": 1,
+			"legend": "Height of the perturbations field in pixels"
+		    }
+		]		
+	    },
+	    {
+		"label": "upload",
+		"name": "upload",
+		"description": "Custom perturbations.",
+		"type": "list",
+		"input_list": [
+		    {
+			"label": "file",
+			"name": "file",
+			"type": "file",
+			"legend": "Upload a file with &delta;&psi;"
+		    }
+		]
+	    }
+	]
+    }
+
+
+}

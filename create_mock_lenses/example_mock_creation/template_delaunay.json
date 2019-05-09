@@ -1,0 +1,109 @@
+{
+    "general":{
+	"iplane": {
+            "pix_x": 80,
+            "pix_y": 80,
+            "width": 6.5,
+            "height": 6.5,
+	    "inf_x": 1000,
+	    "inf_y": 1000
+	}
+    },
+    /*
+      "perturbations":{
+      "type":"grf",
+      "logvar": -2,
+      "slope": -5,
+      "Ni": 80,
+      "Nj": 80
+      },
+    */
+    "fproject":{
+	"print_all": 0,
+	"physical": [
+            {
+		"nam": "g",
+		"val": 0.032,
+   		"fix": 0,
+		"min": 0.00,
+		"max": 0.095
+	    },
+            {
+		"nam": "phi",
+		"val": 51.0,
+		"fix": 0,
+		"min": 30,
+		"max": 55
+            }
+	],
+	"source":	    
+	{
+	    "type": "delaunay",
+	    "filename": "/Users/users/gvernard/myGit/VeryKooL/create_mock_lenses/example_mock_creation/delaunay_source.dat"
+	},
+	"lenses": [
+            {
+		"type": "mass",
+		"subtype": "sie",
+		"nlpars": [
+                    {
+			"nam": "b",
+			"val": 0.9,
+			"fix": 0,
+			"min": 0.8,
+			"max": 1.0
+                    },
+                    {
+			"nam": "q",
+			"val": 0.8,
+			"fix": 0,
+			"min": 0.7,
+			"max": 0.999
+                    },
+                    {
+			"nam": "pa",
+			"val": -45.0,
+			"fix": 0,
+			"min": -60,
+			"max": -20
+                    },
+                    {
+			"nam": "x0",
+			"val": 0.0,
+			"fix": 0,
+			"min": -0.1,
+			"max": 0.1
+                    },
+                    {
+			"nam": "y0",
+			"val": 0.0,
+			"fix": 0,
+			"min": -0.1,
+			"max": 0.1
+                    }
+		]
+            }
+	]
+    },
+
+    "noise":{
+	"noise_flag": "uniform",
+        "seed": 123,
+        "sn": 40
+    },
+
+    "addmachine":{
+	"psfpath": "/Users/users/gvernard/myGit/VeryKooL/create_mock_lenses/example_mock_creation/psf.fits",
+	"psf": {
+            "pix_x": 74,
+            "pix_y": 74,
+            "crop_x": 30,
+            "crop_y": 30
+	}
+    },
+
+    "automask":{
+	"smear": 5,
+	"threshold": 0.92
+    }
+}

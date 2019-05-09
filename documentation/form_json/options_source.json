@@ -1,0 +1,188 @@
+{
+
+    "analytic": {
+	"name": "analytic",
+	"label": "Analytic",
+	"description": "Select an analytic profile for the source",
+	"type": "select",
+	"select_list": [
+	    {
+		"label": "Gauss",
+		"name": "gauss",
+		"description": "2D Gaussian distribution",
+		"type": "list",
+		"input_list":[
+		    {
+			"label": "x<sub>0</sub>",
+			"name": "x0",
+			"type": "number",
+			"legend": "Source center abscissa in arcsec"
+		    }, 
+		    {
+			"label": "y<sub>0</sub>",
+			"name": "y0",
+			"type": "number",
+			"legend": "Source center ordinate in arcsec"
+		    },
+		    {
+			"label": "q",
+			"name": "q",
+			"type": "number",
+			"min": 0,
+			"max": 1,
+			"legend": "Axis ratio (minor/major, major is always on the x-axis)"
+		    }, 
+		    {
+			"label": "pa",
+			"name": "pa",
+			"type": "number",
+			"legend": "Position angle of the major axis (degrees, east of north)"
+		    }, 
+		    {
+			"label": "I<sub>0</sub>",
+			"name": "i_eff",
+			"type": "number",
+			"min": 0,
+			"legend": "Scaling factor for the profile brightness (value at the central pixel)"
+		    }, 
+		    {
+			"label": "&sigma;",
+			"name": "r_eff",
+			"type": "number",
+			"min": 0,
+			"legend": "Standard deviation on the x-axis"
+		    }	    
+		]
+	    },
+	    
+	    {
+		"label": "Sersic",
+		"name": "sersic",
+		"description": "2D Sersic profile",
+		"type": "list",
+		"input_list":[
+		    {
+			"label": "x<sub>0</sub>",
+			"name": "x0",
+			"type": "number",
+			"legend": "Source center abscissa in arcsec"
+		    }, 
+		    {
+			"label": "y<sub>0</sub>",
+			"name": "y0",
+			"type": "number",
+			"legend": "Source center ordinate in arcsec"
+		    },
+		    {
+			"label": "q",
+			"name": "q",
+			"type": "number",
+			"min": 0,
+			"max": 1,
+			"legend": "Axis ratio (minor/major, major is always on the x-axis)"
+		    }, 
+		    {
+			"label": "pa",
+			"name": "pa",
+			"type": "number",
+			"legend": "Position angle of the major axis (degrees, east of north)"
+		    }, 
+		    {
+			"label": "I<sub>0</sub>",
+			"name": "i_eff",
+			"type": "number",
+			"min": 0,
+			"legend": "Scaling factor for the profile brightness (value at the central pixel)"
+		    }, 
+		    {
+			"label": "&sigma;",
+			"name": "r_eff",
+			"type": "number",
+			"min": 0,
+			"legend": "Standard deviation on the x-axis"
+		    },
+		    {
+			"label": "n",
+			"name": "n",
+			"type": "number",
+			"min": 0,
+			"legend": "Sersic index"
+		    }
+		]
+	    }	       
+	]   
+    },
+    
+    
+    "fromfits": {
+	"name": "fromfits",
+	"label": "From .fits file",
+	"description": "Upload a .fits image of the source",
+	"type": "list",
+	"input_list": [
+	    {
+		"label": "filename",
+		"name": "filename",
+		"type": "file",
+		"legend": "Select a .fits file for the source"
+	    },
+	    {
+		"label": "N<sub>j</sub>",
+		"name": "Nj",
+		"type": "number",
+		"step": 1,
+		"legend": "Pixel resolution in x"
+	    },
+	    {
+		"label": "N<sub>i</sub>",
+		"name": "Ni",
+		"type": "number",
+		"step": 1,
+		"legend": "Pixel resolution in y"
+	    },
+	    {
+		"label": "W",
+		"name": "width",
+		"type": "number",
+		"min": 0,
+		"legend": "Width of the image in arcsec"
+	    },
+	    {
+		"label": "H",
+		"name": "height",
+		"type": "number",
+		"min": 0,
+		"legend": "Height of the image in arcsec"
+	    },
+	    {
+		"label": "x<sub>0</sub>",
+		"name": "x0",
+		"type": "number",
+		"legend": "Source center abscissa in arcsec"
+	    },
+	    {
+		"label": "y<sub>0</sub>",
+		"name": "y0",
+		"type": "number",
+		"legend": "Source center ordinate in arcsec"
+	    }
+	]
+	
+    },
+    
+    "delaunay": {
+	"name": "delaunay",
+	"label": "Irregular grid",
+	"description": "Upload an irregular brightness grid (abscissa,ordinate,brightness)",
+	"type": "list",
+	"input_list": [
+	    {
+		"label": "filename",
+		"name": "filename",
+		"type": "file",
+		"legend": "Select a file with an irregular grid for the source.</br>Each line must have: the coordinates and the brightness of each grid point, separated by whitespace."
+	    }
+	]		
+    }
+
+}
