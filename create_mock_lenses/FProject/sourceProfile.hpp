@@ -14,75 +14,119 @@
 typedef CGAL::Exact_predicates_inexact_constructions_kernel K;
 typedef K::Point_2 Point;
 
+
 class BaseProfile {
 public:
-  std::map<std::string,double> pars;
-  int npoly = 100;
-  double* x;
-  double* y;
-  const double pi  = 3.14159265358979323846;
-  const double fac = 0.01745329251;
+  std::string type;
+  int output_res;
   
   BaseProfile(){};
-  ~BaseProfile(){
-    free(x);
-    free(y);
-    pars.clear();
-  }
+  ~BaseProfile(){};
 
   virtual double value(double x,double y) = 0;
+  virtual void outputProfile(std::string filename) = 0;
 
   void profile(int Sj,int Si,double* sx,double* sy,double* s);
-  void ellipticalContour();
-};
-
-  
-class Sersic: public BaseProfile {
-public:
-  double index;
-
-  Sersic(std::map<std::string,Nlpar*> nlpars);
-  double value(double x,double y);
+  void writeProfile(std::string filename,double half_range);
 };
 
 
-class ProGauss: public BaseProfile {
+
+
+class BaseAnalyticFunction {
 public:
-  ProGauss(std::map<std::string,Nlpar*> nlpars);
-  double value(double x,double y);
+  std::string type;
+  std::map<std::string,double> pars;
+
+  BaseAnalyticFunction(){};
+  ~BaseAnalyticFunction(){};
+
+  virtual double function_value(double x,double y) = 0;
+  virtual std::vector<double> extent() = 0;
 };
 
 
-class myVoronoi: public BaseProfile {
+class Sersic: public BaseAnalyticFunction {
 public:
-  int Ncells;
-  std::vector<int> sizes;
-  std::vector<Point*> cells;
-  std::vector<double> values;
-  
-  myVoronoi(std::string filename);
-  ~myVoronoi(){
-    for(int i=0;i<Ncells;i++){
-      delete(cells[i]);
+  Sersic(std::map<std::string,double> pars);
+  double function_value(double x,double y);
+  std::vector<double> extent();
+private:
+  const double fac = 0.01745329251; // conversion from degrees to rad
+};
+
+
+class proGauss: public BaseAnalyticFunction { // name Gauss is taken in nonLinearPars.hpp so I use proGauss (pro for profile)
+public:
+  proGauss(std::map<std::string,double> pars);
+  double function_value(double x,double y);
+  std::vector<double> extent();
+private:
+  const double fac = 0.01745329251; // conversion from degrees to rad
+};
+
+
+class FactoryAnalyticFunction {
+public:
+  FactoryAnalyticFunction(FactoryAnalyticFunction const&) = delete;
+  void operator=(FactoryAnalyticFunction const&) = delete;
+
+  static FactoryAnalyticFunction* getInstance(){
+    static FactoryAnalyticFunction dum;
+    return &dum;
+  }
+
+  BaseAnalyticFunction* createAnalyticFunction(const std::string &name,std::map<std::string,double> pars){
+    if( name == "sersic" ){
+      return new Sersic(pars);
+    } else if ( name == "gauss" ){
+      return new proGauss(pars);
+    } else {
+      return NULL;
     }
   }
-  double value(double x,double y);
+
+private:
+  FactoryAnalyticFunction(){};
 };
+
+
+class Analytic: public BaseProfile {
+public:
+  std::vector<BaseAnalyticFunction*> components;
+
+  Analytic(std::vector<std::string> names,std::vector<std::map<std::string,double> > all_pars);
+  ~Analytic(){
+    for(int i=0;i<this->components.size();i++){
+      delete(components[i]);
+    }
+  }
+
+  double value(double x,double y);
+  void outputProfile(std::string filename);
+};
+
+
+
 
 
 class myDelaunay: public BaseProfile {
 public:
-  int N;
-  double* src;
-  
   myDelaunay(std::string filename);
   ~myDelaunay(){
+    free(x);
+    free(y);
     free(src);
     free(convex_hull);
   }
   double value(double x,double y);
+  void outputProfile(std::string filename);
 
 private:
+  int N;
+  double* x;
+  double* y;
+  double* src;
   struct atriangle {
     int a;
     int b;
@@ -94,6 +138,7 @@ private:
 };
 
 
+
 class fromFITS: public BaseProfile {
 public:
   fromFITS(std::string filename,int Ni,int Nj,double height,double width,double x0,double y0);
@@ -101,47 +146,17 @@ public:
     delete(mySource);
   }
   double value(double x,double y);
+  void outputProfile(std::string filename);
 
 private:
+  int Ni;
+  int Nj;
+  double height;
+  double width;
+  double x0;
+  double y0;
   ImagePlane* mySource;
 };
 
-
-
-class FactoryProfile{//This is a singleton class.
-public:
-  FactoryProfile(FactoryProfile const&) = delete;//Stop the compiler generating methods of copy the object.
-  void operator=(FactoryProfile const&) = delete;
-
-  static FactoryProfile* getInstance(){
-    static FactoryProfile dum;//Guaranteed to be destroyed. Instantiated on first call.
-    return &dum;
-  }
-
-  BaseProfile* createProfile(const std::string &modelname,std::map<std::string,Nlpar*> nlpars){
-    if( modelname == "sersic" ){
-      return new Sersic(nlpars);
-    } else if ( modelname == "gauss" ){
-      return new ProGauss(nlpars);
-    } else {
-      return NULL;
-    }
-  }
-
-  BaseProfile* createProfile(const std::string &modelname,std::map<std::string,std::string> pars){
-    if( modelname == "voronoi" ){
-      return new myVoronoi(pars["filename"]);
-    } else if( modelname == "delaunay" ){
-      return new myDelaunay(pars["filename"]);
-    } else if( modelname == "fromfits" ){
-      return new fromFITS(pars["filename"],std::stoi(pars["Ni"]),std::stoi(pars["Nj"]),std::stof(pars["height"]),std::stof(pars["width"]),std::stof(pars["x0"]),std::stof(pars["y0"]));
-    } else {
-      return NULL;
-    }
-  }
-
-private:
-  FactoryProfile(){};
-};
 
 #endif /* SOURCE_PROFILE_HPP */

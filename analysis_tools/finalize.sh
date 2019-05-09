@@ -119,7 +119,10 @@ if [ "$lmodel" = "pert" ]; then
     cp ${path}${run}output/smooth_residual.fits $target/smooth_residual.fits
 fi
 
-rm -r ${path}${run}analysis
+
+if [ -d ${path}${run}analysis ]; then
+    rm -r ${path}${run}analysis
+fi
 cp -r $target/ ${path}${run}analysis
 
 

@@ -16,6 +16,8 @@
 
 #include <CGAL/Polygon_2_algorithms.h>
 
+#include <CCfits/CCfits>
+
 typedef CGAL::Exact_predicates_inexact_constructions_kernel            K;
 typedef CGAL::Triangulation_vertex_base_with_info_2<unsigned int,K>    Vb;
 typedef CGAL::Triangulation_face_base_with_info_2<unsigned int,K>      Fb;
@@ -33,34 +35,58 @@ void BaseProfile::profile(int Sj,int Si,double* sx,double* sy,double* s){
   }
 }
 
-void BaseProfile::ellipticalContour(){
-  double dt     = (2.*this->pi)/(this->npoly);
-  double cosphi = cos(this->pars["pa"]*this->fac);//in rad
-  double sinphi = sin(this->pars["pa"]*this->fac);//in rad
-  double size   = this->pars["r_eff"]/2.;
+void BaseProfile::writeProfile(std::string filename,double half_range){
+  // produces a square image centered at (0,0) on the source plane
   
-  for(int i=0;i<this->npoly;i++){
-    this->x[i] = ( size*cos(i*dt)*cosphi - size*this->pars["q"]*sin(i*dt)*sinphi ) + this->pars["x0"];
-    this->y[i] = ( size*cos(i*dt)*sinphi + size*this->pars["q"]*sin(i*dt)*cosphi ) + this->pars["y0"];
+  // create grid of source brightness profile
+  std::valarray<double> array(output_res*output_res);
+  double dpix = 2.0*half_range/output_res;
+  for(int i=0;i<output_res;i++){
+    for(int j=0;j<output_res;j++){
+      double x = j*dpix - half_range;
+      double y = i*dpix - half_range;
+      //array[(output_res-1-i)*output_res+j] = this->value(x,y);
+      array[i*output_res+j] = this->value(x,y);
+    }
   }
+
+  //Write FITS:
+  long naxis    = 2;
+  long naxes[2] = {(long) output_res,(long) output_res};
+  long Ntot = (long) output_res*output_res;
+
+  std::unique_ptr<CCfits::FITS> pFits(nullptr);
+  pFits.reset( new CCfits::FITS("!"+filename,DOUBLE_IMG,naxis,naxes) );
+  
+  std::vector<long> extAx(2,(long) output_res);
+  std::string newName("NEW-EXTENSION");
+  CCfits::ExtHDU* imageExt = pFits->addImage(newName,DOUBLE_IMG,extAx);
+
+  long fpixel(1);
+  imageExt->write(fpixel,(long) Ntot,array);
+  pFits->pHDU().addKey("WIDTH",2.0*half_range,"width of the image"); 
+  pFits->pHDU().addKey("HEIGHT",2.0*half_range,"height of the image"); 
+  pFits->pHDU().write(fpixel,Ntot,array); 
 }
 
-//Derived class from BaseProfile: Sersic
+
+
+
+
+//Derived class from BaseAnalyticFunction: Sersic
 //===============================================================================================================
-Sersic::Sersic(std::map<std::string,Nlpar*> nlpars){
-  this->pars["n"]     = nlpars["n"]->val;
-  this->pars["r_eff"] = nlpars["r_eff"]->val;
-  this->pars["i_eff"] = nlpars["i_eff"]->val;
-  this->pars["q"]     = nlpars["q"]->val;
-  this->pars["x0"]    = nlpars["x0"]->val;
-  this->pars["y0"]    = nlpars["y0"]->val;
-  this->pars["pa"]    = nlpars["pa"]->val;
-  this->x = (double*) calloc(this->npoly,sizeof(double));
-  this->y = (double*) calloc(this->npoly,sizeof(double));
-  ellipticalContour();
+Sersic::Sersic(std::map<std::string,double> pars){
+  this->type          = "sersic";
+  this->pars["n"]     = pars["n"];
+  this->pars["r_eff"] = pars["r_eff"];
+  this->pars["i_eff"] = pars["i_eff"];
+  this->pars["q"]     = pars["q"];
+  this->pars["x0"]    = pars["x0"];
+  this->pars["y0"]    = pars["y0"];
+  this->pars["pa"]    = pars["pa"];
 }
 
-double Sersic::value(double x,double y){
+double Sersic::function_value(double x,double y){
   double bn = 1.9992*this->pars["n"] - 0.3271;//From Capaccioli 1989
   double u,v,r,fac2;
   double cosphi = cos(this->pars["pa"]*this->fac);
@@ -73,21 +99,30 @@ double Sersic::value(double x,double y){
   return this->pars["i_eff"]*exp(-bn*fac2 - 1);
 }
 
-//Derived class from BaseProfile: ProGauss
-//===============================================================================================================
-ProGauss::ProGauss(std::map<std::string,Nlpar*> nlpars){
-  this->pars["r_eff"] = nlpars["r_eff"]->val;
-  this->pars["i_eff"] = nlpars["i_eff"]->val;
-  this->pars["q"]     = nlpars["q"]->val;
-  this->pars["x0"]    = nlpars["x0"]->val;
-  this->pars["y0"]    = nlpars["y0"]->val;
-  this->pars["pa"]    = nlpars["pa"]->val;
-  this->x = (double*) calloc(this->npoly,sizeof(double));
-  this->y = (double*) calloc(this->npoly,sizeof(double));
-  ellipticalContour();
+std::vector<double> Sersic::extent(){
+  double dx = 3*this->pars["_reff"]*cos(this->pars["pa"]*this->fac);
+  double xmin = this->pars["x0"] - dx;
+  double xmax = this->pars["x0"] + dx;
+  double dy = 3*this->pars["r_eff"]*sin(this->pars["pa"]*this->fac);
+  double ymin = this->pars["y0"] - dy;
+  double ymax = this->pars["y0"] + dy;
+  std::vector<double> ranges = {xmin,xmax,ymin,ymax};
+  return ranges;
 }
 
-double ProGauss::value(double x,double y){
+//Derived class from BaseAnalyticFunction: Gauss
+//===============================================================================================================
+proGauss::proGauss(std::map<std::string,double> pars){
+  this->type          = "gauss";
+  this->pars["r_eff"] = pars["r_eff"];
+  this->pars["i_eff"] = pars["i_eff"];
+  this->pars["q"]     = pars["q"];
+  this->pars["x0"]    = pars["x0"];
+  this->pars["y0"]    = pars["y0"];
+  this->pars["pa"]    = pars["pa"];
+}
+
+double proGauss::function_value(double x,double y){
   double u,v,r2;
   double cosphi = cos(this->pars["pa"]*this->fac);
   double sinphi = sin(this->pars["pa"]*this->fac);  
@@ -102,19 +137,80 @@ double ProGauss::value(double x,double y){
   return this->pars["i_eff"]*exp(-r2);
 }
 
+std::vector<double> proGauss::extent(){
+  double dimg = 3.0*this->pars["r_eff"];
+  double xmin = this->pars["x0"] - dimg;
+  double xmax = this->pars["x0"] + dimg;
+  double ymin = this->pars["y0"] - dimg;
+  double ymax = this->pars["y0"] + dimg;
+  std::vector<double> ranges = {xmin,xmax,ymin,ymax};
+  return ranges;
+}
+
+
+
+
+
+
+
+//Derived class from BaseProfile: Analytic
+//===============================================================================================================
+Analytic::Analytic(std::vector<std::string> names,std::vector<std::map<std::string,double> > par_maps){
+  this->type = "analytic";
+  this->output_res = 500;
+  for(int i=0;i<names.size();i++){
+    BaseAnalyticFunction* function = FactoryAnalyticFunction::getInstance()->createAnalyticFunction(names[i],par_maps[i]);
+    this->components.push_back( function );
+  }
+}
+
+double Analytic::value(double x,double y){
+  double value = 0.0;
+  for(int i=0;i<this->components.size();i++){
+    value += this->components[i]->function_value(x,y);
+  }
+  return value;
+}
+
+void Analytic::outputProfile(std::string filename){
+  double half_range = 0.0;
+  for(int i=0;i<this->components.size();i++){
+    std::vector<double> ranges = this->components[i]->extent();
+    for(int j=0;j<ranges.size();j++){
+      if( fabs(ranges[j]) > half_range ){
+	half_range = fabs(ranges[j]);
+      }
+    }
+  }
+  this->writeProfile(filename,half_range);
+}
+
+
+
+
+
+
+
 //Derived class from BaseProfile: fromFITS
 //===============================================================================================================
 fromFITS::fromFITS(std::string filename,int Ni,int Nj,double height,double width,double x0,double y0){
+  this->type = "fromfits";
+  this->Ni = Ni;
+  this->Nj = Nj;
+  this->height = height;
+  this->width  = width;
+  this->x0 = x0;
+  this->y0 = y0;
   this->mySource = new ImagePlane(filename,Ni,Nj,height,width);
   // ImagePlane sets the coordinate origin in the center of the image, so I can re-position it here.
   for(int i=0;i<this->mySource->Nm;i++){
-    this->mySource->x[i] -= x0;
-    this->mySource->y[i] -= y0;
+    this->mySource->x[i] += x0;
+    this->mySource->y[i] += y0;
   }
-  this->mySource->xmin -= x0;
-  this->mySource->xmax -= x0;
-  this->mySource->ymin -= y0;
-  this->mySource->ymax -= y0;
+  this->mySource->xmin += x0;
+  this->mySource->xmax += x0;
+  this->mySource->ymin += y0;
+  this->mySource->ymax += y0;
 }
 
 double fromFITS::value(double x,double y){
@@ -122,90 +218,55 @@ double fromFITS::value(double x,double y){
     // Source and Image grids MUST be the same, therefore I just need to match the right pixels (no interpolation)
     int i = (int) floor((this->mySource->ymax - y)*this->mySource->Ni/this->mySource->height); // y-axis is reflected
     int j = (int) floor((x - this->mySource->xmin)*this->mySource->Nj/this->mySource->width);
+    //int j = (int) floor((this->mySource->xmin - x)*this->mySource->Nj/this->mySource->width);
     return this->mySource->img[i*this->mySource->Nj + j];
   } else {
     return 0;
   }
 }
 
-//Derived class from BaseProfile: Voronoi
-//===============================================================================================================
-myVoronoi::myVoronoi(std::string filename){
-  this->x = (double*) calloc(this->npoly,sizeof(double));
-  this->y = (double*) calloc(this->npoly,sizeof(double));
-
-  std::ifstream file(filename);
-  std::string line;
-  double val,x,y;
-
-  while( std::getline(file,line) ){
-    std::istringstream ss(line);
-
-    ss >> val;
-    values.push_back(val);
-
-    std::vector<double> xvec;
-    std::vector<double> yvec;
-    while( !ss.eof() ){
-      ss >> x >> y;
-      //      std::cout << x << " " << y << "   ";
-      xvec.push_back(x);
-      yvec.push_back(y);
-    }
-    //    std::cout << std::endl;
-    sizes.push_back(xvec.size());
-
-    Point* cell = (Point*) malloc(xvec.size()*sizeof(Point));
-    for(int i=0;i<xvec.size();i++){
-      cell[i] = Point(xvec[i],yvec[i]);
-    }
-    cells.push_back(cell);
-  }
-  Ncells = cells.size();
-
-
-  // check if the polygons are simple.
-  for(int i=0;i<Ncells;i++){
-    if( !CGAL::is_simple_2(cells[i],cells[i]+sizes[i],K()) ){
-      std::cout << i << " polygon is not simple. Something is wrong in the provided list of Voronoi cells." << std::endl;
+void fromFITS::outputProfile(std::string filename){
+  double xmin = this->x0 - this->width/2.0;
+  double xmax = this->x0 + this->width/2.0;
+  double ymin = this->y0 - this->height/2.0;
+  double ymax = this->y0 + this->height/2.0;
+  std::vector<double> ranges = {xmin,xmax,ymin,ymax};
+  double half_range = 0.0;
+  for(int i=0;i<ranges.size();i++){
+    if( fabs(ranges[i]) > half_range ){
+      half_range = fabs(ranges[i]);
     }
   }
+  this->output_res = 2.0*half_range*this->Nj/this->width;
+  this->writeProfile(filename,half_range);
 }
 
-double myVoronoi::value(double x,double y){
-  double val = 0.0;
 
-  for(int i=0;i<Ncells;i++){
-    if( CGAL::bounded_side_2(cells[i],cells[i]+sizes[i],Point(x,y),K()) == CGAL::ON_UNBOUNDED_SIDE ){
-      continue;
-    } else {
-      val = values[i];
-      break;
-    }
-  }
 
-  return val;
-}
+
+
 
 
 //Derived class from BaseProfile: Delaunay
 //===============================================================================================================
 myDelaunay::myDelaunay(std::string filename){
+  this->type = "delaunay";
+  this->output_res = 500;
 
   // Read v,x,y from file to the class variables
   std::ifstream file(filename);
   std::string line;
-  double x,y,v;
+  double xx,yy,vv;
   std::vector<double> xvec;
   std::vector<double> yvec;
   std::vector<double> vvec;
 
   while( std::getline(file,line) ){
     std::istringstream ss(line);
-    ss >> v >> x >> y;
-    xvec.push_back(x);
-    yvec.push_back(y);
-    vvec.push_back(v);
+    ss >> vv >> xx >> yy;
+    xvec.push_back(xx);
+    yvec.push_back(yy);
+    vvec.push_back(vv);
   }
 
   int N = xvec.size();
@@ -219,16 +280,13 @@ myDelaunay::myDelaunay(std::string filename){
     this->src[i] = vvec[i];
   }
 
-
   // Create the Dealaunay triangulation
   std::vector< std::pair<Point,int> > points;
   for(int i=0;i<N;i++){
     points.push_back( std::make_pair(Point(this->x[i],this->y[i]),i) );
   }
-
   Delaunay triangulation;
   triangulation.insert(points.begin(),points.end());
-
 
   //Get each Delaunay triangle in my own struct, and number them
   //[constructing this->triangles]
@@ -272,19 +330,14 @@ myDelaunay::myDelaunay(std::string filename){
   for(int i=0;i<this->ch_size;i++){
     this->convex_hull[i] = dum[i];
   }
-
 }
-
 
 double myDelaunay::value(double x,double y){
   double val;
 
-
   // If the point is outside the convex hull of the triangulation set its value to zero, else interpolate within the triangle it in.
   if( CGAL::bounded_side_2(this->convex_hull,this->convex_hull+this->ch_size,Point(x,y),K()) == CGAL::ON_UNBOUNDED_SIDE ){
-
     val = 0.0;
-
   } else {
     double wa,wb,wc;
     double ybc,xac,xcb,yac,xxc,yyc,den;
@@ -310,9 +363,31 @@ double myDelaunay::value(double x,double y){
 	break;
       }
     }
-
   }
 
-
   return val;
+}
+
+void myDelaunay::outputProfile(std::string filename){
+  // find the extent of the grid
+  double half_range = 0.1;
+  double drange = 0.1;
+
+  double sum = 0.0;
+  for(int i=0;i<this->N;i++){
+    sum += this->src[i];
+  }
+
+  double part = 0.0;
+  while( part/sum < 0.95 ){
+    part = 0.0;
+    for(int i=0;i<this->N;i++){
+      if( -half_range < this->x[i] && this->x[i] < half_range && -half_range < this->y[i] && this->y[i] < half_range ){
+	part += this->src[i];
+      }
+    }
+    half_range += 0.1;
+  }
+
+  this->writeProfile(filename,half_range);  
 }
