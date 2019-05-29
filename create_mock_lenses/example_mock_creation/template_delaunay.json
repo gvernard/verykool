@@ -97,6 +97,8 @@
 	"psf": {
             "pix_x": 74,
             "pix_y": 74,
+	    "width": 3.0,
+	    "height": 3.0,
             "crop_x": 30,
             "crop_y": 30
 	}
