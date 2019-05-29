@@ -1248,7 +1248,7 @@ std::vector<Nlpar*> FactoryLikelihoodModel::nlparsFromJsonVector(const Json::Val
     }
     par->pri = FactoryPrior::getInstance()->createPrior(par,prior_pars);
     //std::cout << par->nam << " " << par->pri->type << std::endl;
-    std::cout << par->nam << " " << par->pri->prior(par->max) << " " << par->pri->prior(par->max) << std::endl;
+    //std::cout << par->nam << " " << par->pri->prior(par->min) << " " << par->pri->prior(par->max) << std::endl;
     //par->setNewPrior(prior);
     
     pars.push_back(par);

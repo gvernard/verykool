@@ -175,8 +175,8 @@ void MultiNestDumper(int& nSamples,int& nlive,int& nPar,double** physLive,double
   int Ncols = nPar + 2;
   double postdist[nSamples][Ncols];
   for(int j=0;j<nSamples;j++){
-    postdist[j][0] = posterior[0][nSamples*(Ncols-2)+j];
-    postdist[j][1] = posterior[0][nSamples*(Ncols-1)+j];
+    postdist[j][0] = posterior[0][nSamples*(Ncols-2)+j]; // loglike
+    postdist[j][1] = posterior[0][nSamples*(Ncols-1)+j]; // posterior probability
     for(int i=0;i<Ncols-2;i++){
       postdist[j][i+2] = e->pars->active[i]->pri->fromUnitCube( posterior[0][nSamples*i+j] );
     }
@@ -185,8 +185,8 @@ void MultiNestDumper(int& nSamples,int& nlive,int& nPar,double** physLive,double
   // File for the corner plot
   fh = fopen( (e->output + std::to_string(e->minimizer->counter) + "_" + e->minimizer->name + "_postdist.txt").c_str() ,"w");
   for(int j=0;j<nSamples;j++){
-    fprintf(fh," %25.18e",1.0);
-    fprintf(fh," %25.18e",postdist[j][1]);
+    fprintf(fh," %25.18e",postdist[j][0]); // loglike
+    fprintf(fh," %25.18e",postdist[j][1]); // posterior
     for(int i=2;i<Ncols;i++){
       fprintf(fh," %25.18e",postdist[j][i]);
     }

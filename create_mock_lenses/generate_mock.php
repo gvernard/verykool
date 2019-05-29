@@ -3,7 +3,7 @@
 $res_path = '';
 $name = '';
 
-if( $argc < 3  ){
+if( $argc < 3 ){
     echo "\n";
     echo "==> Need command line arguments: the name of the mock observation and the name of the input file\n";
     echo "\n";
@@ -280,7 +280,7 @@ for($i=0;$i<count($fproject_json['lenses']);$i++){
 		  'min' => 0.0001,
 		  'max' => 1000,
 		  'pri' => array(
-		      'type' => 'log'
+		      'type' => 'log10'
 		  )
 	    )
 	);
@@ -296,7 +296,7 @@ for($i=0;$i<count($fproject_json['lenses']);$i++){
 		  'min' => 0.0001,
 		  'max' => 1000,
 		  'pri' => array(
-		      'type' => 'log'
+		      'type' => 'log10'
 		  )
 	    )
 	);
@@ -326,7 +326,7 @@ $input['reg']['nlpars'] = array(
 	  'min' => 0.0001,
 	  'max' => 1000,
 	  'pri' => array(
-	      'type' => 'log'
+	      'type' => 'log10'
 	  )
     )
 );

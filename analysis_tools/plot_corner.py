@@ -50,9 +50,10 @@ for i in range(0,len(names)):
 
 ola = np.loadtxt("./plt_corner.txt")
 pars = ola[:,2:]
-wei  = ola[:,0]
-myloglike = ola[:,1]
-#myloglike = pow(10000*ola[:,1],2)
+#mypost = ola[:,0]
+mypost = ola[:,1]
+#for i in range(0,len(mypost)):
+#    mypost[i] = i
 
 
 '''
@@ -76,22 +77,18 @@ pars[:,0] = np.log10(tmp)
 
 ### Change to log scale
 ###################################################################################################################
-weights = np.ones(len(myloglike))
 for i in range(0,len(names)):
     if names[i] in ["lambda","lambda_s","lambda_dpsi","sdev","sdev_s","sdev_dpsi"]:
         labels[i] = "log("+labels[i]+")"
         tmp = np.copy(pars[:,i])
         pars[:,i] = np.log10(tmp)
-        weights = np.multiply(weights,2.3026*np.multiply(tmp,np.log10(tmp)))
         mins[i] = np.log10(abs(mins[i]))
         maxs[i] = np.log10(abs(maxs[i]))
         mapping[names[i]] = (mins[i],maxs[i])
-weights = np.absolute(weights)
-myloglike = np.add(myloglike,np.log(weights))
 
 #dyo = MCSamples(samples=pars,weights=wei,loglikes=loglike,names=names,labels=labels)
 ena = MCSamples(samples=pars,names=names,labels=labels,settings={"ignore_rows": 0.0,"smooth_scale_2D":0.3,"mult_bias_correction_order":1})
-#ena.reweightAddingLogLikes(myloglike)
+ena.reweightAddingLogLikes(mypost)
 
 
 
@@ -108,16 +105,10 @@ for i in range(0,len(ena.getParamNames().names)):
 
 g = plots.getSubplotPlotter(subplot_size=4)
 g.settings.rcSizes()
-#g.triangle_plot([ena],param_limits=mapping,filled=True)
-g.triangle_plot([ena],filled=True)
+g.triangle_plot([ena],param_limits=mapping,filled=True)
+#g.triangle_plot([ena],filled=True)
 
 
-
-### Reset the plot ranges from automatic to the code
-###################################################################################################################
-#for i in range(0,len(names)):
-#    for ax in g.subplots[i:,i]:
-#        ax.set_xlim(mins[i],maxs[i])
 
 
 
@@ -168,7 +159,7 @@ for i in range(0,len(names)):
 
 ### Export image
 g.export('corner.pdf')
-os.remove('plt_corner.txt')
-os.remove('plt_corner.paramnames')
-os.remove('plt_corner.ranges')
+#os.remove('plt_corner.txt')
+#os.remove('plt_corner.paramnames')
+#os.remove('plt_corner.ranges')
 #os.remove('plt_corner.py_mcsamples')

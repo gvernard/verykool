@@ -334,9 +334,9 @@ std::map<std::string,double> Exp::getPars(){
 //===============================================================================================================
 //virtual
 Log::Log(Nlpar* p){
-  type = "log";
+  type = "log10";
   mother = p;
-  fac = 1.0/log(this->mother->max/this->mother->min);
+  fac = 1.0/log10(this->mother->max/this->mother->min);
 }
 
 //virtual
@@ -347,16 +347,52 @@ double Log::prior(double x){
 
 //virtual
 double Log::fromUnitCube(double u){
-  return this->mother->ran*u + this->mother->min;
+  double exp = log10(this->mother->min) + u/fac;
+  return pow(10,exp);
 }
 
 //virtual
 void Log::printPars(){
-  std::cout << "Logarithmic prior 1/x in the range: " << this->mother->min << "  -  " << this->mother->max <<std::endl;
+  std::cout << "Logarithmic (base 10) prior, i.e 1/x, in the range: " << this->mother->min << "  -  " << this->mother->max <<std::endl;
 }
 
 //virtual
 std::map<std::string,double> Log::getPars(){
+  std::map<std::string,double> mymap;
+  return mymap;
+}
+
+
+//Derived class from BasePrior: PowerLaw
+//===============================================================================================================
+// Sub-cases of the PowerLaw are the Log (beta = -1) and Uni (beta = 0) priors
+
+//virtual
+PowerLaw::PowerLaw(Nlpar* p,int b){
+  type = "plaw";
+  mother = p;
+  beta = b;
+  fac = ( pow(this->mother->max,beta+1) - pow(this->mother->min,beta+1) )/(beta + 1);
+}
+
+//virtual
+double PowerLaw::prior(double x){
+  double p = this->fac*pow(x,beta);
+  return p;
+}
+
+//virtual
+double PowerLaw::fromUnitCube(double u){
+  return pow(u,1.0/beta)*(this->mother->max - this->mother->min) + this->mother->min;
+}
+
+//virtual
+void PowerLaw::printPars(){
+  std::cout << "Power law prior, i.e x^b, in the range: " << this->mother->min << "  -  " << this->mother->max <<std::endl;
+}
+
+//virtual
+std::map<std::string,double> PowerLaw::getPars(){
   std::map<std::string,double> mymap;
   return mymap;
 }

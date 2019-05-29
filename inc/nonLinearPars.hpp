@@ -132,6 +132,21 @@ private:
   double fac;
 };
 
+class PowerLaw: public BasePrior {
+public:
+  PowerLaw(Nlpar* p,int beta);
+  ~PowerLaw(){};
+
+  double prior(double x);
+  double fromUnitCube(double u);
+  void printPars();
+  std::map<std::string,double> getPars();
+
+private:
+  int beta;
+  double fac;
+};
+
 //This is a singleton class.
 class FactoryPrior {
 public:
@@ -150,8 +165,10 @@ public:
       return new Gauss(mother,stof(prior["mean"]),stof(prior["sdev"]));
     } else if( prior["type"] == "exp" ){
       return new Exp(mother,stof(prior["beta"]));
-    } else if( prior["type"] == "log" ){
+    } else if( prior["type"] == "log10" ){
       return new Log(mother);
+    } else if( prior["type"] == "plaw" ){
+      return new PowerLaw(mother,stoi(prior["beta"]));
     } else {
       return NULL;
     }

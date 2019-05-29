@@ -47,9 +47,10 @@ fig       = plt.figure(figsize=(12,8))
 data_path = path+'data/'
 
 if os.path.isfile(data_path+'source.fits'):
-    hdulist = fits.open(data_path+'source.fits')
-    srcwidth = float(hdulist[0].header['size']) # this is the total width of he fits image of the source
-    srcrange = srcwidth/2.0
+    hdulist   = fits.open(data_path+'source.fits')
+    srcwidth  = float(hdulist[0].header['width']) # this is the total width of he fits image of the source
+    srcheight = float(hdulist[0].header['height']) # this is the total height of he fits image of the source
+    srcrange  = max(srcwidth,srcheight)/2.0
     hdulist.close()
 else:
     srcrange = 0.5

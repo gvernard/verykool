@@ -36,8 +36,7 @@
 		"max": 55
             }
 	],
-	"source":	    
-	{
+	"source": {
 	    "type": "analytic",
 	    "pars": [
 		{
@@ -113,9 +112,12 @@
 
     "addmachine":{
 	"psfpath": "/Users/users/gvernard/myGit/VeryKooL/create_mock_lenses/example_mock_creation/psf.fits",
+//	"psfpath": "/Users/users/gvernard/myGit/VeryKooL/create_mock_lenses/example_mock_creation/tinytim_psf.fits",
 	"psf": {
             "pix_x": 74,
             "pix_y": 74,
+	    "width": 3.0,
+	    "height": 3.0,
             "crop_x": 30,
             "crop_y": 30
 	}

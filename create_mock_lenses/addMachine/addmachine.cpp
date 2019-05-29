@@ -58,6 +58,88 @@ void addMapRealization(double factor,double* noise,int Ni,int Nj,double* data){
   }
 }
 
+
+
+class PSF {
+public:
+  ImagePlane* original_psf = NULL;
+  ImagePlane* scaled_psf = NULL;
+
+  PSF(std::string fname,int pix_x,int pix_y,double width,double height,ImagePlane* mydata){
+    this->original_psf = new ImagePlane(fname,pix_x,pix_y,width,height); // last two arguments are dummy
+    interpolatePSF(mydata);
+  }
+
+  ~PSF(){
+    delete(original_psf);
+    delete(scaled_psf);
+  }
+
+  void interpolatePSF(ImagePlane* mydata){
+    // Decide on the profile width and height in pixels based on the input profile
+    double dresx = (this->original_psf->width)/(mydata->width/mydata->Nj);
+    int newNj = floor(dresx);
+    double xoffset = (dresx - newNj)/2.0;
+    if( newNj%2 != 0 ){
+      newNj -= 1;
+      xoffset += 0.5;
+    }
+    double dresy = (this->original_psf->height)/(mydata->height/mydata->Ni);
+    int newNi = floor(dresy);
+    double yoffset = (dresy - newNi)/2.0;
+    if( newNi%2 != 0 ){
+      newNi -= 1;
+      yoffset += 0.5;
+    }
+    this->scaled_psf = new ImagePlane(newNi,newNj,this->original_psf->height,this->original_psf->width);
+    
+    double x,y,xp,yp,dx,dy,ddx,ddy,w00,w10,w01,w11,f00,f10,f01,f11;
+    int ii,jj;
+    double newPixSize  = this->scaled_psf->width/this->scaled_psf->Nj;
+    double origPixSize = this->original_psf->width/this->original_psf->Nj;
+
+
+    for(int i=0;i<this->scaled_psf->Ni;i++){
+      y  = yoffset+i*newPixSize;
+      ii = floor( y/origPixSize );
+      yp = ii*origPixSize;
+      dy = y - yp;
+      ddy = (1.0 - dy);
+      
+      for(int j=0;j<this->scaled_psf->Nj;j++){
+	x  = xoffset+j*newPixSize;
+	jj = floor( x/origPixSize );
+	xp = jj*origPixSize;
+	dx = x - xp;
+	ddx = (1.0 - dx);
+	
+	w00 = dx*dy;
+	w10 = dy*ddx;
+	w01 = dx*ddy;
+	w11 = ddx*ddy;
+	
+	f00 = this->original_psf->img[ii*this->original_psf->Nj+jj];
+	f10 = this->original_psf->img[ii*this->original_psf->Nj+jj+1];
+	f01 = this->original_psf->img[(ii+1)*this->original_psf->Nj+jj];
+	f11 = this->original_psf->img[(ii+1)*this->original_psf->Nj+jj+1];
+	
+	this->scaled_psf->img[i*this->scaled_psf->Nj+j] = f00*w00 + f10*w10 + f01*w01 + f11*w11;
+      }
+    }
+
+  }
+
+};
+
+
+
+
+
+
+
+
+
+
 int main(int argc,char* argv[]){
 
   //=============== BEGIN:PARSE INPUT =======================
@@ -83,18 +165,20 @@ int main(int argc,char* argv[]){
   // Read the image properties as a map of strings
   std::map<std::string,std::string> image;
   const Json::Value iplane = root["iplane"];
-  image["pix_x"] = iplane["pix_x"].asString();
-  image["pix_y"] = iplane["pix_y"].asString();
-  image["width"] = iplane["width"].asString();
+  image["pix_x"]  = iplane["pix_x"].asString();
+  image["pix_y"]  = iplane["pix_y"].asString();
+  image["width"]  = iplane["width"].asString();
   image["height"] = iplane["height"].asString();
-  image["inf_x"] = iplane["inf_x"].asString();
-  image["inf_y"] = iplane["inf_y"].asString();
+  image["inf_x"]  = iplane["inf_x"].asString();
+  image["inf_y"]  = iplane["inf_y"].asString();
 
   // Read the psf properties as a map of strings
   std::map<std::string,std::string> psf;
   const Json::Value jpsf = root["psf"];
   psf["pix_x"]  = jpsf["pix_x"].asString();
   psf["pix_y"]  = jpsf["pix_y"].asString();
+  psf["width"]  = jpsf["width"].asString();
+  psf["height"] = jpsf["height"].asString();
   psf["crop_x"] = jpsf["crop_x"].asString();
   psf["crop_y"] = jpsf["crop_y"].asString();
   //================= END:PARSE INPUT =======================
@@ -115,7 +199,7 @@ int main(int argc,char* argv[]){
   if( psfpath != "0" ){
     int Ni = mydata.Ni;
     int Nj = mydata.Nj;
-    ImagePlane mypsf(psfpath,stoi(psf["pix_x"]),stoi(psf["pix_y"]),1.0,1.0); // last two arguments are dummy
+    PSF mypsf(psfpath,stoi(psf["pix_x"]),stoi(psf["pix_y"]),stof(psf["width"]),stof(psf["height"]),&mydata);
 
     // Create psf kernel
     int Pi     = stoi(psf["pix_x"]);
@@ -141,7 +225,7 @@ int main(int argc,char* argv[]){
     int offset = (floor(Pi/2.0)-toffy)*Pi + (floor(Pj/2.0)-loffx);
     for(int i=0;i<Ncropy;i++){
       for (int j=0;j<Ncropx;j++){
-	blur[i*Ncropx+j] = mypsf.img[offset+i*Pi+j];
+	blur[i*Ncropx+j] = mypsf.scaled_psf->img[offset+i*Pi+j];
       }
     }
         
