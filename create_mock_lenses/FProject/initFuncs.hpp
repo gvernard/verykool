@@ -46,7 +46,12 @@ typedef struct{
 template<typename T>
 inline bool fromString(const std::string &s, T &t){
   std::istringstream ss(s);
-  return (ss >> t);
+  ss >> t;
+  if( ss.fail() ){
+    return false;
+  } else {
+    return true;
+  }
 }
 
 void printUsage(char* argv[]);
