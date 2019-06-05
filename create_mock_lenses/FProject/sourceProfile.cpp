@@ -37,7 +37,7 @@ void BaseProfile::profile(int Sj,int Si,double* sx,double* sy,double* s){
 
 void BaseProfile::writeProfile(std::string filename,double half_range){
   // produces a square image centered at (0,0) on the source plane
-  
+
   // create grid of source brightness profile
   std::valarray<double> array(output_res*output_res);
   double dpix = 2.0*half_range/output_res;
@@ -50,6 +50,13 @@ void BaseProfile::writeProfile(std::string filename,double half_range){
     }
   }
 
+  // Total brightness
+  double sum = 0.0;
+  for(long i=0;i<output_res*output_res;i++){
+    sum += array[i]*pow(2*half_range/output_res,2);
+  }
+  //  std::cout << sum << std::endl;
+  
   //Write FITS:
   long naxis    = 2;
   long naxes[2] = {(long) output_res,(long) output_res};

@@ -118,8 +118,8 @@
             "pix_y": 74,
 	    "width": 3.0,
 	    "height": 3.0,
-            "crop_x": 30,
-            "crop_y": 30
+            "crop_x": 0.5,
+            "crop_y": 0.5
 	}
     },
 

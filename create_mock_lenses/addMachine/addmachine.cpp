@@ -66,7 +66,7 @@ public:
   ImagePlane* scaled_psf = NULL;
 
   PSF(std::string fname,int pix_x,int pix_y,double width,double height,ImagePlane* mydata){
-    this->original_psf = new ImagePlane(fname,pix_x,pix_y,width,height); // last two arguments are dummy
+    this->original_psf = new ImagePlane(fname,pix_x,pix_y,width,height);
     interpolatePSF(mydata);
   }
 
@@ -76,56 +76,65 @@ public:
   }
 
   void interpolatePSF(ImagePlane* mydata){
-    // Decide on the profile width and height in pixels based on the input profile
-    double dresx = (this->original_psf->width)/(mydata->width/mydata->Nj);
-    int newNj = floor(dresx);
-    double xoffset = (dresx - newNj)/2.0;
-    if( newNj%2 != 0 ){
-      newNj -= 1;
-      xoffset += 0.5;
-    }
-    double dresy = (this->original_psf->height)/(mydata->height/mydata->Ni);
-    int newNi = floor(dresy);
-    double yoffset = (dresy - newNi)/2.0;
-    if( newNi%2 != 0 ){
-      newNi -= 1;
-      yoffset += 0.5;
-    }
-    this->scaled_psf = new ImagePlane(newNi,newNj,this->original_psf->height,this->original_psf->width);
-    
-    double x,y,xp,yp,dx,dy,ddx,ddy,w00,w10,w01,w11,f00,f10,f01,f11;
-    int ii,jj;
-    double newPixSize  = this->scaled_psf->width/this->scaled_psf->Nj;
+    //    double newPixSize  = (mydata->xmax - mydata->xmin)/mydata->Nj;
+    double newPixSize  = (mydata->width)/(mydata->Nj);
     double origPixSize = this->original_psf->width/this->original_psf->Nj;
 
+    // Decide on the profile width and height in pixels based on the input profile
+    int newNj,newNi;
+    if( mydata->width < this->original_psf->width ){
+      newNj = mydata->Nj;
+      newNi = mydata->Ni;
+    } else {
+      newNj = floor( mydata->Nj*this->original_psf->width/mydata->width );
+      newNi = floor( mydata->Ni*this->original_psf->height/mydata->height );
+    }
+
+    double neww    = newNj*newPixSize;
+    double xoffset = (this->original_psf->width - neww)/2.0;
+    double newh    = newNi*newPixSize;
+    double yoffset = (this->original_psf->height - newh)/2.0;
+
+    this->scaled_psf = new ImagePlane(newNi,newNj,newh,neww);
+
+    
+    //    double sum = 0.0;
+    double x,y,xp,yp,dx,dy,ddx,ddy,w00,w10,w01,w11,f00,f10,f01,f11;
+    int ii,jj;
 
     for(int i=0;i<this->scaled_psf->Ni;i++){
       y  = yoffset+i*newPixSize;
       ii = floor( y/origPixSize );
       yp = ii*origPixSize;
-      dy = y - yp;
+      dy = (y - yp)/origPixSize;
       ddy = (1.0 - dy);
-      
+
       for(int j=0;j<this->scaled_psf->Nj;j++){
 	x  = xoffset+j*newPixSize;
 	jj = floor( x/origPixSize );
 	xp = jj*origPixSize;
-	dx = x - xp;
+	dx = (x - xp)/origPixSize;
 	ddx = (1.0 - dx);
-	
-	w00 = dx*dy;
-	w10 = dy*ddx;
+
+	// first index: i (y direction) second index: j (x direction)
+	w00 = ddx*ddy;
 	w01 = dx*ddy;
-	w11 = ddx*ddy;
-	
+	w10 = dy*ddx;
+	w11 = dx*dy;
+
 	f00 = this->original_psf->img[ii*this->original_psf->Nj+jj];
-	f10 = this->original_psf->img[ii*this->original_psf->Nj+jj+1];
-	f01 = this->original_psf->img[(ii+1)*this->original_psf->Nj+jj];
+	f01 = this->original_psf->img[ii*this->original_psf->Nj+jj+1];
+	f10 = this->original_psf->img[(ii+1)*this->original_psf->Nj+jj];
 	f11 = this->original_psf->img[(ii+1)*this->original_psf->Nj+jj+1];
-	
+
 	this->scaled_psf->img[i*this->scaled_psf->Nj+j] = f00*w00 + f10*w10 + f01*w01 + f11*w11;
+	//	sum += this->scaled_psf->img[i*this->scaled_psf->Nj+j];
       }
     }
+
+    //    for(int i=0;i<this->scaled_psf->Nm;i++){
+    //      this->scaled_psf->img[i] /= sum;
+    //    }
 
   }
 
@@ -202,10 +211,8 @@ int main(int argc,char* argv[]){
     PSF mypsf(psfpath,stoi(psf["pix_x"]),stoi(psf["pix_y"]),stof(psf["width"]),stof(psf["height"]),&mydata);
 
     // Create psf kernel
-    int Pi     = stoi(psf["pix_x"]);
-    int Pj     = stoi(psf["pix_y"]);
-    int Ncropx = stoi(psf["crop_x"]);
-    int Ncropy = stoi(psf["crop_y"]);
+    int Ncropx = floor( stof(psf["crop_x"])/(mypsf.scaled_psf->width/mypsf.scaled_psf->Nj) ); // crop x in arcsec divided by the data pixel size
+    int Ncropy = floor( stof(psf["crop_y"])/(mypsf.scaled_psf->height/mypsf.scaled_psf->Ni) );
     int loffx,roffx,toffy,boffy;
 
     loffx = floor(Ncropx/2.0);
@@ -221,14 +228,19 @@ int main(int argc,char* argv[]){
       boffy = floor(Ncropy/2.0) + 1;
     }
 
+    double sum = 0.0;
     double* blur = (double*) calloc(Ncropx*Ncropy,sizeof(double));
-    int offset = (floor(Pi/2.0)-toffy)*Pi + (floor(Pj/2.0)-loffx);
+    int offset = (floor(mypsf.scaled_psf->Ni/2.0)-toffy)*mypsf.scaled_psf->Ni + (floor(mypsf.scaled_psf->Nj/2.0)-loffx);
     for(int i=0;i<Ncropy;i++){
-      for (int j=0;j<Ncropx;j++){
-	blur[i*Ncropx+j] = mypsf.scaled_psf->img[offset+i*Pi+j];
+      for(int j=0;j<Ncropx;j++){
+	blur[i*Ncropx+j] = mypsf.scaled_psf->img[offset+i*mypsf.scaled_psf->Ni+j];
+	sum += blur[i*Ncropx+j];
       }
     }
-        
+    for(int i=0;i<Ncropx*Ncropy;i++){
+      blur[i] /= sum;
+    }
+
     int bNx = Ncropx/2.0;
     int bNy = Ncropy/2.0;
     double* kernel = (double*) calloc(Ni*Nj,sizeof(double));
@@ -240,7 +252,7 @@ int main(int argc,char* argv[]){
 	kernel[Ni*(Nj-bNy)+Ni-bNx+j*Ni+i] = blur[2*bNx*j+i];
       }
     }
-    
+
 
     // Convolve with psf kernel
     fftw_complex* f_image  = (fftw_complex*) fftw_malloc(Ni*Nj*sizeof(fftw_complex));
@@ -277,11 +289,12 @@ int main(int argc,char* argv[]){
       mydata.img[i] /= (Ni*Nj);
     }
   }
-
+  mydata.writeImage(output+"psf_image.fits");
 
 
   // Bin image from 'infinite' to observed resolution
   ImagePlane obs_img(stoi(image["pix_x"]),stoi(image["pix_y"]),stof(image["width"]),stof(image["height"]));
+  int* counts = (int*) calloc(obs_img.Nm,sizeof(int));
   double inf_dx = stof(image["width"])/stoi(image["inf_x"]);
   double inf_dy = stof(image["height"])/stoi(image["inf_y"]);
   double obs_dx = stof(image["width"])/stoi(image["pix_x"]);
@@ -291,13 +304,25 @@ int main(int argc,char* argv[]){
     for(int j=0;j<mydata.Nj;j++){
       int jj = (int) floor(j*inf_dx/obs_dx);
       obs_img.img[ii*obs_img.Nj + jj] += mydata.img[i*mydata.Nj + j];
+      counts[ii*obs_img.Nj + jj] += 1;
     }
   }
+  for(int i=0;i<obs_img.Nm;i++){
+    //    obs_img.img[i] = obs_img.img[i]*obs_dx*obs_dy/counts[i];
+    obs_img.img[i] = obs_img.img[i]/counts[i];
+  }
 
-    
+
+  double sum = 0.0;
+  for(int i=0;i<obs_img.Nm;i++){
+    sum += obs_img.img[i]*obs_dx*obs_dy;
+  }
+  //  std::cout << sum << std::endl;
+
 
 
   // Add different kinds of noise to the image
+  /*
   if( noise_flag == "uniform" ){
     double maxdata = *std::max_element(obs_img.img,obs_img.img+obs_img.Ni*obs_img.Nj);
     double sigma = maxdata/stof(noise["sn"]);
@@ -319,7 +344,7 @@ int main(int argc,char* argv[]){
 
   }
   //================= END:PROCESS IMAGE =======================
-
+  */
 
 
 
