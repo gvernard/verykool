@@ -289,7 +289,7 @@ int main(int argc,char* argv[]){
       mydata.img[i] /= (Ni*Nj);
     }
   }
-  mydata.writeImage(output+"psf_image.fits");
+  //  mydata.writeImage(output+"psf_image.fits");
 
 
   // Bin image from 'infinite' to observed resolution
@@ -322,7 +322,6 @@ int main(int argc,char* argv[]){
 
 
   // Add different kinds of noise to the image
-  /*
   if( noise_flag == "uniform" ){
     double maxdata = *std::max_element(obs_img.img,obs_img.img+obs_img.Ni*obs_img.Nj);
     double sigma = maxdata/stof(noise["sn"]);
@@ -344,7 +343,7 @@ int main(int argc,char* argv[]){
 
   }
   //================= END:PROCESS IMAGE =======================
-  */
+
 
 
 

@@ -50,6 +50,13 @@
 	"type": "select",
 	"select_list": [
 	    {
+		"name": "none",
+		"label": "None",
+		"description": "No noise is used",
+		"type": "list",
+		"input_list": []
+	    },
+	    {
 		"name": "uniform",
 		"label": "Uniform",
 		"description": "Uniform noise drawn from the same Gaussian distribution (&sigma; determined by S/N below)",
