@@ -86,8 +86,8 @@ public:
       newNj = mydata->Nj;
       newNi = mydata->Ni;
     } else {
-      newNj = floor( mydata->Nj*this->original_psf->width/mydata->width );
-      newNi = floor( mydata->Ni*this->original_psf->height/mydata->height );
+      newNj = floor( mydata->Nj*(0.901*this->original_psf->width)/mydata->width );
+      newNi = floor( mydata->Ni*(0.901*this->original_psf->height)/mydata->height );
     }
 
     double neww    = newNj*newPixSize;
@@ -209,24 +209,22 @@ int main(int argc,char* argv[]){
     int Ni = mydata.Ni;
     int Nj = mydata.Nj;
     PSF mypsf(psfpath,stoi(psf["pix_x"]),stoi(psf["pix_y"]),stof(psf["width"]),stof(psf["height"]),&mydata);
+    //    mypsf.scaled_psf->writeImage(output+"psf_scaled.fits");
 
-    // Create psf kernel
+    // Create psf kernel. Cropped PSF always even in dimensions.
     int Ncropx = floor( stof(psf["crop_x"])/(mypsf.scaled_psf->width/mypsf.scaled_psf->Nj) ); // crop x in arcsec divided by the data pixel size
     int Ncropy = floor( stof(psf["crop_y"])/(mypsf.scaled_psf->height/mypsf.scaled_psf->Ni) );
+    if( Ncropx % 2 != 0 ){
+      Ncropx += 1;
+    }
+    if( Ncropy % 2 != 0 ){
+      Ncropy += 1;
+    }
     int loffx,roffx,toffy,boffy;
-
     loffx = floor(Ncropx/2.0);
-    if( Ncropx % 2 == 0 ){
-      roffx = floor(Ncropx/2.0);
-    } else {
-      roffx = floor(Ncropx/2.0) + 1;
-    }
+    roffx = floor(Ncropx/2.0);
     toffy = floor(Ncropy/2.0);
-    if( Ncropy % 2 == 0 ){
-      boffy = floor(Ncropy/2.0);
-    } else {
-      boffy = floor(Ncropy/2.0) + 1;
-    }
+    boffy = floor(Ncropy/2.0);
 
     double sum = 0.0;
     double* blur = (double*) calloc(Ncropx*Ncropy,sizeof(double));
@@ -240,6 +238,7 @@ int main(int argc,char* argv[]){
     for(int i=0;i<Ncropx*Ncropy;i++){
       blur[i] /= sum;
     }
+
 
     int bNx = Ncropx/2.0;
     int bNy = Ncropy/2.0;
