@@ -124,7 +124,7 @@
     },
 
     "automask":{
-	"smear": 5,
-	"threshold": 0.92
+	"smear": 0.3,
+	"threshold": 0.08
     }
 }

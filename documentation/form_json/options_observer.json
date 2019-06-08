@@ -184,7 +184,7 @@
 			"label": "Threshold",
 			"name": "threshold",
 			"type": "number",
-			"legend": "Accept pixels above this threshold in brightness after smearing"
+			"legend": "Accept pixels above this threshold (fraction of the maximum image brightness) after smearing"
 		    }
 		]
 	    },

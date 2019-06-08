@@ -1,5 +1,5 @@
 #!/bin/bash
-path="RUNS/DR_exclusion_plot/slope_-3/"
+path="RUNS/DR_exclusion_plot/slope_-5/"
 
 
 # Scan the given path and create alist with all the names (except 'data')

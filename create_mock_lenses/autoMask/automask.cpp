@@ -51,6 +51,16 @@ int main(int argc,char* argv[]){
   //Read clean image data
   ImagePlane mydata(outpath+"image.fits",stoi(image["pix_x"]),stoi(image["pix_y"]),stof(image["width"]),stof(image["height"]));
 
+  double img_max = 0.0;
+  for(int i=0;i<mydata->Nm;i++){
+    if( mydata.img[i] > img_max ){
+      img_max = mydata.img[i];
+    }
+  }
+  double threshold_noise = threshold*img_max;
+  
+
+  /*
   double threshold_noise;
   if( noise_flag == "none" ){
     threshold_noise = threshold;
@@ -69,6 +79,7 @@ int main(int argc,char* argv[]){
     }
     threshold_noise = threshold*sigma_max;    
   }
+  */
   //  std::cout << threshold_noise << std::endl;
   //================= END:INITIALIZATION =======================
   
