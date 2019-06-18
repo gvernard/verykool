@@ -156,6 +156,8 @@ private:
   double x0;
   double y0;
   ImagePlane* mySource;
+
+  void scaleProfile();
 };
 
 

@@ -209,6 +209,7 @@ fromFITS::fromFITS(std::string filename,int Ni,int Nj,double height,double width
   this->x0 = x0;
   this->y0 = y0;
   this->mySource = new ImagePlane(filename,Ni,Nj,height,width);
+  scaleProfile();
   // ImagePlane sets the coordinate origin in the center of the image, so I can re-position it here.
   for(int i=0;i<this->mySource->Nm;i++){
     this->mySource->x[i] += x0;
@@ -246,6 +247,18 @@ void fromFITS::outputProfile(std::string filename){
   }
   this->output_res = 2.0*half_range*this->Nj/this->width;
   this->writeProfile(filename,half_range);
+}
+
+void fromFITS::scaleProfile(){
+  double max = 0.0;
+  for(int i=0;i<this->mySource->Nm;i++){
+    if( this->mySource->img[i] > max ){
+      max = this->mySource->img[i];
+    }
+  }
+  for(int i=0;i<this->mySource->Nm;i++){
+    this->mySource->img[i] /= max;    
+  }
 }
 
 
