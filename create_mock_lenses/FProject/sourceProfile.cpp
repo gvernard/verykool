@@ -411,3 +411,43 @@ void myDelaunay::outputProfile(std::string filename){
 
   this->writeProfile(filename,half_range);  
 }
+
+double myDelaunay::sourceExtent(){
+  // the extent of the source (in arcsec) must include 99% of the source flux
+  double sum = 0.0;
+  for(int i=0;i<this->N;i++){
+    sum += this->src[i];
+  }
+  double limit = 0.99*sum;
+  
+  double psum,xmin,xmax,ymin,ymax;
+  double hsize = 0.0;
+  double dsize = 0.25;
+  int jmax = 20;
+  for(int j=1;j<jmax;j++){
+    hsize = j*dsize;
+
+    xmin = -hsize;
+    xmax =  hsize;
+    ymin = -hsize;
+    ymax =  hsize;
+
+    psum = 0.0;
+    for(int i=0;i<this->N;i++){
+      if( xmin < this->x[i] && this->x[i] < xmax && ymin < this->y[i] && this->y[i] < ymax ){
+	psum += this->src[i];
+      }
+    }
+    if( psum > limit ){
+      break;
+    }
+  }
+
+  if( hsize == jmax*dsize ){
+    // Source is larger than jmax*dsize arcsec!
+    return 0;
+  }
+  double size = 2*hsize; // arcsec
+
+  return size;
+}

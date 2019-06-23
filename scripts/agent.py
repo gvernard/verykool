@@ -11,7 +11,8 @@ import socket
 
 
 def main():
-    vkl_dir       = "/Users/users/gvernard/myGit/VeryKooL/"
+#    vkl_dir       = "/Users/users/gvernard/myGit/VeryKooL/"
+    vkl_dir       = "/home/george/myCodes/verykool/"
     cosmo_lib_dir = "/net/argo/data/users/gvernard/myLibraries/cosmosis/"
     conda_env     = "/net/argo/data/users/gvernard/myLibraries/anaconda_envs/cosmosis_env"
     

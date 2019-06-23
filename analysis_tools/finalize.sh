@@ -3,6 +3,7 @@
 path=$1
 run=$2
 
+cd analysis_tools/
 
 #########################################
 # Read or determine lmodel and step
@@ -11,7 +12,10 @@ if [ "$#" -eq 4 ]; then
     step=$4
     out_path=${path}${run}output/${step}_${lmodel}_
 else
-    read lmodel step <<<$(php get_lmodel_step.php $path $run $3)
+    #    read lmodel step <<<$(php get_lmodel_step.php $path $run $3)
+    mystr=$(php get_lmodel_step.php $path $run $3)
+    lmodel=$(echo $mystr | cut -f1 -d\ )
+    step=$(echo $mystr | cut -f2 -d\ )
     if [ "$step" = "dum" ]; then
 	step=""
 	out_path=${path}${run}output/${lmodel}_
@@ -30,7 +34,8 @@ fi
 # Create output dir
 target=analyzed_cases/$run
 mkdir -p $target
-source activate /data/users/gvernard/myLibraries/anaconda_envs/new_basic
+#source activate /data/users/gvernard/myLibraries/anaconda_envs/new_basic
+#source activate /home/george/anaconda3/envs/vkl_env
 
 
 #########################################
@@ -126,5 +131,5 @@ fi
 cp -r $target/ ${path}${run}analysis
 
 
-conda deactivate
+#conda deactivate
 echo "Done!"

@@ -143,6 +143,10 @@ mocks: common $(OBJ_DIR)/addmachine.o $(OBJ_DIR)/automask.o $(OBJ_DIR)/kappa.o $
 	$(GPP) -std=c++11 -I inc -o $(MOCKS_DIR)/createPerturbations/kappa $(OBJ_DIR)/kappa.o $(OBJ_DIR)/imagePlane.o -ljsoncpp -lcfitsio -lCCfits
 	$(GPP) -std=c++11 -I inc -I $(MOCKS_DIR)/FProject -o $(MOCKS_DIR)/FProject/fproject $(OBJ_DIR)/fproject.o $(OBJ_DIR)/fastell.o $(OBJ_DIR)/imagePlane.o $(OBJ_DIR)/nonLinearPars.o $(OBJ_DIR)/massModels.o $(OBJ_DIR)/sourcePlane.o $(FPROJECT_OBJ) -ljsoncpp -lcfitsio -lCCfits -lgfortran -lgmp -lCGAL
 
+# src/common/source_plane.o
+support: analysis_tools/create_gridded_source.cpp 
+	$(GPP) -std=c++11 -I inc -o analysis_tools/create_gridded_source -I $(MOCKS_DIR)/FProject $(OBJ_DIR)/fastell.o $(OBJ_DIR)/sourcePlane.o $(OBJ_DIR)/massModels.o $(OBJ_DIR)/imagePlane.o $(OBJ_DIR)/nonLinearPars.o $(OBJ_DIR)/sourceProfile.o analysis_tools/create_gridded_source.cpp -ljsoncpp -lcfitsio -lCCfits -lgfortran -lgmp -lCGAL
+
 
 clean:
 	$(RM) -r $(OBJ_DIR)/* $(LIB_DIR)/*

@@ -121,7 +121,8 @@ public:
   }
   double value(double x,double y);
   void outputProfile(std::string filename);
-
+  double sourceExtent();
+  
 private:
   int N;
   double* x;

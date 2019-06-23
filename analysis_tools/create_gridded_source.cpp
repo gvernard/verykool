@@ -34,43 +34,8 @@ int main(int argc,char* argv[]){
 
 
   myDelaunay* source = new myDelaunay(out_path + "_source_irregular.dat");
+  double size = source->sourceExtent();
 
-  // define size of the source plane here
-  double sum = 0.0;
-  for(int i=0;i<source->N;i++){
-    sum += source->src[i];
-  }
-  double limit = 0.99*sum;
-  
-  double psum,xmin,xmax,ymin,ymax;
-  double hsize = 0.0;
-  double dsize = 0.25;
-  int jmax = 20;
-  for(int j=1;j<jmax;j++){
-    hsize = j*dsize;
-
-    xmin = -hsize;
-    xmax =  hsize;
-    ymin = -hsize;
-    ymax =  hsize;
-
-    psum = 0.0;
-    for(int i=0;i<source->N;i++){
-      if( xmin < source->x[i] && source->x[i] < xmax && ymin < source->y[i] && source->y[i] < ymax ){
-	psum += source->src[i];
-      }
-    }
-    //    std::cout << hsize << " " << psum << std::endl;
-    if( psum > limit ){
-      break;
-    }
-  }
-
-  if( hsize == jmax*dsize ){
-    std::cout << "Source larger than " << jmax*dsize << " arcsec!!!" << std::endl;
-    return 0;
-  }
-  double size = 2*hsize; // arcsec
 
 
 
@@ -79,7 +44,11 @@ int main(int argc,char* argv[]){
   FixedSource* splane = new FixedSource(res,res,size,"identity");
   
   //set a fixed source profile
-  source->profile(splane->Sj,splane->Si,splane->x,splane->y,splane->src);
+  for(int i=0;i<splane->Si;i++){
+    for(int j=0;j<splane->Sj;j++){
+      splane->src[i*splane->Sj+j] = source->value(splane->x[j],splane->y[i]);
+    }
+  }
   
   // output source profile
   splane->outputSource("source_model.fits");
