@@ -11,8 +11,13 @@ import socket
 
 
 def main():
+    # Determine VKL root directory
+    dir_path = os.path.dirname(os.path.realpath(__file__))
+    dum = dir_path.split('/')
+    vkl_dir = '/'.join(dum[:-1]) + '/'
+
 #    vkl_dir       = "/Users/users/gvernard/myGit/VeryKooL/"
-    vkl_dir       = "/home/george/myCodes/verykool/"
+#    vkl_dir       = "/home/george/myCodes/verykool/"
     cosmo_lib_dir = "/net/argo/data/users/gvernard/myLibraries/cosmosis/"
     conda_env     = "/net/argo/data/users/gvernard/myLibraries/anaconda_envs/cosmosis_env"
     

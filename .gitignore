@@ -18,4 +18,7 @@ scripts/report.txt
 create_mock_lenses/addMachine/addmachine
 create_mock_lenses/autoMask/automask
 create_mock_lenses/FProject/fproject
-
+create_mock_lenses/createPerturbations/kappa
+plt_corner.paramnames
+plt_corner.ranges
+plt_corner.txt

@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# I need to have loaded the appropriate python environment
+
 path=$1
 run=$2
 
