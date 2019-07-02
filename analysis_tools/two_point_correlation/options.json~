@@ -1,0 +1,78 @@
+{
+    "modgauss": [
+        {
+            "nam": "lambda",
+            "fix": 0,
+            "per": 0,
+            "val": 1,
+            "err": 0,
+            "min": 0.0001,
+            "max": 1000,
+            "pri": {
+                "type": "log10"
+            }
+        },
+        {
+            "nam": "sdev",
+            "fix": 0,
+            "per": 0,
+            "val": 0.2,
+            "err": 0,
+            "min": 0.01,
+            "max": 1,
+            "pri": {
+                "type": "log10"
+            }
+        },
+        {
+            "nam": "cmax",
+            "fix": 1,
+            "per": 0,
+            "val": 0.001,
+            "err": 0,
+            "min": 0.001,
+            "max": 1,
+            "pri": {
+                "type": "uni"
+            }
+        }
+    ],
+    "gauss": [
+        {
+            "nam": "lambda",
+            "fix": 0,
+            "per": 0,
+            "val": 1,
+            "err": 0,
+            "min": 0.0001,
+            "max": 1000,
+            "pri": {
+                "type": "log10"
+            }
+        },
+        {
+            "nam": "sdev",
+            "fix": 0,
+            "per": 0,
+            "val": 0.2,
+            "err": 0,
+            "min": 0.01,
+            "max": 1,
+            "pri": {
+                "type": "log10"
+            }
+        },
+        {
+            "nam": "cmax",
+            "fix": 1,
+            "per": 0,
+            "val": 0.001,
+            "err": 0,
+            "min": 0.001,
+            "max": 1,
+            "pri": {
+                "type": "uni"
+            }
+        }
+    ]
+}
