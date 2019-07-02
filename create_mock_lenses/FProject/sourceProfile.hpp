@@ -112,6 +112,11 @@ public:
 
 class myDelaunay: public BaseProfile {
 public:
+  int N;
+  double* x;
+  double* y;
+  double* src;
+
   myDelaunay(std::string filename);
   ~myDelaunay(){
     free(x);
@@ -124,10 +129,6 @@ public:
   double sourceExtent();
   
 private:
-  int N;
-  double* x;
-  double* y;
-  double* src;
   struct atriangle {
     int a;
     int b;

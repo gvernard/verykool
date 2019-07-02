@@ -157,6 +157,7 @@ public:
     static FactoryLikelihoodModel dum;//Guaranteed to be destroyed. Instantiated on first call.
     return &dum;
   }
+  std::vector<Nlpar*> nlparsFromJsonVector(const Json::Value myjson);
 
   BaseLikelihoodModel* createLikelihoodModel(std::string path,std::string run,std::string like_model,ImagePlane* image,BaseSourcePlane* source,CollectionMassModels* collection,Pert* pert_mass_model){
     Json::Value root;
@@ -195,7 +196,6 @@ public:
 
 private:
   FactoryLikelihoodModel(){};
-  std::vector<Nlpar*> nlparsFromJsonVector(const Json::Value myjson);
 };
 
 

@@ -17,7 +17,7 @@ import matplotlib.pyplot as plt
 fname = sys.argv[1]
 image = fits.getdata(fname,ext=0)
 dum  = image[::-1,:]
-#data = np.flipud(dum)
+#dum = np.flipud(dum)
 image=dum
 header = fits.getheader(fname)
 Lx = header['WIDTH']
@@ -33,17 +33,18 @@ if len(sys.argv) == 3:
 else:
         data = image
 
+#newhdu = fits.PrimaryHDU(data)
+#newhdu.writeto('res.fits',overwrite=True)
 
 
-
-Nsteps = 20  # number of bins in which to determine the power spectra
+Nsteps = 10  # number of bins in which to determine the power spectra
 pspecs = []  # The list to be filled with power spectra 
 
 #FFT & absolute value squared
 fouriertf = np.fft.fftshift(np.fft.fft2(data))
-#fouriertf = np.fft.fftshift(np.fft.fft2(data))
-fouriertf *= (Lx*Ly)/(nx*ny)
-#fouriertf *= 1.0/((Lx*Ly)*(nx*ny))
+##fouriertf = np.fft.fftshift(np.fft.fft2(data))
+#fouriertf *= (Lx*Ly)/(nx*ny)
+##fouriertf *= 1.0/((Lx*Ly)*(nx*ny))
 absval2 = fouriertf.real**2 + fouriertf.imag**2
 #Dimensions of the Fourier transformed image
 
@@ -59,28 +60,30 @@ lmin   = np.sqrt( pow(1.0/Lx,2.0) + pow(1.0/Ly,2.0) )
 steplist = np.zeros(Nsteps+1)
 l_list = np.zeros(Nsteps)
 
-## Equi-distant linear radial bins
-#dlin = (lmax-lmin)/Nsteps
-#steplist[0] = lmin
-#for i in range(1,Nsteps+1):
-#        steplist[i] = lmin + i*dlin
-#        l_list[i-1] = lmin + i*dlin - dlin/2.0
-##l_list = np.linspace(lmax/(2.0*Nsteps),lmax - lmax/(2.0*Nsteps),Nsteps)
 
 
-# Equi-distant logarithmic radial bins
-dlog   = (np.log10(lmax) - np.log10(lmin))/Nsteps
-logmin = np.log10(lmin)
+# Equi-distant linear radial bins
+dlin = (lmax-lmin)/Nsteps
 steplist[0] = lmin
 for i in range(1,Nsteps+1):
-        steplist[i] = pow(10,logmin + i*dlog)
-        l_list[i-1] = pow(10,logmin + i*dlog - dlog/2.0)
+        steplist[i] = lmin + i*dlin
+        l_list[i-1] = lmin + i*dlin - dlin/2.0
+#l_list = np.linspace(lmax/(2.0*Nsteps),lmax - lmax/(2.0*Nsteps),Nsteps)
 
 
-
-
-
-
+## Equi-distant logarithmic radial bins
+#dlog   = (np.log10(lmax) - np.log10(lmin))/Nsteps
+#logmin = np.log10(lmin)
+#steplist[0] = lmin
+#for i in range(1,Nsteps+1):
+#        steplist[i] = pow(10,logmin + i*dlog)
+#        l_list[i-1] = pow(10,logmin + i*dlog - dlog/2.0)
+        
+        
+        
+        
+        
+        
 #print len(steplist),steplist
 #dum = np.logspace(1,np.log10(Nsteps),steps)
 #steplist = np.insert(dum,0,0)
@@ -92,19 +95,23 @@ pspecerror = [] #Array that will be filled with the error of the powerspectrum v
 for step in range(Nsteps):
         bin = []
 	
-        for x in range (nx):
-                for y in range (ny):
-                        lx = lxlist [x]
-                        ly = lylist [y]
-                        l = m.sqrt(lx**2. + ly**2.)
+        for x in range(nx):
+                for y in range(ny):
+                        lx = lxlist[x]
+                        ly = lylist[y]
+                        l = m.sqrt( lx**2 + ly**2 )
                         if steplist[step] < l <= steplist[step+1]:
                                 bin = np.append(bin, absval2[y][x])
-        if len(bin) > 0:
-                pspeclist = np.append(pspeclist, np.mean(bin)) #Adding each bin value to pspeclist
-                pspecerror = np.append(pspecerror, np.mean(bin)/np.sqrt(len(bin))) #adding the error: P(k)/Npixels per bin (sample variance)
-                #pspecerror = np.append(pspecerror, np.std(bin)) #adding the error: P(k)/Npixels per bin (sample variance)
+        
+        N = len(bin)
+
+        if N > 0:
+                mean = np.mean(bin)
+                pspeclist  = np.append(pspeclist,mean)                        # Adding each bin mean value to pspeclist
+                #pspecerror    = np.append(pspecerror,mean/np.sqrt(N))           # Adding the error
+                pspecerror = np.append(pspecerror,np.std(bin))
         else:
-                pspeclist = np.append(pspeclist,0.0)
+                pspeclist  = np.append(pspeclist,0.0)
                 pspecerror = np.append(pspecerror,0.0)
         #print len(bin)
 
@@ -122,7 +129,12 @@ np.savetxt("ps.dat",table,fmt='%.8e',delimiter=' ',newline='\n')
 plt.figure()
 plt.xscale('log')
 plt.yscale('log')
-#plt.ylim(0.01,10000)
+plt.xlabel('k')
+plt.ylabel('P(k)')
+
+plt.ylim(0.1,20)
+plt.xlim(0.6,20)
+
 
 # Filtering out zero elements
 ind = np.nonzero(pspeclist)
@@ -130,7 +142,8 @@ bins = l_list[ind]
 vals = pspeclist[ind]
 errs = pspecerror[ind]
 
-plt.errorbar(bins,vals,yerr=errs)
-#plt.savefig('ps.png',bbox_inches='tight')
+plt.plot(bins,vals)
+#plt.errorbar(bins,vals,yerr=[errs,errs])
+
 plt.savefig('ps.pdf',bbox_inches='tight')
 #plt.show()

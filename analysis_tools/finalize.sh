@@ -61,11 +61,11 @@ mv ps.pdf residual_ps.pdf
 
 
 #########################################
-echo ' >>> plotting source (and pert) power spectrum...'
-python plot_source_pow_spec.py $path $run $lmodel $step
-if [ "$lmodel" = "pert" ]; then
-    python plot_dpsi_pow_spec.py $path $run $lmodel $step
-fi
+#echo ' >>> plotting source (and pert) power spectrum...'
+#python plot_source_pow_spec.py $path $run $lmodel $step
+#if [ "$lmodel" = "pert" ]; then
+#    python plot_dpsi_pow_spec.py $path $run $lmodel $step
+#fi
 
 
 #########################################
@@ -81,7 +81,8 @@ mv report.pdf $target
 
 #########################################
 echo ' >>> creating regularly gridded source...'
-./create_gridded_source $path $run 200 $lmodel $step # 3rd argument is the resolution of the gridded source
+#./create_gridded_source $path $run 200 $lmodel $step # 3rd argument is the resolution of the gridded source
+./create_gridded_source ${out_path}source_irregular.dat 200 # 2nd argument is the resolution of the gridded source
 mv source_model.fits $target/source_model.fits
 
 
@@ -109,8 +110,10 @@ mv all.png $target/
 if [ -f corner.pdf ]; then
     mv corner.pdf $target/
 fi
-mv source_ps.pdf $target/
 mv residual_ps.pdf $target/
+if [ -f source_ps.pdf ]; then
+    mv source_ps.pdf $target/
+fi
 if [ -f dpsi_ps.pdf ]; then
     mv dpsi_ps.pdf $target/
 fi
