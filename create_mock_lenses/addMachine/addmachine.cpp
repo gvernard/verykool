@@ -327,7 +327,7 @@ int main(int argc,char* argv[]){
     double sigma = maxdata/stof(noise["sn"]);
     addUniNoiz(stoi(noise["seed"]),sigma,obs_img.Ni,obs_img.Nj,obs_img.img);
     std::ofstream myfile(output+"noise.dat",std::ios::out);
-    myfile << sigma << std::endl;
+    myfile << sigma*sigma << std::endl;
     myfile.close();
   } else if( noise_flag == "map" ){
     ImagePlane sigmas(noise["file"],stoi(image["pix_x"]),stoi(image["pix_y"]),stof(image["width"]),stof(image["height"]));

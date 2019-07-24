@@ -1,5 +1,5 @@
 #!/bin/bash
-path="RUNS/VKL_paper/section_3.2/new_merger/"
+path="RUNS/VKL_paper/section_3.2/new_spiral/"
 
 
 # Scan the given path and create alist with all the names (except 'data')

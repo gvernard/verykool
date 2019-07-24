@@ -118,7 +118,7 @@ void SmoothAlgebra::setAlgebraInit(ImagePlane* image,BaseSourcePlane* source){
       det_Cd += log(image->C.tri[i].v);
     }
     this->C_inv = Cdum;
-    this->likeModel->terms["detCd"] = det_Cd;
+    this->likeModel->terms["detCd"] = -det_Cd/2.0;
     Cdum.resize(0,0);
   }
 
