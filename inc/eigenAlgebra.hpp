@@ -45,12 +45,12 @@ public:
   SmoothLikelihood* likeModel;
   Eigen::VectorXd d;
   Eigen::SparseMatrix<double> StCS;
-  Eigen::SparseMatrix<double> C;
+  Eigen::SparseMatrix<double> C_inv;
   Eigen::SparseMatrix<double> B;
   Eigen::SparseMatrix<double> M;
   Eigen::SparseMatrix<double> Mt;
   Eigen::SparseMatrix<double> A;
-  Eigen::SparseMatrix<double> Cs;
+  Eigen::SparseMatrix<double> Cs_inv;
   Eigen::SparseMatrix<double> block;
 };
 
@@ -75,8 +75,8 @@ public:
   Eigen::SparseMatrix<double> M_r;
   Eigen::SparseMatrix<double> Mt_r;
   Eigen::SparseMatrix<double> A_r;
-  Eigen::SparseMatrix<double> Cs;
-  Eigen::SparseMatrix<double> Cp;
+  Eigen::SparseMatrix<double> Cs_inv;
+  Eigen::SparseMatrix<double> Cp_inv;
   Eigen::SparseMatrix<double> J;
   Eigen::SparseMatrix<double> block_s;
   Eigen::SparseMatrix<double> block_p;

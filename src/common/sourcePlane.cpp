@@ -303,7 +303,7 @@ void FixedSource::inMask(ImagePlane* image){
   this->lambda_out_sum = 0.0;
   for(int i=0;i<this->Sm;i++){
     if( this->lambda_out[i] != 0 ){
-      this->lambda_out_sum += log10(this->lambda_out[i]);
+      this->lambda_out_sum += log(this->lambda_out[i]);
     }
   }
 
@@ -1103,7 +1103,7 @@ void AdaptiveSource::inMask(ImagePlane* image){
     this->lambda_out_sum = 0.0;
     for(int i=0;i<this->Sm;i++){
       if( this->lambda_out[i] != 0 ){
-	this->lambda_out_sum += log10(this->lambda_out[i]);
+	this->lambda_out_sum += log(this->lambda_out[i]);
       }
     }
 

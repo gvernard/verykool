@@ -414,7 +414,7 @@ void SmoothLikelihood::updateLikelihoodModel(){
   // If lambda is allowed to vary then update the lambda term
   Nlpar* lambda = Nlpar::getParByName("lambda",this->reg);
   if( lambda->fix == 0 ){
-    this->terms["Nslogl"] = source->Sm*log10(lambda->val)/2.0;
+    this->terms["Nslogl"] = source->Sm*log(lambda->val)/2.0;
   }
 
   // Update all the needed algebraic tables, e.g. M, Mt, Mt*Cd*M + l*Cs, Cs and detCs (if needed)
@@ -874,13 +874,13 @@ void PertLikelihood::updateLikelihoodModel(){
   // If lambda is allowed to vary then update the lambda term for the source
   Nlpar* lambda_s = Nlpar::getParByName("lambda_s",this->reg_s);
   if( lambda_s->fix == 0 ){
-    this->terms["Nslogl_s"] = this->source->Sm*log10(lambda_s->val)/2.0;
+    this->terms["Nslogl_s"] = this->source->Sm*log(lambda_s->val)/2.0;
   }  
   
   // If lambda is allowed to vary then update the lambda term for the potential corrections
   Nlpar* lambda_dpsi = Nlpar::getParByName("lambda_dpsi",this->reg_dpsi);
   if( lambda_dpsi->fix == 0 ){
-    this->terms["Nplogl_p"] = this->pert_mass_model->dpsi->Sm*log10(lambda_dpsi->val)/2.0;
+    this->terms["Nplogl_p"] = this->pert_mass_model->dpsi->Sm*log(lambda_dpsi->val)/2.0;
   }
 
   // Update all the needed algebraic tables, e.g. M_r, Mt_r, Mt_r*Cd*M_r + RtR, Cs and detCs (if needed), Cp and detCp (if needed)

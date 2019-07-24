@@ -44,7 +44,7 @@ public:
   std::string reg;                 // name of the regularization scheme
   int eigenSparseMemoryAllocForH;  // estimate of the non-zero elements per row of the regularization matrix H
   bool sample_reg = false;         // sampling regularization matrix related parameters
-  double lambda_out_sum;           // the sum of the log10 entries of lambda_out
+  double lambda_out_sum;           // the sum of the log (ln) entries of lambda_out
   BaseCovKernel* kernel;           // pointer to kernel class
   mytable L;
   mytable H;

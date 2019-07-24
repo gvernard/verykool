@@ -58,6 +58,7 @@ public:
   mytable B;
   mytable C;
   mytable S;
+  std::string noise_flag;
 
   ImagePlane(){};
   ImagePlane(const std::string filepath,int i,int j,double w,double h);  //used to read images

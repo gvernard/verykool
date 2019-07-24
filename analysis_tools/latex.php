@@ -100,8 +100,25 @@ $str .= '\begin{tabular}{ r l }';
 $str .= ' term & value \\\\' . "\n";
 $str .= '\hline ';
 
+$table3_labels = array(
+    "evidence"  => "evidence",
+    "Nilog2pi"  => '$ -\frac{1}{2} N_i \mathrm{log}(2 \pi) $',
+    "Nslogl"    => '$ \frac{1}{2} N_s \mathrm{log}(\lambda) $',
+    "detCd_inv" => '$ \frac{1}{2} \mathrm{log}(det C_d^{-1}) $',
+    "detCs_inv" => '$ \frac{1}{2} \mathrm{log}(det C_s^{-1}) $',
+    "detA_inv"  => '$ \frac{1}{2} \mathrm{log}(det A^{-1}) $',
+    "chi2"      => '$ -\frac{1}{2} \chi^2 $',
+    "reg"       => '$ -\frac{1}{2} \lambda \; reg $'
+);
+
+
+$label_keys = array_keys($table3_labels);
 foreach($out["terms"] as $key=>$val){
-    $str .= str_replace("_","-",$key) . ' & ' . round(floatval($val),4) . ' \\\\ ' . "\n";
+    if( in_array($key,$label_keys) ){
+	$str .= $table3_labels[$key] . ' & ' . round(floatval($val),4) . ' \\\\ ' . "\n";
+    } else {
+	$str .= str_replace("_","-",$key) . ' & ' . round(floatval($val),4) . ' \\\\ ' . "\n";
+    }
 }
 /*
 $str .= ' $-E_D$                                                & ' . round(floatval(- $out["terms"]["ED"]),3) . ' \\\\ ' . "\n";

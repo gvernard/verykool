@@ -304,6 +304,7 @@ void ImagePlane::setMaskedC(mytable* Cout,mytable* S,mytable* C){
 
 void ImagePlane::readC(const std::string flag,const std::string filepath){
   double value;
+  this->noise_flag = flag;
 
   if( flag == "uniform" ){
 
@@ -311,7 +312,7 @@ void ImagePlane::readC(const std::string flag,const std::string filepath){
     std::ifstream infile(filepath);
     infile >> value;
     for(int i=0;i<this->Nm;i++){
-      this->C.tri.push_back({i,i,1.0/pow(value,2)});
+      this->C.tri.push_back({i,i,value});
     }
     infile.close();
 
@@ -327,7 +328,7 @@ void ImagePlane::readC(const std::string flag,const std::string filepath){
       while( true ){
 	infile >> i >> i >> value;
 	if( infile.eof() ) break;
-	this->C.tri.push_back({i,i,1.0/pow(value,2)});
+	this->C.tri.push_back({i,i,value});
       }
       infile.close();
 
@@ -340,7 +341,7 @@ void ImagePlane::readC(const std::string flag,const std::string filepath){
       this->readFits(filepath,contents);
       
       for(int i=0;i<this->Ni*this->Nj;i++){
-	this->C.tri.push_back({i,i,1.0/pow(contents[i],2)});
+	this->C.tri.push_back({i,i,contents[i]});
 	//	  std::cout << 1./pow(contents[i*this->Nj+j],2) << std::endl;
       }
 
@@ -355,7 +356,7 @@ void ImagePlane::readC(const std::string flag,const std::string filepath){
     while( true ){
       infile >> i >> j >> value;
       if( infile.eof() ) break;
-      this->C.tri.push_back({i,j,1.0/pow(value,2)});
+      this->C.tri.push_back({i,j,value});
     }
     infile.close();
 

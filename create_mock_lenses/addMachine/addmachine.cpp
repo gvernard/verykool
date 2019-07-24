@@ -310,6 +310,7 @@ int main(int argc,char* argv[]){
     //    obs_img.img[i] = obs_img.img[i]*obs_dx*obs_dy/counts[i];
     obs_img.img[i] = obs_img.img[i]/counts[i];
   }
+  //  obs_img.writeImage(output+"binned_image.fits");
 
 
   double sum = 0.0;
