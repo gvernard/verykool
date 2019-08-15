@@ -1,5 +1,5 @@
 #!/bin/bash
-path="RUNS/VKL_paper/section_3.2/new_spiral/"
+path="RUNS/VKL_paper/section_3.2/new_spiral2/"
 
 
 # Scan the given path and create alist with all the names (except 'data')
@@ -10,7 +10,7 @@ path="RUNS/VKL_paper/section_3.2/new_spiral/"
 
 
 # Custom array of run names that are found in 'path'
-declare -a runs=("n2_identity" "n2_curv" "n2_modgauss" "n2_gauss")
+declare -a runs=("curv" "modgauss" "gauss" "identity")
 
 
 echo | cat > scripts/report.txt

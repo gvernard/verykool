@@ -16,7 +16,7 @@
 
 
 int main(int argc,char* argv[]){
-  std::string src_path  = argv[1];
+  std::string src_path  = argv[1]; // The reconstructed source is needed only to read in the adaptive grid.
   std::string json_file = argv[2];
   //  std::string src_true  = argv[3];
 
@@ -396,6 +396,7 @@ int main(int argc,char* argv[]){
   FILE* fh = fopen("corr_theo.dat","w");
   for(int i=0;i<Nbins;i++){
     fprintf(fh,"%5.3f %8.3f %8.3f %8.3f\n",bins[i],vals_curv[i],vals_modgauss[i],vals_gauss[i]);
+    //fprintf(fh,"%5.3f %8.3f\n",bins[i],vals_curv[i]);
   }
   fclose(fh);
   

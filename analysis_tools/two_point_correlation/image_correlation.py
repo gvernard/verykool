@@ -8,8 +8,8 @@ import matplotlib.pyplot as plt
 
 fname = sys.argv[1]
 image = fits.getdata(fname,ext=0)
-dum  = image[::-1,:]
-image=np.flipud(dum)
+dum   = image[::-1,:]
+image = np.flipud(dum)
 
 image_width = 1.0 # arcsec
 dpix = image_width/image.shape[1] # pixel size
@@ -42,7 +42,6 @@ dr = (rmax-rmin)/Nbins
 bins = np.arange(rmin,rmax,dr)
 vals = np.zeros(len(bins))
 counts = np.zeros(len(bins))
-
 
 Nx = corr.shape[1]
 Ny = corr.shape[0]
