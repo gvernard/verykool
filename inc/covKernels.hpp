@@ -13,8 +13,13 @@ public:
   double cmax;
   
   BaseCovKernel(){};
+  BaseCovKernel(const BaseCovKernel& other){
+    this->type = other.type;
+    this->cmax = other.cmax;
+  };
   ~BaseCovKernel(){};
   
+  virtual BaseCovKernel* clone() = 0;
   virtual double getCovariance(double r) = 0;
   virtual double getCovarianceSelf() = 0;
   virtual void setParameters(std::vector<Nlpar*> pars) = 0;
@@ -26,9 +31,13 @@ public:
   double sdev;
 
   GaussKernel(std::vector<Nlpar*> pars);
+  GaussKernel(const GaussKernel& other);
   double getCovariance(double r);
   double getCovarianceSelf();
   void setParameters(std::vector<Nlpar*> pars);
+  GaussKernel* clone(){
+    return new GaussKernel(*this);
+  };
 private:
  double fac;
 };
@@ -38,9 +47,13 @@ public:
   double sdev;
 
   ModGaussKernel(std::vector<Nlpar*> pars);
+  ModGaussKernel(const ModGaussKernel& other);
   double getCovariance(double r);
   double getCovarianceSelf();
   void setParameters(std::vector<Nlpar*> pars);
+  ModGaussKernel* clone(){
+    return new ModGaussKernel(*this);
+  };
 };
 
 class ExpGaussKernel: public BaseCovKernel {
@@ -49,9 +62,13 @@ public:
   double sdev;
 
   ExpGaussKernel(std::vector<Nlpar*> pars);
+  ExpGaussKernel(const ExpGaussKernel& other);
   double getCovariance(double r);
   double getCovarianceSelf();
   void setParameters(std::vector<Nlpar*> pars);
+  ExpGaussKernel* clone(){
+    return new ExpGaussKernel(*this);
+  };
 private:
   double fac;
 };

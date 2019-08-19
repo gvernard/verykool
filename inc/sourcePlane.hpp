@@ -72,7 +72,8 @@ public:
   virtual void constructH() = 0;
   virtual void outputSource(const std::string path) = 0;
   virtual void outputSourceErrors(double* errors,const std::string path) = 0;
-  virtual void constructDs(ImagePlane* image) = 0;
+  virtual void constructDerivatives() = 0;             // constructs the derivatives of the source on the source grid
+  virtual void constructDs(ImagePlane* image) = 0;     // interpolates the derivatives of the source on the deflected image grid
   virtual void createInterpolationWeights(ImagePlane* image) = 0;
   virtual void inMask(ImagePlane* image) = 0;
   virtual void outputMask(const std::string path) = 0;
@@ -96,6 +97,7 @@ public:
 
   virtual void createInterpolationWeights(ImagePlane* image);
   virtual void constructH();
+  virtual void constructDerivatives(){};
   virtual void constructDs(ImagePlane* image){};
   virtual void outputSource(const std::string path);
   virtual void outputSourceErrors(double* errors,const std::string path);
@@ -153,6 +155,7 @@ public:
 
   virtual void createInterpolationWeights(ImagePlane* image);
   virtual void constructH();
+  virtual void constructDerivatives();
   virtual void constructDs(ImagePlane* image);
   virtual void outputSource(const std::string path);
   virtual void outputSourceErrors(double* errors,const std::string path);

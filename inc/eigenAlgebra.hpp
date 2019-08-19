@@ -20,6 +20,11 @@ class Pert;
 
 class BaseAlgebra {
 public:
+  Eigen::VectorXd d;
+  Eigen::SparseMatrix<double> StCS;
+  Eigen::SparseMatrix<double> C_inv;
+  Eigen::SparseMatrix<double> B;
+
   BaseAlgebra(){};
   ~BaseAlgebra(){};
 
@@ -35,7 +40,7 @@ public:
   SmoothAlgebra(SmoothLikelihood* a);
   ~SmoothAlgebra(){};
 
-  void setAlgebraInit(ImagePlane* mydata,BaseSourcePlane* mysource);
+  void setAlgebraInit(ImagePlane* image,BaseSourcePlane* source);
   void setAlgebraRuntime(ImagePlane* image,BaseSourcePlane* source);
   void solveSource(BaseSourcePlane* source);
   void getSourceErrors(int Sm,double* errors);
@@ -43,10 +48,6 @@ public:
   void solveDpsi(Pert* pert_mass_model,ImagePlane* image,BaseSourcePlane* source);
 
   SmoothLikelihood* likeModel;
-  Eigen::VectorXd d;
-  Eigen::SparseMatrix<double> StCS;
-  Eigen::SparseMatrix<double> C_inv;
-  Eigen::SparseMatrix<double> B;
   Eigen::SparseMatrix<double> M;
   Eigen::SparseMatrix<double> Mt;
   Eigen::SparseMatrix<double> A;
@@ -61,8 +62,8 @@ public:
   PertAlgebra(PertLikelihood* a);
   ~PertAlgebra(){};
 
-  void setAlgebraInit(BaseSourcePlane* source,Pert* pert_mass_model);
-  void setAlgebraRuntime(BaseSourcePlane* source,Pert* pert_mass_model);
+  void setAlgebraInit(ImagePlane* image,BaseSourcePlane* source,BaseSourcePlane* source0,Pert* pert_mass_model);
+  void setAlgebraRuntime(BaseSourcePlane* source,BaseSourcePlane* source0,Pert* pert_mass_model);
   void solveSourcePert(BaseSourcePlane* source,Pert* pert_mass_model);
   void constructDsDpsi(ImagePlane* image,BaseSourcePlane* source,Pert* pert_mass_model);
   void constructNormalizingJmatrix(BaseSourcePlane* source,Pert* pert_mass_model,Eigen::SparseMatrix<double>& J_out,double lambda_s,double lambda_dpsi);

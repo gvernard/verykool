@@ -951,6 +951,10 @@ AdaptiveSource::AdaptiveSource(const AdaptiveSource& other) : BaseSourcePlane(ot
   for(int i=0;i<this->opposite_edges_per_vertex.size();i++){
     copy(other.opposite_edges_per_vertex[i].begin(),other.opposite_edges_per_vertex[i].end(),back_inserter(this->opposite_edges_per_vertex[i])); 
   }
+
+  if( this->reg == "covariance_kernel"  || this->reg == "covariance_kernel_in_identity_out" ){
+    this->kernel = other.kernel->clone();
+  }
 }
 
 AdaptiveSource::~AdaptiveSource(){
@@ -1545,9 +1549,10 @@ void AdaptiveSource::constructH(){
   this->H.tri.swap(tmp);
 }
 
-//virtual
-void AdaptiveSource::constructDs(ImagePlane* image){
 
+
+//virtual
+void AdaptiveSource::constructDerivatives(){
   // Calculate the derivative at every source grid point
   double* dev_x_val   = (double*) malloc(2*sizeof(double));
   double* dev_x_coord = (double*) malloc(2*sizeof(double));
@@ -1631,8 +1636,11 @@ void AdaptiveSource::constructDs(ImagePlane* image){
   free(dev_y_coord);
   free(dev_x_val);
   free(dev_y_val);
-  
+}
 
+
+//virtual
+void AdaptiveSource::constructDs(ImagePlane* image){
   // Deflect the image grid, find the triangle that each ray belongs to, and interpolate between the derivatives of the vertices
   // or get the derivative of the vertex if the ray is part of the adaptive grid.
   this->Ds.Ti = image->Nm;

@@ -7,6 +7,8 @@
 #include <map>
 #include <algorithm>
 
+#include "json/json.h"
+
 //Abstract class: BaseNlpar
 //===============================================================================================================
 Nlpar::Nlpar(std::string a,int b,int c,double d,double e,double f,double g){
@@ -18,6 +20,37 @@ Nlpar::Nlpar(std::string a,int b,int c,double d,double e,double f,double g){
   min = f;
   max = g;
   ran = max - min;
+}
+
+std::vector<Nlpar*> Nlpar::nlparsFromJsonVector(const Json::Value myjson){
+  std::vector<Nlpar*> pars;
+
+  for(int i=0;i<myjson.size();i++){
+    const Json::Value nlpar = myjson[i];
+
+    std::string nam = nlpar["nam"].asString();
+    int fix         = nlpar["fix"].asInt();
+    int per         = nlpar["per"].asInt();
+    double val      = nlpar["val"].asDouble();
+    double err      = nlpar["err"].asDouble();
+    double min      = nlpar["min"].asDouble();
+    double max      = nlpar["max"].asDouble();
+    Nlpar* par = new Nlpar(nam,fix,per,val,err,min,max);
+    
+    std::map<std::string,std::string> prior_pars;
+    Json::Value::Members jmembers = nlpar["pri"].getMemberNames();
+    for(int j=0;j<jmembers.size();j++){
+      prior_pars[jmembers[j]] = nlpar["pri"][jmembers[j]].asString();
+    }
+    par->pri = FactoryPrior::getInstance()->createPrior(par,prior_pars);
+    //std::cout << par->nam << " " << par->pri->type << std::endl;
+    //std::cout << par->nam << " " << par->pri->prior(par->min) << " " << par->pri->prior(par->max) << std::endl;
+    //par->setNewPrior(prior);
+    
+    pars.push_back(par);
+  }
+  
+  return pars;
 }
 
 std::string Nlpar::getName(){

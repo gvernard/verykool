@@ -13,19 +13,14 @@
 #include "imagePlane.hpp"
 #include "massModels.hpp"
 #include "sourcePlane.hpp"
+#include "sourceProfile.hpp"
+#include "minimizers.hpp"
 
 
-
-void Initialization::initialize_program(std::string path,std::string run,Initialization*& init,BaseLikelihoodModel*& smooth_like,ImagePlane*& mydata,CollectionMassModels*& mycollection,BaseSourcePlane*& mysource,BaseLikelihoodModel*& pert_like,Pert*& pert_mass_model){
-  printf("%-50s","Starting initialization");
-  fflush(stdout);
-
-
-
+void Initialization::initialize_program(std::string path,std::string run,Initialization*& init,ImagePlane*& mydata,CollectionMassModels*& mycollection,BaseSourcePlane*& mysource,BaseSourcePlane*& source0,Pert*& pert_mass_model,BaseMinimizer*& minimizer){
   // Instantiate init object ---------------------------------------------------------------------------------------------------------------------------------------
   init = new Initialization();
   init->parseInputJSON(path,run);
-
 
 
   // Initializing components: image plane --------------------------------------------------------------------------------------------------------------------------
@@ -35,31 +30,22 @@ void Initialization::initialize_program(std::string path,std::string run,Initial
   mydata->readS(init->maskpath);
 
 
-
   // Initializing components: mass model collection ----------------------------------------------------------------------------------------------------------------
   mycollection = new CollectionMassModels();
 
 
-
-  // Initializing components: source plane -------------------------------------------------------------------------------------------------------------------------
-  mysource = FactorySourcePlane::getInstance()->createSourcePlane(init->source);
-
-
-
-  // Initialize smooth likelihood model (requires the initialized components from above) ---------------------------------------------------------------------------
-  smooth_like = FactoryLikelihoodModel::getInstance()->createLikelihoodModel(path,run,init->smooth_like,mydata,mysource,mycollection,pert_mass_model);
-
-
-
   // Update/initialize mass model parameters -----------------------------------------------------------------------------------------------------------------------
-  mycollection->setPhysicalPars(smooth_like->getPhysicalPars());
+  mycollection->setPhysicalPars(init->nlpars_physical);
   mycollection->models.resize(init->mmodel.size());
   for(int k=0;k<mycollection->models.size();k++){
-    std::vector<Nlpar*> lens = smooth_like->getMassModelPars(k);
+    std::vector<Nlpar*> lens = init->nlpars_lenses[k];
     mycollection->models[k] = FactoryMassModel::getInstance()->createMassModel(init->mmodel[k],lens);
   }
   mycollection->all_defl(mydata); // I need to deflect the image plane once I know the mass model parameters. Needed to create the adaptive grid.
 
+
+  // Initializing components: source plane -------------------------------------------------------------------------------------------------------------------------
+  mysource = FactorySourcePlane::getInstance()->createSourcePlane(init->source);
 
 
   // Update/initialize source --------------------------------------------------------------------------------------------------------------------------------------
@@ -71,51 +57,33 @@ void Initialization::initialize_program(std::string path,std::string run,Initial
     ada->createDelaunay();
   }
   if( mysource->reg == "covariance_kernel" || mysource->reg == "covariance_kernel_in_identity_out" ){
-    SmoothLikelihood* specific_pointer = dynamic_cast<SmoothLikelihood*>(smooth_like);
-    mysource->sample_reg = Nlpar::getSampleReg(specific_pointer->reg);
-    std::string suffix = Nlpar::removeSuffix(specific_pointer->reg);
-    mysource->kernel = FactoryCovKernel::getInstance()->createCovKernel(init->source["kernel"],specific_pointer->reg);
-    Nlpar::addSuffix(specific_pointer->reg,suffix);
-    specific_pointer->updateCovKernelLimits();
+    mysource->sample_reg = Nlpar::getSampleReg(init->nlpars_reg_s);
+    mysource->kernel = FactoryCovKernel::getInstance()->createCovKernel(init->source["kernel"],init->nlpars_reg_s);
   }
   mysource->constructH();
-
-
-
-  // Initialize precomputed algebraic quantities for smooth model likelihood ---------------------------------------------------------------------------------------
-  //Precompute a number of algebraic quantities (table products etc)                                                                [<---algebra package dependent]
-  smooth_like->initializeAlgebra();
-
 
 
   // Initialize perturbations --------------------------------------------------------------------------------------------------------------------------------------
   if( init->perturbations.size() > 0 ){
     pert_mass_model = new Pert(std::stoi(init->perturbations["pix_x"]),std::stoi(init->perturbations["pix_y"]),mydata,init->perturbations["reg_dpsi"]);
-    pert_like = FactoryLikelihoodModel::getInstance()->createLikelihoodModel(path,run,init->pert_like,mydata,mysource,mycollection,pert_mass_model);
-
-    // Set kernel and sample_reg for source
-    PertLikelihood* specific_pointer = dynamic_cast<PertLikelihood*>(pert_like);
-    if( init->perturbations["reg_s"] == "covariance_kernel" ){
-      specific_pointer->source->sample_reg = Nlpar::getSampleReg(specific_pointer->reg_s);
-      std::string suffix = Nlpar::removeSuffix(specific_pointer->reg_s);
-      specific_pointer->source->kernel = FactoryCovKernel::getInstance()->createCovKernel(init->perturbations["kernel_s"],specific_pointer->reg_s);
-      Nlpar::addSuffix(specific_pointer->reg_s,suffix);
-    }   
-
-    // Set kernel and sample_reg for perturbations
     if( init->perturbations["reg_dpsi"] == "covariance_kernel" ){
-      specific_pointer->pert_mass_model->dpsi->sample_reg = Nlpar::getSampleReg(specific_pointer->reg_dpsi);
-      std::string suffix = Nlpar::removeSuffix(specific_pointer->reg_dpsi);
-      specific_pointer->pert_mass_model->dpsi->kernel = FactoryCovKernel::getInstance()->createCovKernel(init->perturbations["kernel_dpsi"],specific_pointer->reg_dpsi);
-      Nlpar::addSuffix(specific_pointer->reg_dpsi,suffix);
+      pert_mass_model->dpsi->sample_reg = Nlpar::getSampleReg(init->nlpars_reg_dpsi);
+      pert_mass_model->dpsi->kernel = FactoryCovKernel::getInstance()->createCovKernel(init->perturbations["kernel_dpsi"],init->nlpars_reg_dpsi);
     }
+    
+    // HERE I CONSTRUCT source0 either as BaseSourcePlane or as BaseProfile.
+    source0 = mysource->clone(); // x,y, and src are not copied (src is also empty at this stage)
+    for(int i=0;i<source0->Sm;i++){
+      source0->x[i]   = mysource->x[i];
+      source0->y[i]   = mysource->y[i];
+      source0->src[i] = init->prof_source0->value(source0->x[i],source0->y[i]);
+    }
+    source0->constructDerivatives();
   }
 
 
-
-  printf("%+7s\n","...done");
-  std::cout << std::string(200,'=') << std::endl;
-  fflush(stdout);
+  // Initialize minimizer ------------------------------------------------------------------------------------------------------------------------------------------
+  minimizer = FactoryMinimizer::getInstance()->createMinimizer("dum",init->minimizer,init->output);
 }
 
 
@@ -137,31 +105,7 @@ void Initialization::parseInputJSON(std::string path,std::string run){
   } else {
     this->maskpath = path+root["maskpath"].asString();
   }
-  this->smooth_like = root["parameter_model"].asString();
-
-
-
-  //Parameters for the perturbations
-  if( root.isMember("perturbations") ){
-    this->pert_like = root["perturbations"]["parameter_model"].asString();
-    this->perturbations["pix_x"] = root["perturbations"]["pix_x"].asString();
-    this->perturbations["pix_y"] = root["perturbations"]["pix_y"].asString();
-
-    jmembers = root["perturbations"]["minimizer"].getMemberNames();
-    for(int i=0;i<jmembers.size();i++){
-      this->pert_minimizer[jmembers[i]] = root["perturbations"]["minimizer"][jmembers[i]].asString();
-    }
-
-    this->perturbations["reg_s"] = root["perturbations"]["reg_s"]["type"].asString();
-    if( this->perturbations["reg_s"] == "covariance_kernel" ){
-      this->perturbations["kernel_s"] = root["perturbations"]["reg_s"]["subtype"].asString();
-    }
-
-    this->perturbations["reg_dpsi"] = root["perturbations"]["reg_dpsi"]["type"].asString();
-    if( this->perturbations["reg_dpsi"] == "covariance_kernel" ){
-      this->perturbations["kernel_dpsi"] = root["perturbations"]["reg_dpsi"]["subtype"].asString();
-    }
-  }
+  this->likeModel = root["parameter_model"].asString();
 
 
   //Parameters for the image
@@ -171,15 +115,12 @@ void Initialization::parseInputJSON(std::string path,std::string run){
     this->image[jmembers[i]] = root["iplane"][jmembers[i]].asString();
   }
 
+
   //Parameters of the source
   this->interp = root["interp"].asString();
   jmembers = root["splane"].getMemberNames();
   for(int i=0;i<jmembers.size();i++){
     this->source[jmembers[i]] = root["splane"][jmembers[i]].asString();
-  }
-  this->source["reg"] = root["reg"]["type"].asString();
-  if( this->source["reg"] == "covariance_kernel" || this->source["reg"] == "covariance_kernel_in_identity_out" ){
-    this->source["kernel"] = root["reg"]["subtype"].asString();
   }
 
 
@@ -211,45 +152,102 @@ void Initialization::parseInputJSON(std::string path,std::string run){
     this->psf[jmembers[i]] = root["psf"][jmembers[i]].asString();
   }
 
+
   //Parameters for the noise
   this->noise_flag = root["noise_flag"].asString();
   this->noisepath  = path+root["noisepath"].asString();
 
+
   //Parameters for the minimizer/sampler
   jmembers = root["minimizer"].getMemberNames();
   for(int i=0;i<jmembers.size();i++){
-    this->smooth_minimizer[jmembers[i]] = root["minimizer"][jmembers[i]].asString();
+    this->minimizer[jmembers[i]] = root["minimizer"][jmembers[i]].asString();
   }
 
 
-  //Mass model name for the lenses
+  //NLPARS: Physical parameters (shear magnitude and direction)
+  this->nlpars_physical = Nlpar::nlparsFromJsonVector(root["physical"]["nlpars"]);
+
+
+  //NLPARS: Mass model for the lenses
   jmembers = root["lenses"].getMemberNames();
   for(int i=0;i<jmembers.size();i++){
     this->mmodel.push_back( root["lenses"][jmembers[i]]["subtype"].asString() );
-  }
-}
-
-
-
-void Initialization::finalizeLikelihoodModel(std::string output,BaseLikelihoodModel* likeModel){
-  printf("%-16s%20s\n","Starting output ",likeModel->name.c_str());
-  fflush(stdout);
-  
-  // update active with MAP parameters
-  for(int i=0;i<likeModel->active.size();i++){
-    likeModel->active[i]->val = likeModel->maps[i];
+    this->lens_names.push_back( jmembers[i] );
+    this->nlpars_lenses.push_back( Nlpar::nlparsFromJsonVector(root["lenses"][jmembers[i]]["nlpars"]) );
   }
 
-  likeModel->updateLikelihoodModel();
-  likeModel->getLogLike();
-  likeModel->printActive();
-  likeModel->printTerms();
-  printf("\n");
-  likeModel->outputLikelihoodModel(output);
 
-  printf("%+7s\n","...done");
-  std::cout << std::string(200,'=') << std::endl;
-  fflush(stdout);  
+  //NLPARS: Source regularization
+  this->source["reg"] = root["reg"]["type"].asString();
+  if( this->source["reg"] == "covariance_kernel" || this->source["reg"] == "covariance_kernel_in_identity_out" ){
+    this->source["kernel"] = root["reg"]["subtype"].asString();
+  }
+  this->nlpars_reg_s = Nlpar::nlparsFromJsonVector(root["reg"]["nlpars"]);
+
+
+  //Parameters for the perturbations
+  if( root.isMember("perturbations") ){
+    this->perturbations["pix_x"] = root["perturbations"]["pix_x"].asString();
+    this->perturbations["pix_y"] = root["perturbations"]["pix_y"].asString();
+
+    //NLPARS: Source regularization
+    this->source["reg"] = root["perturbations"]["reg_s"]["type"].asString();
+    if( this->source["reg"] == "covariance_kernel" || this->source["reg"] == "covariance_kernel_in_identity_out" ){
+      this->source["kernel"] = root["perturbations"]["reg_s"]["subtype"].asString();
+    }
+    this->nlpars_reg_s = Nlpar::nlparsFromJsonVector(root["perturbations"]["reg_s"]["nlpars"]);
+    for(int i=0;i<this->nlpars_reg_s.size();i++){
+      this->nlpars_reg_s[i]->nam += "_s";
+    }
+
+    //NLPARS: Dpsi regularization
+    this->perturbations["reg_dpsi"] = root["perturbations"]["reg_dpsi"]["type"].asString();
+    if( this->perturbations["reg_dpsi"] == "covariance_kernel" ){
+      this->perturbations["kernel_dpsi"] = root["perturbations"]["reg_dpsi"]["subtype"].asString();
+    }
+    this->nlpars_reg_dpsi = Nlpar::nlparsFromJsonVector(root["perturbations"]["reg_dpsi"]["nlpars"]);
+    for(int i=0;i<this->nlpars_reg_s.size();i++){
+      this->nlpars_reg_dpsi[i]->nam += "_dpsi";
+    }
+
+    //source0
+    Json::Value jsource0 = root["perturbations"]["source0"];
+    if( jsource0["type"].asString() == "analytic" ){
+      
+      std::vector<std::string> names;
+      std::vector<std::map<std::string,double> > all_pars;
+      for(int i=0;i<jsource0["pars"].size();i++){
+	std::string name = jsource0["pars"][i]["type"].asString();
+	names.push_back(name);
+	
+	std::map<std::string,double> pars;
+	const Json::Value::Members jpars = jsource0["pars"][i].getMemberNames();
+	for(int j=0;j<jpars.size();j++){
+	  if( jpars[j] != "type" ){
+	    pars[jpars[j]] = jsource0["pars"][i][jpars[j]].asDouble();
+	  }
+	}
+	all_pars.push_back(pars);
+      }
+      this->prof_source0 = new Analytic(names,all_pars);
+      
+    } else if( jsource0["type"].asString() == "delaunay" ){
+      
+      std::string filename = jsource0["filename"].asString();
+      this->prof_source0 = new myDelaunay(filename);
+      
+    } else if( jsource0["type"].asString() == "fromfits" ){
+      
+      std::string filename = jsource0["filename"].asString();
+      int Ni               = jsource0["Ni"].asInt();
+      int Nj               = jsource0["Nj"].asInt();
+      double height        = jsource0["height"].asDouble();
+      double width         = jsource0["width"].asDouble();
+      double x0            = jsource0["x0"].asDouble();
+      double y0            = jsource0["y0"].asDouble();
+      this->prof_source0 = new fromFITS(filename,Ni,Nj,height,width,x0,y0);
+      
+    }
+  }
 }
-
-

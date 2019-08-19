@@ -29,8 +29,8 @@ COSMOSIS_LIBS  = -lcosmosis
 COMMON_SRC   = src/common
 COMMON_FLAGS = -std=c++11 -fPIC -g -frounding-math
 COMMON_LIBS  = -lgfortran -lCCfits -lcfitsio -ljsoncpp -lgmp -lCGAL
-DEPS         = imagePlane.hpp inputOutput.hpp massModels.hpp sourcePlane.hpp eigenAlgebra.hpp nonLinearPars.hpp likelihoodModels.hpp covKernels.hpp
-OBJ          = imagePlane.o   inputOutput.o   massModels.o   sourcePlane.o   eigenAlgebra.o   nonLinearPars.o   likelihoodModels.o   covKernels.o   fastell.o
+DEPS         = imagePlane.hpp inputOutput.hpp massModels.hpp sourcePlane.hpp sourceProfile.hpp eigenAlgebra.hpp nonLinearPars.hpp likelihoodModels.hpp covKernels.hpp
+OBJ          = imagePlane.o   inputOutput.o   massModels.o   sourcePlane.o   sourceProfile.o   eigenAlgebra.o   nonLinearPars.o   likelihoodModels.o   covKernels.o   fastell.o
 COMMON_DEPS  = $(patsubst %,$(INC_DIR)/%,$(DEPS)) #Pad names with dir
 COMMON_OBJ   = $(patsubst %,$(OBJ_DIR)/%,$(OBJ))  #Pad names with dir
 #$(info $$OBJ is [${COMMON_OBJ}])

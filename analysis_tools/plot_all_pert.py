@@ -279,6 +279,7 @@ plt.colorbar(col,cax=cax,format="%5.2f")
 
 # Errors on reconstructed adaptive source
 #########################################################################################################################
+'''
 f        = open(out_path+'pert_source_voronoi_errors.dat')
 content  = [x.strip('\n') for x in f.readlines()]
 zvalues  = []
@@ -319,7 +320,7 @@ divider = make_axes_locatable(vkl_err)
 cax = divider.append_axes("right",size="5%",pad=0.05)
 #plt.colorbar(im,cax=cax,ticks=MultipleLocator(0.2),format="%4.1f")
 plt.colorbar(col,cax=cax,format="%6.4f")
-
+'''
 
 
 

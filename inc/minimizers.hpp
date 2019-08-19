@@ -157,11 +157,9 @@ public:
   BaseMinimizer* createMinimizer(std::string name,std::map<std::string,std::string> minimizer,const std::string output){
 
     if( minimizer["type"] == "test" ){
-      printf("%-25s","using given parameters");
       fflush(stdout);
       return new Nothing(name);
     } else if( minimizer["type"] == "multinest" ){
-      printf("%-25s","using MultiNest");
       fflush(stdout);
       return new MultiNest(name);
       //    } else if( minimizer["type"] == "simplex" ){
@@ -169,7 +167,6 @@ public:
       //      fflush(stdout);
       //      return new mySimplex(image,source,collection,nlpars,matrices,pcomp);
     } else if( minimizer["type"] == "iterator" ){
-      printf("%-25s","using Iterator");
       fflush(stdout);
       return new Iterator(name);
     } else {

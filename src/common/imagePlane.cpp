@@ -442,20 +442,20 @@ void ImagePlane::readB(const std::string filepath,int i,int j,int ci,int cj){
 	}
       }
       if( flag ){
-	std::cout << "Particular form of the PSF: it is even-even but the peak lies outside the four central pixels" << std::endl;
+	//	std::cout << "Particular form of the PSF: it is even-even but the peak lies outside the four central pixels" << std::endl;
       } else {
-	std::cout << std::endl << "PSF is even-even with the peak located at: " << std::endl;
-	printf("%2d%2d\n%2d%2d\n",loc[0],loc[1],loc[2],loc[3]);
+	//	std::cout << std::endl << "PSF is even-even with the peak located at: " << std::endl;
+	//	printf("%2d%2d\n%2d%2d\n",loc[0],loc[1],loc[2],loc[3]);
       }
     } else if( Pi%2 != 0 && Pj%2 != 0 ){
       int Pi2 = (Pi-1)/2;
       int Pj2 = (Pj-1)/2;
       int centre = Pi2*Pj + Pj2;
       if( centre != imax ){
-	std::cout << "Particular form of the PSF: it is odd-odd but the peak is not the central pixel" << std::endl;	
+	//	std::cout << "Particular form of the PSF: it is odd-odd but the peak is not the central pixel" << std::endl;	
       }
     } else {
-      std::cout << "Particular form of the PSF: it it neither even-even nor odd-odd" << std::endl;
+      //      std::cout << "Particular form of the PSF: it it neither even-even nor odd-odd" << std::endl;
     }
 
 

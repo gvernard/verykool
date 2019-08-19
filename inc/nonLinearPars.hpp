@@ -7,6 +7,8 @@
 #include <iostream>
 #include <cstdlib>
 
+#include "json/json.h"
+
 // In this file: BasePrior, Uni, Gauss, Exp, and FactoryPrior
 //               Nlpar
 
@@ -36,6 +38,7 @@ public:
   int getActive();
   void setNewPrior(BasePrior* prior);
 
+  static std::vector<Nlpar*> nlparsFromJsonVector(const Json::Value myjson);
   static std::vector<std::string> getVectorNames(std::vector<Nlpar*> pars);
   static std::vector<double> getVectorValues(std::vector<Nlpar*> pars);
   static std::vector<int> getVectorActive(std::vector<Nlpar*> pars);
