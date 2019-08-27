@@ -49,6 +49,9 @@ int main(int argc,char* argv[]){
   } else if (init->likeModel == "perturbations_standard" ){
     vkl_minimizer->name = "pert";
     vkl_likeModel = new PertLikelihood(init->nlpars_reg_s,init->nlpars_reg_dpsi,vkl_data,vkl_source,vkl_source0,vkl_collection,vkl_pert_mass_model);
+  } else if( init->likeModel == "both" ){
+    vkl_minimizer->name = "both";
+    vkl_likeModel = new BothLikelihood(init->nlpars_physical,init->nlpars_lenses,init->lens_names,init->nlpars_reg_s,init->nlpars_reg_dpsi,vkl_data,vkl_source,vkl_collection,vkl_pert_mass_model);
   } else if (init->likeModel == "perturbations_iter" ){
     // Something
   }

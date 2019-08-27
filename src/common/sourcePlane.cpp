@@ -936,10 +936,36 @@ AdaptiveSource::AdaptiveSource(std::string m,int a,int b,std::string reg_scheme)
 }
 
 AdaptiveSource::AdaptiveSource(const AdaptiveSource& other) : BaseSourcePlane(other) {
+  this->type = other.type;
   this->mode = other.mode;
   this->spacing = other.spacing;
-  this->n_triangles = other.n_triangles;
 
+  this->Sm = other.Sm;
+  this->Si = other.Si;
+  this->Sj = other.Sj;
+
+  this->src  = (double*) calloc(Sm,sizeof(double));
+  this->x    = (double*) calloc(Sm,sizeof(double));
+  this->y    = (double*) calloc(Sm,sizeof(double));
+  this->s_dx = (double*) calloc(Sm,sizeof(double));
+  this->s_dy = (double*) calloc(Sm,sizeof(double));
+  this->mask_vertices = (int*) calloc(Sm,sizeof(int));
+  this->lambda_out = (double*) calloc(Sm,sizeof(double));
+  for(int i=0;i<this->Sm;i++){
+    this->src[i]  = other.src[i];
+    this->x[i]    = other.x[i];
+    this->y[i]    = other.y[i];
+    this->s_dx[i] = other.s_dx[i];
+    this->s_dy[i] = other.s_dy[i];
+    this->mask_vertices[i] = other.mask_vertices[i];
+    this->lambda_out[i]    = other.lambda_out[i];
+  }
+  
+  this->reg = other.reg;
+  this->eigenSparseMemoryAllocForH = other.eigenSparseMemoryAllocForH;
+  this->sample_reg = other.sample_reg;
+
+  this->n_triangles = other.n_triangles;
   this->triangles.resize( other.triangles.size() );
   for(int i=0;i<this->triangles.size();i++){
     this->triangles[i].a = other.triangles[i].a;
@@ -1559,12 +1585,10 @@ void AdaptiveSource::constructDerivatives(){
   double* dev_y_val   = (double*) malloc(2*sizeof(double));
   double* dev_y_coord = (double*) malloc(2*sizeof(double));
   for(int i=0;i<this->Sm;i++){
-    
     xypoint p0 = {this->x[i],this->y[i]};
     std::vector<int> indices = this->opposite_edges_per_vertex[i];
 
     if( indices.size() == 0 ){
-      
       //we are on a convex-hull point that has zero source derivative
       this->s_dx[i] = 0.0;
       this->s_dy[i] = 0.0;
@@ -1628,10 +1652,11 @@ void AdaptiveSource::constructDerivatives(){
       } else {
 	this->s_dy[i] = (dev_y_val[1] - dev_y_val[0])/(dev_y_coord[1] - dev_y_coord[0]);
       }
-     
+
     }
     
   }
+
   free(dev_x_coord);
   free(dev_y_coord);
   free(dev_x_val);
@@ -1746,6 +1771,7 @@ void AdaptiveSource::outputSource(const std::string path){
   FILE* fh = fopen(filename.c_str(),"w");
   for(int i=0;i<this->Sm;i++){
 
+    //    std::cout << "111" << std::endl;
 
     int mask_flag = 0;
     for(int k=0;k<this->opposite_edges_per_vertex[i].size();k++){
@@ -1755,6 +1781,8 @@ void AdaptiveSource::outputSource(const std::string path){
 	break;
       }
     }
+
+    //    std::cout << "222" << std::endl;
    
     if( mask_flag == 1 ){
       //    if( this->opposite_edges_per_vertex[i].size() != 0 ){
@@ -1772,6 +1800,8 @@ void AdaptiveSource::outputSource(const std::string path){
       } while( ++ec != ec_start );
       fprintf(fh,"\n");
     }
+
+    //    std::cout << "333" << std::endl;
 	  
 
   }
@@ -1781,9 +1811,9 @@ void AdaptiveSource::outputSource(const std::string path){
   std::string filename2 = path + "source_irregular.dat";
   FILE* fh2 = fopen(filename2.c_str(),"w");
   for(int i=0;i<this->Sm;i++){
-    if( this->mask_vertices[i] == 1 ){
+    //    if( this->mask_vertices[i] == 1 ){
       fprintf(fh2,"%20.5f %20.5f %20.5f\n",this->src[i],this->x[i],this->y[i]);
-    }
+      //    }
   }  
   fclose(fh2);
 }

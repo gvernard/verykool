@@ -273,6 +273,7 @@ myDelaunay::myDelaunay(std::string filename){
   this->type = "delaunay";
   this->output_res = 500;
 
+
   // Read v,x,y from file to the class variables
   std::ifstream file(filename);
   std::string line;
@@ -298,6 +299,7 @@ myDelaunay::myDelaunay(std::string filename){
     this->x[i]   = xvec[i];
     this->y[i]   = yvec[i];
     this->src[i] = vvec[i];
+    //    std::cout << this->src[i] << " " << this->x[i] << " " << this->y[i] << std::endl;
   }
 
   // Create the Dealaunay triangulation
@@ -349,15 +351,17 @@ myDelaunay::myDelaunay(std::string filename){
   this->convex_hull = (Point*) malloc(this->ch_size*sizeof(Point));
   for(int i=0;i<this->ch_size;i++){
     this->convex_hull[i] = dum[i];
+    //    std::cout << dum[i].x() << " " << dum[i].y() << std::endl;
   }
+  //  std::cout << std::endl << std::endl;
 }
 
 double myDelaunay::value(double x,double y){
   double val;
-
   // If the point is outside the convex hull of the triangulation set its value to zero, else interpolate within the triangle it in.
   if( CGAL::bounded_side_2(this->convex_hull,this->convex_hull+this->ch_size,Point(x,y),K()) == CGAL::ON_UNBOUNDED_SIDE ){
     val = 0.0;
+    std::cout << "out " << x << " " << y << std::endl;
   } else {
     double wa,wb,wc;
     double ybc,xac,xcb,yac,xxc,yyc,den;

@@ -54,6 +54,13 @@ void BaseLikelihoodModel::printActive(){
   printf("\n");
 }
 
+//non-virtual
+void BaseLikelihoodModel::getResidual(){
+  for(int i=0;i<this->image->Nm;i++){
+    this->res->img[i] = this->image->img[i] - this->model->img[i];
+  }
+}
+
 /*
 //non-virtual
 void BaseLikelihoodModel::printTerms(){
@@ -70,7 +77,7 @@ void BaseLikelihoodModel::printTerms(){
 
 //non-virtual
 double BaseLikelihoodModel::getLogLike(){
-  this->terms["evidence"] = 0.0;
+  this->terms["evidence"] = 0.0; // need because the loop below goes over all this->terms[]
   double sum = 0.0;
   for(std::unordered_map<std::string,double>::iterator it=this->terms.begin();it!=this->terms.end();it++){
     sum += it->second;
@@ -157,7 +164,7 @@ SmoothLikelihood::SmoothLikelihood(std::vector<Nlpar*> a,std::vector<Nlpar*> b,s
   this->s1_high = (double*) malloc(this->active.size()*sizeof(double));
 
   terms["Nilog2pi"] = 0.0;
-  terms["Nslogl"]   = 0.0;
+  terms["Nslogl_s"]   = 0.0;
   if( this->source->reg == "curvature_in_identity_out" || this->source->reg == "covariance_kernel_in_identity_out" ){
     terms["Noutlog2pi"] = 0.0;
   }
@@ -223,17 +230,10 @@ void SmoothLikelihood::getModel(){
 }
 
 //virtual
-void SmoothLikelihood::getResidual(){
-  for(int i=0;i<this->image->Nm;i++){
-    this->res->img[i] = this->image->img[i] - this->model->img[i];
-  }
-}
-
-//virtual
 void SmoothLikelihood::printTerms(){
   if( this->source->reg == "curvature_in_identity_out" || this->source->reg == "covariance_kernel_in_identity_out" ){
     printf(" %16s","Nilog2pi");
-    printf(" %16s","Nslogl");
+    printf(" %16s","Nslogl_s");
     printf(" %16s","Noutlog2pi");
     printf(" %16s","detCd");
     printf(" %16s","detA");
@@ -245,7 +245,7 @@ void SmoothLikelihood::printTerms(){
     printf(" %16s","evidence");
     printf("\n");
     printf(" %16f",terms["Nilog2pi"]);
-    printf(" %16f",terms["Nslogl"]);
+    printf(" %16f",terms["Nslogl_s"]);
     printf(" %16f",terms["Noutlog2pi"]);
     printf(" %16f",terms["detCd"]);
     printf(" %16f",terms["detA"]);
@@ -258,7 +258,7 @@ void SmoothLikelihood::printTerms(){
     printf("\n");
   } else {
     printf(" %16s","Nilog2pi");
-    printf(" %16s","Nslogl");
+    printf(" %16s","Nslogl_s");
     printf(" %16s","detCd");
     printf(" %16s","detA");
     printf(" %16s","detCs");
@@ -267,7 +267,7 @@ void SmoothLikelihood::printTerms(){
     printf(" %16s","evidence");
     printf("\n");
     printf(" %16f",terms["Nilog2pi"]);
-    printf(" %16f",terms["Nslogl"]);
+    printf(" %16f",terms["Nslogl_s"]);
     printf(" %16f",terms["detCd"]);
     printf(" %16f",terms["detA"]);
     printf(" %16f",terms["detCs"]);
@@ -403,7 +403,8 @@ Json::Value SmoothLikelihood::getActiveJson(){
 
 //virtual
 void SmoothLikelihood::initializeAlgebra(){
-  this->algebra->setAlgebraInit(this->image,this->source);
+  Nlpar* lambda_s = Nlpar::getParByName("lambda",this->reg_s);
+  this->algebra->setAlgebraInit(this->image,this->source,lambda_s->val);
 }
 
 //virtual
@@ -439,16 +440,16 @@ void SmoothLikelihood::updateLikelihoodModel(){
   }
 
   // If lambda is allowed to vary then update the lambda term
-  Nlpar* lambda = Nlpar::getParByName("lambda",this->reg_s);
-  if( lambda->fix == 0 ){
-    this->terms["Nslogl"] = source->Sm*log(lambda->val)/2.0;
+  Nlpar* lambda_s = Nlpar::getParByName("lambda",this->reg_s);
+  if( lambda_s->fix == 0 ){
+    this->terms["Nslogl_s"] = source->Sm*log(lambda_s->val)/2.0;
   }
 
   // Update all the needed algebraic tables, e.g. M, Mt, Mt*Cd*M + l*Cs, Cs and detCs (if needed)
-  this->algebra->setAlgebraRuntime(this->image,this->source);
+  this->algebra->setAlgebraRuntime(this->image,this->source,lambda_s->val);
 
   // Solve for the source, calculate the chi2, reg, and detA terms
-  this->algebra->solveSource(this->source);
+  this->algebra->solveSource(this->source,lambda_s->val);
 }
 
 //virtual
@@ -636,7 +637,10 @@ PertLikelihood::PertLikelihood(std::vector<Nlpar*> a,std::vector<Nlpar*> b,Image
   // the interpolation weights of the deflected image grid need to be set before calling constructDs
   this->source->createInterpolationWeights(this->image);
   this->source->constructL(this->image);
+  //  this->source0->createInterpolationWeights(this->image);
+  //  this->source0->constructL(this->image);
   this->source0->constructDs(this->image);
+
 
   // Initialize Pert
   this->pert_mass_model->createCrosses(this->image);
@@ -823,14 +827,6 @@ void PertLikelihood::getModel(){
 }
 
 //virtual
-void PertLikelihood::getResidual(){
-  for(int i=0;i<this->image->Nm;i++){
-    this->res->img[i] = this->image->img[i] - this->model->img[i];
-  }
-}
-
-
-//virtual
 void PertLikelihood::initializeAlgebra(){
   this->algebra->setAlgebraInit(this->image,this->source,this->source0,this->pert_mass_model);
 }
@@ -844,7 +840,6 @@ void PertLikelihood::updateLikelihoodModel(){
     this->source->kernel->setParameters(this->reg_s);
     Nlpar::addSuffix(this->reg_s,suffix);
     this->source->constructH();
-
   }
 
   // Update covariance kernel for the perturbations (if needed)
@@ -1006,6 +1001,458 @@ void PertLikelihood::pertResiduals(std::string output,ImagePlane* image,BaseSour
   this->algebra->constructDsDpsi(image,source0,pert_mass_model);
   this->algebra->solvePerturbationsResiduals(output,pert_mass_model);
 }
+
+
+
+
+
+//Derived class from BaseLikelihoodModel: BothLikelihood
+//===============================================================================================================
+BothLikelihood::BothLikelihood(std::vector<Nlpar*> phys,std::vector< std::vector<Nlpar*> > lenses,std::vector<std::string> lens_names,std::vector<Nlpar*> reg_s,std::vector<Nlpar*> reg_dpsi,ImagePlane* c,BaseSourcePlane* d,CollectionMassModels* e,Pert* f){
+  this->physical   = phys;
+  this->lens_names = lens_names;
+  this->lenses     = lenses;
+  this->reg_s      = reg_s;
+  this->reg_dpsi   = reg_dpsi;
+  
+  this->name       = "both";
+  this->image      = c;
+  this->source     = d;
+  this->collection = e;
+  this->pert_mass_model = f;
+  this->smooth_algebra  = new SmoothAlgebra(this);
+  this->both_algebra    = new BothAlgebra(this);
+  this->model   = new ImagePlane(*this->image);
+  this->res     = new ImagePlane(*this->image);
+
+  // Set physical parameters
+  for(int i=0;i<this->physical.size();i++){
+    if( this->physical[i]->getActive() ){
+      this->active.push_back( this->physical[i] );
+      this->active_names.push_back( this->physical[i]->nam );
+    }
+  }
+
+  // Set lens mass model parameters
+  for(int j=0;j<this->lenses.size();j++){
+    for(int i=0;i<this->lenses[j].size();i++){
+      if( this->lenses[j][i]->getActive() ){
+	this->active.push_back( this->lenses[j][i] );
+	this->active_names.push_back( this->lens_names[j] + "_" + this->lenses[j][i]->nam );
+      }
+    }
+  }
+
+  // Set source regularization parameters
+  for(int i=0;i<this->reg_s.size();i++){
+    if( this->reg_s[i]->getActive() ){
+      this->active.push_back( this->reg_s[i] );
+      this->active_names.push_back( this->reg_s[i]->nam );
+    }
+  }
+
+  // Set dpsi regularization parameters
+  for(int i=0;i<this->reg_dpsi.size();i++){
+    if( this->reg_dpsi[i]->getActive() ){
+      this->active.push_back( this->reg_dpsi[i] );
+      this->active_names.push_back( this->reg_dpsi[i]->nam );
+    }
+  }
+
+  this->maps    = (double*) malloc(this->active.size()*sizeof(double));
+  this->means   = (double*) malloc(this->active.size()*sizeof(double));
+  this->s1_low  = (double*) malloc(this->active.size()*sizeof(double));
+  this->s1_high = (double*) malloc(this->active.size()*sizeof(double));
+  
+  terms["Nilog2pi"] = 0.0;
+  terms["Nslogl_s"] = 0.0;
+  terms["Nplogl_p"] = 0.0;
+  terms["detCd"]    = 0.0;
+  terms["detA"]     = 0.0;
+  terms["detCs"]    = 0.0;
+  terms["detCp"]    = 0.0;
+  terms["chi2"]     = 0.0;
+  terms["reg"]      = 0.0;
+  terms["evidence"] = 0.0;
+}
+
+BothLikelihood::~BothLikelihood(){
+  for(int i=0;i<physical.size();i++){
+    delete(physical[i]);
+  }
+  for(int i=0;i<lenses.size();i++){
+    for(int j=0;j<lenses[i].size();j++){
+      delete(lenses[i][j]);
+    }
+  }
+  for(int i=0;i<reg_s.size();i++){
+    delete(reg_s[i]);
+  }
+  for(int i=0;i<reg_dpsi.size();i++){
+    delete(reg_dpsi[i]);
+  }
+  delete(smooth_algebra);
+  delete(both_algebra);
+}
+
+//virtual
+void BothLikelihood::initializeAlgebra(){
+  Nlpar* lambda_s = Nlpar::getParByName("lambda_s",this->reg_s);
+  this->smooth_algebra->setAlgebraInit(this->image,this->source,lambda_s->val);
+}
+
+//virtual
+void BothLikelihood::updateLikelihoodModel(){
+  // Set the new smooth lens, physical, and source covariance parameters (lambda is set in SmoothLikelihood->reg)
+  for(int i=0;i<this->collection->models.size();i++){
+    if( this->collection->models[i]->type != "pert" ){
+      this->collection->models[i]->setMassPars(this->lenses[i]);
+    }
+  }
+  this->collection->setPhysicalPars(this->physical);
+  if( this->source->sample_reg ){
+    this->source->kernel->setParameters(this->reg_s);
+  }
+  if( this->source->sample_reg ){
+    std::string suffix = Nlpar::removeSuffix(this->reg_s); // need to remove _s suffix for the source parameters to update the kernel, then I add it back
+    this->source->kernel->setParameters(this->reg_s);
+    Nlpar::addSuffix(this->reg_s,suffix);
+  }
+  if( this->pert_mass_model->dpsi->sample_reg ){
+    std::string suffix = Nlpar::removeSuffix(this->reg_dpsi); // need to remove _dpsi suffix for the dpsi parameters to update the kernel, then I add it back
+    this->pert_mass_model->dpsi->kernel->setParameters(this->reg_dpsi);
+    Nlpar::addSuffix(this->reg_dpsi,suffix);
+  }
+
+  // Deflect the rays in the updated mass model
+  this->collection->all_defl(this->image);
+
+  // Set the adaptive source in the updated mass model
+  if( this->source->type == "adaptive" ){
+    AdaptiveSource* ada = dynamic_cast<AdaptiveSource*>(this->source);
+    ada->createAdaGrid(this->image,this->collection);
+    ada->createDelaunay();
+  }
+  this->source->createInterpolationWeights(this->image);
+  this->source->constructL(this->image);
+
+  // Re-construct the source regularization matrix
+  if( this->source->sample_reg || this->source->type == "adaptive" ){
+    this->source->constructH();
+  }
+
+  // If lambda is allowed to vary then update the lambda term for the source
+  Nlpar* lambda_s = Nlpar::getParByName("lambda_s",this->reg_s);
+  if( lambda_s->fix == 0 ){
+    this->terms["Nslogl_s"] = this->source->Sm*log(lambda_s->val)/2.0;
+  }  
+  
+  // If lambda is allowed to vary then update the lambda term for the potential corrections
+  Nlpar* lambda_dpsi = Nlpar::getParByName("lambda_dpsi",this->reg_dpsi);
+  if( lambda_dpsi->fix == 0 ){
+    this->terms["Nplogl_p"] = this->pert_mass_model->dpsi->Sm*log(lambda_dpsi->val)/2.0;
+  }
+
+  // SMOOTH part
+  // Update all the needed algebraic tables, e.g. M, Mt, Mt*Cd*M + l*Cs, Cs and detCs (if needed)
+  this->smooth_algebra->setAlgebraRuntime(this->image,this->source,lambda_s->val);
+
+  // Solve for the source, calculate the chi2, reg, and detA terms
+  this->smooth_algebra->solveSource(this->source,lambda_s->val);
+
+    
+  // PERTURBATIONS part
+  this->source->constructDerivatives();
+  this->source->constructDs(this->image);
+  this->pert_mass_model->createCrosses(this->image);
+  this->pert_mass_model->dpsi->constructH();
+
+
+  // Update all the needed algebraic tables, e.g. M_r, Mt_r, Mt_r*Cd*M_r + RtR, Cs and detCs (if needed), Cp and detCp (if needed)
+  this->both_algebra->setAlgebraRuntime(this->source,this->pert_mass_model);
+
+  // Solve for the source and perturbations (r), calculate the chi2, reg, and detA terms
+  this->both_algebra->solveSourcePert(this->source,this->pert_mass_model);
+}
+
+
+//virtual
+void BothLikelihood::printTerms(){
+  printf(" %16s","Nilog2pi");
+  printf(" %16s","detCd");
+  printf(" %16s","detA");
+  printf(" %16s","Nslogl_s");
+  printf(" %16s","detCs");
+  printf(" %16s","Nplogl_p");
+  printf(" %16s","detCp");
+  printf(" %16s","chi2");
+  printf(" %16s","reg");
+  printf(" %16s","evidence");
+  printf("\n");
+  printf(" %16f",terms["Nilog2pi"]);
+  printf(" %16f",terms["detCd"]);
+  printf(" %16f",terms["detA"]);
+  printf(" %16f",terms["Nslogl_s"]);
+  printf(" %16f",terms["detCs"]);
+  printf(" %16f",terms["Nplogl_p"]);
+  printf(" %16f",terms["detCp"]);
+  printf(" %16f",terms["chi2"]);
+  printf(" %16f",terms["reg"]);
+  printf(" %16f",terms["evidence"]);
+  printf("\n");
+}
+
+//virtual
+void BothLikelihood::initialOutputLikelihoodModel(std::string output){
+  this->pert_mass_model->dpsi->outputMask(output + "pert_dpsi_mask.fits");
+
+  // generic quantities computed in the code (perturbations part)
+  Json::Value json_initial;
+  json_initial["Ndata"]        = this->image->Nm;
+  json_initial["Nmask"]        = this->image->Nmask;
+  json_initial["Psize"]        = this->image->width/this->image->Ni;
+  json_initial["Npert"]        = this->pert_mass_model->dpsi->Sm;
+  json_initial["Npert_mask"]   = this->pert_mass_model->dpsi->Smask;
+  json_initial["Ppert_size"]   = this->pert_mass_model->dpsi->width/this->pert_mass_model->dpsi->Sj;
+  json_initial["Nsource"]      = this->source->Sm;
+  json_initial["Nsource_mask"] = this->source->Smask;
+  json_initial["reg_source"]        = this->source->reg;
+  json_initial["sample_reg_source"] = this->source->sample_reg;
+  json_initial["reg_dpsi"]          = this->pert_mass_model->dpsi->reg;
+  json_initial["sample_reg_dpsi"]   = this->pert_mass_model->dpsi->sample_reg;
+
+  std::ofstream jsonfile(output+"both_initial_output.json");
+  jsonfile << json_initial;
+  jsonfile.close();
+}
+
+//virtual
+void BothLikelihood::outputLikelihoodModel(std::string output){
+  // Output reconstructed source
+  this->source->outputSource(output + "both_");
+
+  // Create mock data (lensed MAP source)
+  this->getModel();
+  this->model->writeImage(output + "both_model.fits");
+  
+  // Output residual image (diference between mydata and mock_data)
+  this->getResidual();
+  this->res->writeImage(output + "both_residual.fits");
+  
+  // Output current perturbations correction
+  this->pert_mass_model->dpsi->outputSource(output + "both_dpsi.fits");
+
+  // Output convergence
+  ImagePlane* kappa = new ImagePlane(this->pert_mass_model->dpsi->Si,this->pert_mass_model->dpsi->Sj,this->pert_mass_model->dpsi->width,this->pert_mass_model->dpsi->height);
+  pert_mass_model->getConvergence(kappa);
+  kappa->writeImage(output + "both_convergence.fits");
+  delete(kappa);
+
+
+  // Output various quantities in json format
+  Json::Value json_output;
+  
+  // Print and write to json the parameters and their associated uncertainties from the parameter model
+  // 1: collapsed list of ALL the parameter names and MAP values
+  Json::Value pars;
+  std::vector<double> values;
+  std::vector<std::string> names;
+  this->getAllNamesValues(names,values);
+  for(int i=0;i<names.size();i++){
+    std::cout << names[i] << " " << values[i] << std::endl;
+    pars[names[i]] = values[i];
+  }
+  json_output["collapsed_all"] = pars;
+  
+  // 2: collapsed list of the ACTIVE parameter names and MAP, mean, 1-sigma lower and 1-sigma upper bounds
+  Json::Value collapsed_active;
+  for(int i=0;i<this->active_names.size();i++){
+    Json::Value active_par;
+    active_par["map"]     = this->maps[i];
+    active_par["mean"]    = this->means[i];
+    active_par["s1_low"]  = this->s1_low[i];
+    active_par["s1_high"] = this->s1_high[i];
+    collapsed_active[this->active_names[i]] = active_par;
+  }
+  json_output["collapsed_active"] = collapsed_active;
+  
+  // 3: same as above, but the non-linear parameter json structure is preserved
+  Json::Value json_active = this->getActiveJson();
+  json_output["json_active"] = json_active;
+
+  // 4: likelihood terms
+  Json::Value terms;
+  for(std::unordered_map<std::string,double>::iterator it=this->terms.begin();it!=this->terms.end();it++){
+    terms[it->first] = it->second;
+  }
+  json_output["terms"] = terms;
+
+  std::ofstream jsonfile(output+"both_output.json");
+  jsonfile << json_output;
+  jsonfile.close();
+}
+
+//virtual
+void BothLikelihood::getModel(){
+  BaseSourcePlane* tmp_source = this->source->clone(); // This is the right way to copy a derived class, e.g. "this->source = new BaseSourcePlane(*c)" does not work, and "this->source = c" only copies the pointer.
+  for(int i=0;i<this->source->Sm;i++){
+    tmp_source->src[i] = this->source->src[i];
+  }
+
+  // Add perturbations to the mass collection
+  this->pert_mass_model->updatePert();
+  this->collection->models.push_back(this->pert_mass_model);
+  this->collection->all_defl(this->image);
+
+  tmp_source->createInterpolationWeights(this->image);
+  tmp_source->constructL(this->image);
+
+  this->both_algebra->getMockData(this->model,tmp_source,this->smooth_algebra->B);
+
+  // Remove perturbations from the mass collection
+  this->collection->models.pop_back();
+  this->collection->all_defl(this->image);
+}
+
+//virtual
+void BothLikelihood::getAllNamesValues(std::vector<std::string>& names,std::vector<double>& values){
+  std::map<std::string,int> active_ind;
+  for(int i=0;i<this->active.size();i++){
+    active_ind[this->active[i]->nam] = i;
+  }
+  double value;
+  std::string name;
+
+  for(int i=0;i<this->physical.size();i++){
+    name = this->physical[i]->getName();
+    if( this->physical[i]->getActive() ){
+      value = this->maps[active_ind[name]];
+    } else {
+      value = this->physical[i]->getValue();
+    }
+    names.push_back(name);
+    values.push_back(value);
+  }
+  for(int j=0;j<this->lenses.size();j++){
+    for(int i=0;i<this->lenses[j].size();i++){
+      name = this->lenses[j][i]->getName();
+      if( this->lenses[j][i]->getActive() ){
+	value = this->maps[active_ind[name]];
+      } else {
+	value = this->lenses[j][i]->getValue();
+      }
+      names.push_back(this->lens_names[j] + "_" + name);
+      values.push_back(value);
+    }
+  }
+  for(int i=0;i<this->reg_s.size();i++){
+    name = this->reg_s[i]->getName();
+    if( this->reg_s[i]->getActive() ){
+      value = this->maps[active_ind[name]];
+    } else {
+      value = this->reg_s[i]->getValue();
+    }
+    names.push_back(name);
+    values.push_back(value);
+  }
+  for(int i=0;i<this->reg_dpsi.size();i++){
+    name = this->reg_dpsi[i]->getName();
+    if( this->reg_dpsi[i]->getActive() ){
+      value = this->maps[active_ind[name]];
+    } else {
+      value = this->reg_dpsi[i]->getValue();
+    }
+    names.push_back(name);
+    values.push_back(value);
+  }
+}
+
+//virtual
+Json::Value BothLikelihood::getActiveJson(){
+  Json::Value all;
+
+  std::map<std::string,int> active_ind;
+  for(int i=0;i<this->active.size();i++){
+    active_ind[this->active[i]->nam] = i;
+  }
+
+  Json::Value physical = Json::Value(Json::arrayValue);
+  for(int i=0;i<this->physical.size();i++){
+    if( this->physical[i]->getActive() ){
+      std::string name = this->physical[i]->getName();
+      Json::Value dum;
+      dum["nam"]     = name;
+      dum["map"]     = this->maps[active_ind[name]];
+      dum["mean"]    = this->means[active_ind[name]];
+      dum["s1_low"]  = this->s1_low[active_ind[name]];
+      dum["s1_high"] = this->s1_high[active_ind[name]];
+      physical.append(dum);
+    }
+  }
+  if( physical.size() != 0 ){
+    all["physical"] = physical;
+  }
+
+  Json::Value lenses;
+  for(int j=0;j<this->lenses.size();j++){
+    Json::Value lens = Json::Value(Json::arrayValue);
+    for(int i=0;i<this->lenses[j].size();i++){
+      if( this->lenses[j][i]->getActive() ){
+	std::string name = this->lenses[j][i]->getName();
+	Json::Value dum;
+	dum["nam"]     = name;
+	dum["map"]     = this->maps[active_ind[name]];
+	dum["mean"]    = this->means[active_ind[name]];
+	dum["s1_low"]  = this->s1_low[active_ind[name]];
+	dum["s1_high"] = this->s1_high[active_ind[name]];
+	lens.append(dum);
+      }
+    }
+    lenses[lens_names[j]] = lens;
+  }
+  if( lenses.size() != 0 ){
+    all["lenses"] = lenses;
+  }
+
+  Json::Value reg_s = Json::Value(Json::arrayValue);
+  for(int i=0;i<this->reg_s.size();i++){
+    if( this->reg_s[i]->getActive() ){
+      std::string name = this->reg_s[i]->getName();
+      Json::Value dum;
+      dum["nam"]     = name;
+      dum["map"]     = this->maps[active_ind[name]];
+      dum["mean"]    = this->means[active_ind[name]];
+      dum["s1_low"]  = this->s1_low[active_ind[name]];
+      dum["s1_high"] = this->s1_high[active_ind[name]];
+      reg_s.append(dum);
+    }
+  }
+  if( reg_s.size() != 0 ){
+    all["reg_s"] = reg_s;
+  }
+
+  Json::Value reg_dpsi = Json::Value(Json::arrayValue);
+  for(int i=0;i<this->reg_dpsi.size();i++){
+    if( this->reg_dpsi[i]->getActive() ){
+      std::string name = this->reg_dpsi[i]->getName();
+      Json::Value dum;
+      dum["nam"]     = name;
+      dum["map"]     = this->maps[active_ind[name]];
+      dum["mean"]    = this->means[active_ind[name]];
+      dum["s1_low"]  = this->s1_low[active_ind[name]];
+      dum["s1_high"] = this->s1_high[active_ind[name]];
+      reg_dpsi.append(dum);
+    }
+  }
+  if( reg_dpsi.size() != 0 ){
+    all["reg_dpsi"] = reg_dpsi;
+  }
+
+  return all;
+}
+
+
+
 
 
 

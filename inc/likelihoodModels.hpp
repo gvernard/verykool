@@ -16,6 +16,7 @@ class BaseSourcePlane;
 class CollectionMassModels;
 class SmoothAlgebra;
 class PertAlgebra;
+class BothAlgebra;
 class Pert;
 class BaseMinimizer;
 
@@ -45,11 +46,10 @@ public:
   void printActive();
   //  void printTerms();
   double getLogLike();
+  void getResidual();
 
   virtual void printTerms() = 0;
   virtual void getAllNamesValues(std::vector<std::string>& names,std::vector<double>& values) = 0;
-  virtual std::vector<Nlpar*> getMassModelPars(int i) = 0;
-  virtual std::vector<Nlpar*> getPhysicalPars() = 0;
   virtual Json::Value getActiveJson() = 0;
 
   virtual void initializeAlgebra() = 0;
@@ -75,16 +75,14 @@ public:
   void updateCovKernelLimits();
   std::vector<Nlpar*> getRegPars();
   void deriveLinearDpsi(Pert* pert_mass_model,ImagePlane* img_grid);
+  std::vector<Nlpar*> getPhysicalPars();
+  std::vector<Nlpar*> getMassModelPars(int i);
 
   //virtual
   void printTerms();
   void getAllNamesValues(std::vector<std::string>& names,std::vector<double>& values);
-  std::vector<Nlpar*> getPhysicalPars();
-  std::vector<Nlpar*> getMassModelPars(int i);
   Json::Value getActiveJson();
   void getModel();
-  void getResidual();
-
   void initializeAlgebra();
   void updateLikelihoodModel();
   void initialOutputLikelihoodModel(std::string output);
@@ -109,12 +107,8 @@ public:
   //virtual
   void printTerms();
   void getAllNamesValues(std::vector<std::string>& names,std::vector<double>& values);
-  std::vector<Nlpar*> getPhysicalPars(){};
-  std::vector<Nlpar*> getMassModelPars(int i){};
   Json::Value getActiveJson();
   void getModel();
-  void getResidual();
-
   void initializeAlgebra();
   void updateLikelihoodModel();
   void initialOutputLikelihoodModel(std::string output);
@@ -122,21 +116,30 @@ public:
 };
 
 
-/*
-class PertIterationLikelihood : public PertLikelihood {
+class BothLikelihood : public BaseLikelihoodModel {
 public:
-  CollectionMassModels* collection;
+  std::vector<Nlpar*> physical;
+  std::vector<std::string> lens_names;
+  std::vector< std::vector<Nlpar*> > lenses;
+  std::vector<Nlpar*> reg_s;
+  std::vector<Nlpar*> reg_dpsi;
+  Pert* pert_mass_model;
+  SmoothAlgebra* smooth_algebra;
+  BothAlgebra* both_algebra;
 
-  PertIterationLikelihood(std::vector<Nlpar*> reg_s,std::vector<Nlpar*> reg_dpsi,std::string a,std::string b,BaseSourcePlane* c,Pert* d,CollectionMassModels* e);
-
-  //non-virtual
-  void initializePert(SmoothLikelihood* smooth_like);
+  BothLikelihood(std::vector<Nlpar*> phys,std::vector< std::vector<Nlpar*> > lenses,std::vector<std::string> lens_names,std::vector<Nlpar*> reg_s,std::vector<Nlpar*> reg_dpsi,ImagePlane* c,BaseSourcePlane* d,CollectionMassModels* f,Pert* g);
+  ~BothLikelihood();
 
   //virtual
+  void printTerms();
+  void getAllNamesValues(std::vector<std::string>& names,std::vector<double>& values);
+  Json::Value getActiveJson();
+  void getModel();
   void initializeAlgebra();
   void updateLikelihoodModel();
+  void initialOutputLikelihoodModel(std::string output);
   void outputLikelihoodModel(std::string output);
 };
-*/
+
 
 #endif /* LIKELIHOOD_MODELS_HPP */

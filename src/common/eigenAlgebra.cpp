@@ -88,13 +88,13 @@ double BaseAlgebra::getDeterminant(Eigen::SparseMatrix<double> mat){
 
 // Class: SmoothAlgebra
 //===============================================================================================================
-SmoothAlgebra::SmoothAlgebra(SmoothLikelihood* a){
+SmoothAlgebra::SmoothAlgebra(BaseLikelihoodModel* a){
   this->likeModel = a;
 }
 
 
 // Calculate tables and related quantities at initialization
-void SmoothAlgebra::setAlgebraInit(ImagePlane* image,BaseSourcePlane* source){
+void SmoothAlgebra::setAlgebraInit(ImagePlane* image,BaseSourcePlane* source,double lambda){
   // Read the data
   Eigen::Map<Eigen::VectorXd> d(image->img,image->Nm);
   this->d = d;
@@ -170,12 +170,12 @@ void SmoothAlgebra::setAlgebraInit(ImagePlane* image,BaseSourcePlane* source){
     this->likeModel->terms["Noutlog2pi"] = -(source->Sm-source->Smask)*log(2*M_PI)/2.0;
     this->likeModel->terms["detLout"] = -source->lambda_out_sum/2.0;
   }
-  this->likeModel->terms["Nslogl"]    =  source->Sm*log(Nlpar::getValueByName("lambda",this->likeModel->reg_s))/2.0;
+  this->likeModel->terms["Nslogl_s"]    =  source->Sm*log(lambda)/2.0;
 }
 
 
 // Calculate tables and related quantities at every iteration
-void SmoothAlgebra::setAlgebraRuntime(ImagePlane* image,BaseSourcePlane* source){
+void SmoothAlgebra::setAlgebraRuntime(ImagePlane* image,BaseSourcePlane* source,double lambda){
   // Update Mt and M matrices based on the new lensing matrix L
   Eigen::SparseMatrix<double> LL(source->L.Ti,source->L.Tj);
   LL.reserve(Eigen::VectorXi::Constant(source->L.Ti,4));//setting the non-zero coefficients per row of the lensing matrix (4 for bi-linear interpolation scheme, etc)
@@ -220,11 +220,11 @@ void SmoothAlgebra::setAlgebraRuntime(ImagePlane* image,BaseSourcePlane* source)
     block_dum.resize(0,0);
     A_dum = this->Mt*this->StCS*this->M + this->block;
     */
-    A_dum = this->Mt*this->StCS*this->M + Nlpar::getValueByName("lambda",this->likeModel->reg_s)*this->Cs_inv + this->block;
+    A_dum = this->Mt*this->StCS*this->M + lambda*this->Cs_inv + this->block;
 
   } else {
     //  A = this->Mt*this->C*this->M + Nlpar::getValueByName("lambda",this->likeModel->reg)*this->Cs;
-    A_dum = this->Mt*this->StCS*this->M + Nlpar::getValueByName("lambda",this->likeModel->reg_s)*this->Cs_inv;
+    A_dum = this->Mt*this->StCS*this->M + lambda*this->Cs_inv;
   }
 
 
@@ -234,7 +234,7 @@ void SmoothAlgebra::setAlgebraRuntime(ImagePlane* image,BaseSourcePlane* source)
 
 
 // Solve for the source and calculate likelihood terms at every iteration
-void SmoothAlgebra::solveSource(BaseSourcePlane* source){
+void SmoothAlgebra::solveSource(BaseSourcePlane* source,double lambda){
   // Get the inverse and the det of A
   Eigen::SparseMatrix<double> A_inv(source->Sm,source->Sm);
   double detA = 0.0;
@@ -313,11 +313,11 @@ void SmoothAlgebra::solveSource(BaseSourcePlane* source){
     //    double reg                    =  st.dot(this->block*s);
     double reg1                   =  st.dot(this->Cs_inv*s);
     double reg2                   =  st.dot(this->block*s);
-    this->likeModel->terms["reg"] = -Nlpar::getValueByName("lambda",this->likeModel->reg_s)*reg1/2.0;
+    this->likeModel->terms["reg"] = -lambda*reg1/2.0;
     this->likeModel->terms["reg_out"] = -reg2/2.0;
   } else {
     double reg                     = st.dot(this->Cs_inv*s);
-    this->likeModel->terms["reg"]  = -Nlpar::getValueByName("lambda",this->likeModel->reg_s)*reg/2.0;
+    this->likeModel->terms["reg"]  = -lambda*reg/2.0;
   }
 }
 
@@ -474,6 +474,7 @@ void PertAlgebra::setAlgebraInit(ImagePlane* image,BaseSourcePlane* source,BaseS
 
   // Create DsDpsi sparse matrix directly based on source->Ds (varying at each call) and image->crosses (fixed at initialization)
   this->constructDsDpsi(this->likeModel->image,source0,pert_mass_model);
+  //  std::cout << this->DsDpsi << std::endl;
 
   this->likeModel->terms["detCd"]    = this->likeModel->terms["detCd"];
   this->likeModel->terms["Nilog2pi"] = -(this->likeModel->image->Nmask*log(2*M_PI)/2.0); // for some reason i need the outer parenthsis here, otherwise there is a memory problem
@@ -801,4 +802,200 @@ void PertAlgebra::getMockData(ImagePlane* mockdata,BaseSourcePlane* source,Eigen
 
   Eigen::VectorXd tmp = B*LL*s;
   Eigen::Map<Eigen::VectorXd>(mockdata->img,tmp.size()) = tmp;
+}
+
+
+
+
+// Class: BothAlgebra
+//===============================================================================================================
+BothAlgebra::BothAlgebra(BothLikelihood* a){
+  this->likeModel = a;
+}
+
+void BothAlgebra::setAlgebraRuntime(BaseSourcePlane* source,Pert* pert_mass_model){
+  this->constructDsDpsi(this->likeModel->image,this->likeModel->source,this->likeModel->pert_mass_model);
+  //  std::cout << this->DsDpsi << std::endl;
+
+  Eigen::SparseMatrix<double> M_r_dum(this->likeModel->image->Nm,pert_mass_model->dpsi->Sm+source->Sm);
+  Eigen::SparseMatrix<double> Mt_r_dum(this->likeModel->image->Nm,pert_mass_model->dpsi->Sm+source->Sm);
+  Eigen::SparseMatrix<double> block(this->likeModel->image->Nm,pert_mass_model->dpsi->Sm+source->Sm);
+  block.reserve(Eigen::VectorXi::Constant(this->likeModel->image->Nm,30));//overestimating the number of non-zero coefficients per HH row (different number for 1st,2nd order derivative etc)
+  for(int i=0;i<source->L.tri.size();i++){  block.insert(source->L.tri[i].i,source->L.tri[i].j) = source->L.tri[i].v;  }
+  for(int k=0;k<this->DsDpsi.outerSize();++k){
+    for(Eigen::SparseMatrix<double>::InnerIterator it(this->DsDpsi,k);it;++it){
+      block.insert(it.row(),source->Sm+it.col()) = -it.value();
+    }
+  }
+  M_r_dum  = (this->likeModel->smooth_algebra->B) * block;
+  Mt_r_dum = M_r_dum.transpose();
+  this->M_r = M_r_dum;
+  this->Mt_r = Mt_r_dum;
+  block.resize(0,0);
+  M_r_dum.resize(0,0);
+  Mt_r_dum.resize(0,0);
+
+  /*
+  // The following steps are needed to calculate RtR for covariance based regularizations
+  // Calculate source regularization
+  if( source->sample_reg && source->reg == "covariance_kernel" ){
+    // Read updated source regularization matrix
+    Eigen::SparseMatrix<double> HH_s(source->H.Ti,source->H.Tj);
+    HH_s.reserve(Eigen::VectorXi::Constant(source->Sm,source->eigenSparseMemoryAllocForH));//overestimating the number of non-zero coefficients per HH_s row (different number for 1st,2nd order derivative etc)
+    for(int i=0;i<source->H.tri.size();i++){  HH_s.insert(source->H.tri[i].i,source->H.tri[i].j) = source->H.tri[i].v;  }
+    double detCs = 0.0;
+    this->setAlgebraField(source,HH_s,this->Cs_inv,detCs);
+    this->likeModel->terms["detCs"] = -detCs/2.0;
+    HH_s.resize(0,0);
+  }
+  */
+
+  // Calculate perturbation regularization
+  if( pert_mass_model->dpsi->sample_reg && pert_mass_model->dpsi->reg == "covariance_kernel" ){
+    // Read updated perturbations regularization matrix
+    Eigen::SparseMatrix<double> HH_dpsi(pert_mass_model->dpsi->Sm,pert_mass_model->dpsi->Sm);
+    HH_dpsi.reserve(Eigen::VectorXi::Constant(pert_mass_model->dpsi->Sm,pert_mass_model->dpsi->eigenSparseMemoryAllocForH));//overestimating the number of non-zero coefficients per HH_dpsi row (different number for 1st,2nd order derivative etc)
+    for(int i=0;i<pert_mass_model->dpsi->H.tri.size();i++){  HH_dpsi.insert(pert_mass_model->dpsi->H.tri[i].i,pert_mass_model->dpsi->H.tri[i].j) = pert_mass_model->dpsi->H.tri[i].v;  }
+    double detCp = 0.0;
+    this->setAlgebraField(source,HH_dpsi,this->Cp_inv,detCp);
+    this->likeModel->terms["detCp"] = -detCp/2.0;
+    HH_dpsi.resize(0,0);
+  }
+
+
+  // Calculate RtR
+  Eigen::SparseMatrix<double> RtR_dum(source->Sm+pert_mass_model->dpsi->Sm,source->Sm+pert_mass_model->dpsi->Sm);
+  double lambda_s = Nlpar::getValueByName("lambda_s",this->likeModel->reg_s);
+  for(int k=0;k<this->likeModel->smooth_algebra->Cs_inv.outerSize();++k){
+    for(Eigen::SparseMatrix<double>::InnerIterator it(this->likeModel->smooth_algebra->Cs_inv,k);it;++it){
+      RtR_dum.insert(it.row(),it.col()) = lambda_s * it.value();
+    }
+  }
+
+  double lambda_dpsi = Nlpar::getValueByName("lambda_dpsi",this->likeModel->reg_dpsi);
+  for(int k=0;k<this->Cp_inv.outerSize();++k){
+    for(Eigen::SparseMatrix<double>::InnerIterator it(this->Cp_inv,k);it;++it){
+      RtR_dum.insert(source->Sm+it.row(),source->Sm+it.col()) = lambda_dpsi * it.value();
+    }
+  }
+  this->RtR = RtR_dum;
+  RtR_dum.resize(0,0);
+
+
+  //std::cout << this->RtR << std::endl;
+  //std::cout << this->J*this->RtR << std::endl;
+
+
+  Eigen::SparseMatrix<double> A_r_dum(this->likeModel->image->Nm,pert_mass_model->dpsi->Sm+source->Sm);
+  //A_r_dum = this->J*(this->Mt_r*this->likeModel->smooth_like->algebra->C*this->M_r + this->RtR);
+  //A_r_dum = this->Mt_r*this->likeModel->smooth_like->algebra->C*this->M_r + this->RtR;
+  A_r_dum = this->Mt_r*this->likeModel->smooth_algebra->StCS*this->M_r + this->RtR;
+  this->A_r = A_r_dum;
+
+  A_r_dum.resize(0,0);
+}
+
+
+void BothAlgebra::getMockData(ImagePlane* mockdata,BaseSourcePlane* source,Eigen::SparseMatrix<double> B){
+  Eigen::Map<Eigen::VectorXd> s(source->src,source->Sm);
+
+  Eigen::SparseMatrix<double> LL(source->L.Ti,source->L.Tj);
+  LL.reserve(Eigen::VectorXi::Constant(source->L.Ti,4));//setting the non-zero coefficients per row of the lensing matrix (4 for bi-linear interpolation scheme, etc)
+  for(int i=0;i<source->L.tri.size();i++){  LL.insert(source->L.tri[i].i,source->L.tri[i].j) = source->L.tri[i].v;  }
+
+  Eigen::VectorXd tmp = B*LL*s;
+  Eigen::Map<Eigen::VectorXd>(mockdata->img,tmp.size()) = tmp;
+}
+
+
+void BothAlgebra::constructDsDpsi(ImagePlane* image,BaseSourcePlane* source,Pert* pert_mass_model){
+  Eigen::SparseMatrix<double> DsDpsi_dum(image->Nm,pert_mass_model->dpsi->Sm);
+  DsDpsi_dum.reserve(Eigen::VectorXi::Constant(pert_mass_model->dpsi->Sm,24));
+
+  int i0,j0,j_index;
+  double dsx,dsy;
+  int rel_i[12] = {-1,-1,0,0,0,0,1,1,1,1,2,2};
+  int rel_j[12] = {0,1,-1,0,1,2,-1,0,1,2,0,1};
+  double coeffs[12] = {0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0};
+  
+  for(int h=0;h<image->Nm;h++){
+    dsx = source->Ds.tri[2*h].v;
+    dsy = source->Ds.tri[2*h+1].v;
+
+    i0 = image->crosses[h]->i0;
+    j0 = image->crosses[h]->j0;
+
+    coeffs[0]  = image->crosses[h]->coeff_y[0]*dsy;
+    coeffs[1]  = image->crosses[h]->coeff_y[4]*dsy;
+    coeffs[2]  = image->crosses[h]->coeff_x[0]*dsx;
+    coeffs[3]  = image->crosses[h]->coeff_y[1]*dsy + image->crosses[h]->coeff_x[1]*dsx;
+    coeffs[4]  = image->crosses[h]->coeff_y[5]*dsy + image->crosses[h]->coeff_x[2]*dsx;
+    coeffs[5]  = image->crosses[h]->coeff_x[3]*dsx;
+    coeffs[6]  = image->crosses[h]->coeff_x[4]*dsx;
+    coeffs[7]  = image->crosses[h]->coeff_y[2]*dsy + image->crosses[h]->coeff_x[5]*dsx;
+    coeffs[8]  = image->crosses[h]->coeff_y[6]*dsy + image->crosses[h]->coeff_x[6]*dsx;
+    coeffs[9]  = image->crosses[h]->coeff_x[7]*dsx;
+    coeffs[10] = image->crosses[h]->coeff_y[3]*dsy;
+    coeffs[11] = image->crosses[h]->coeff_y[7]*dsy;
+    
+    for(int q=0;q<12;q++){
+      if( coeffs[q] != 0.0 ){
+	j_index = (i0 + rel_i[q])*pert_mass_model->dpsi->Sj + (j0 + rel_j[q]);
+	DsDpsi_dum.insert( h, j_index) = coeffs[q];
+      }
+      coeffs[q] = 0.0; // need to reset the vector "coeffs"
+    }
+    
+  }
+
+  this->DsDpsi = DsDpsi_dum;
+  DsDpsi_dum.resize(0,0);
+}
+
+void BothAlgebra::solveSourcePert(BaseSourcePlane* source,Pert* pert_mass_model){
+  // Get the inverse and det of A_r
+  Eigen::SparseMatrix<double> A_inv(source->Sm+pert_mass_model->dpsi->Sm,source->Sm+pert_mass_model->dpsi->Sm);
+  double detA = 0.0;
+  this->getInverseAndDet(this->A_r,A_inv,detA);
+  double lambda_s    = Nlpar::getValueByName("lambda_s",this->likeModel->reg_s);
+  double lambda_dpsi = Nlpar::getValueByName("lambda_dpsi",this->likeModel->reg_dpsi);
+  //this->likeModel->terms["detA"] = -(detA - pert_mass_model->dpsi->Sm*log(1.0/lambda_dpsi) )/2.0;
+  this->likeModel->terms["detA"] = -detA/2.0;
+  
+  // Get the Most Probable solution for the source and potential
+  Eigen::VectorXd r(source->Sm+pert_mass_model->dpsi->Sm);
+  
+  r = A_inv*(this->Mt_r*this->likeModel->smooth_algebra->StCS*this->likeModel->smooth_algebra->d);
+  A_inv.resize(0,0);
+
+
+  // Set the edge values of dpsi to zero
+  for(int j=0;j<pert_mass_model->dpsi->Sj;j++){
+    r[source->Sm+j] = 0.0;
+  }
+  for(int i=1;i<pert_mass_model->dpsi->Si-1;i++){
+    r[source->Sm+i*pert_mass_model->dpsi->Sj] = 0.0;
+    r[source->Sm+i*pert_mass_model->dpsi->Sj+pert_mass_model->dpsi->Sj-1] = 0.0;
+  }
+  for(int j=0;j<pert_mass_model->dpsi->Sj;j++){
+    r[source->Sm+(pert_mass_model->dpsi->Si-1)*pert_mass_model->dpsi->Sj+j] = 0.0;
+  }
+
+  // Get the chi-squared term
+  Eigen::VectorXd y  = this->likeModel->smooth_algebra->d - (this->M_r*r);
+  Eigen::VectorXd yt = y.transpose();
+  double chi2        = yt.dot(this->likeModel->smooth_algebra->StCS*y);
+  this->likeModel->terms["chi2"] = -chi2/2.0;
+
+  // Get the regularization term (adding the block matrix is already incorporated in RtR)
+  Eigen::VectorXd rt = r.transpose();
+  double reg         = rt.dot(this->RtR*r);
+  this->likeModel->terms["reg"] = -reg/2.0;
+
+  for(int i=0;i<source->Sm;i++){
+    source->src[i] = r[i];
+  }
+  for(int i=0;i<pert_mass_model->dpsi->Sm;i++){
+    pert_mass_model->dpsi->src[i] = r[source->Sm+i];
+  }
 }

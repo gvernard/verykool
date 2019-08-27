@@ -64,21 +64,45 @@ void Initialization::initialize_program(std::string path,std::string run,Initial
 
 
   // Initialize perturbations --------------------------------------------------------------------------------------------------------------------------------------
-  if( init->perturbations.size() > 0 ){
+  if( init->likeModel == "perturbations_standard" || init->likeModel == "both" ){
     pert_mass_model = new Pert(std::stoi(init->perturbations["pix_x"]),std::stoi(init->perturbations["pix_y"]),mydata,init->perturbations["reg_dpsi"]);
     if( init->perturbations["reg_dpsi"] == "covariance_kernel" ){
       pert_mass_model->dpsi->sample_reg = Nlpar::getSampleReg(init->nlpars_reg_dpsi);
       pert_mass_model->dpsi->kernel = FactoryCovKernel::getInstance()->createCovKernel(init->perturbations["kernel_dpsi"],init->nlpars_reg_dpsi);
     }
-    
+  }
+
+  if( init->likeModel == "perturbations_standard" ){
     // HERE I CONSTRUCT source0 either as BaseSourcePlane or as BaseProfile.
     source0 = mysource->clone(); // x,y, and src are not copied (src is also empty at this stage)
+
+    /*
     for(int i=0;i<source0->Sm;i++){
       source0->x[i]   = mysource->x[i];
       source0->y[i]   = mysource->y[i];
       source0->src[i] = init->prof_source0->value(source0->x[i],source0->y[i]);
     }
+    */
+    int i=0;
+    std::string line;
+    double xx,yy,vv;
+    std::ifstream file("/data/users/gvernard/RESULTS/VKL_tests/test_standard/output/smooth_source_irregular.dat");
+    while( std::getline(file,line) ){
+      std::istringstream ss(line);
+      ss >> vv >> xx >> yy;
+      source0->x[i] = xx;
+      source0->y[i] = yy;
+      source0->src[i] = vv;
+      i++;
+    }
+
+    AdaptiveSource* ada = dynamic_cast<AdaptiveSource*>(source0);
+    ada->createDelaunay(); // required to properly set the Delaunay grid related CGAL variables
+
     source0->constructDerivatives();
+    //    for(int i=0;i<source0->Sm;i++){
+    //      printf("%20.5f %20.5f\n",source0->s_dx[i],source0->s_dy[i]);
+    //    }
   }
 
 
@@ -187,7 +211,7 @@ void Initialization::parseInputJSON(std::string path,std::string run){
 
 
   //Parameters for the perturbations
-  if( root.isMember("perturbations") ){
+  if( root["parameter_model"] == "perturbations_standard" || root["parameter_model"] == "both" ){
     this->perturbations["pix_x"] = root["perturbations"]["pix_x"].asString();
     this->perturbations["pix_y"] = root["perturbations"]["pix_y"].asString();
 
@@ -210,7 +234,9 @@ void Initialization::parseInputJSON(std::string path,std::string run){
     for(int i=0;i<this->nlpars_reg_s.size();i++){
       this->nlpars_reg_dpsi[i]->nam += "_dpsi";
     }
+  }
 
+  if( root["parameter_model"] == "perturbations_standard" ){
     //source0
     Json::Value jsource0 = root["perturbations"]["source0"];
     if( jsource0["type"].asString() == "analytic" ){
@@ -233,9 +259,9 @@ void Initialization::parseInputJSON(std::string path,std::string run){
       this->prof_source0 = new Analytic(names,all_pars);
       
     } else if( jsource0["type"].asString() == "delaunay" ){
-      
-      std::string filename = jsource0["filename"].asString();
-      this->prof_source0 = new myDelaunay(filename);
+
+      //      std::string filename = jsource0["filename"].asString();
+      //      this->prof_source0 = new myDelaunay(filename);
       
     } else if( jsource0["type"].asString() == "fromfits" ){
       
