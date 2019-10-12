@@ -210,14 +210,14 @@ public:
 
   BaseSourcePlane* createSourcePlane(std::map<std::string,std::string> source){
     if( source["type"] == "fixed" ){
-      return new FixedSource(stoi(source["sx"]),stoi(source["sy"]),stof(source["size"]),source["reg"]);
+      return new FixedSource(stoi(source["sx"]),stoi(source["sy"]),stof(source["size"]),source["reg_s"]);
       //    } else if( source["type"] == "floating" ){
       //      return new FloatingSource(stoi(source["sx"]),stoi(source["sy"]),stof(source["size"]),stof(source["x0"]),stof(source["y0"]),source["reg"]);
     } else if( source["type"] == "adaptive" ){
       if( source["mode"] == "random" ){
-	return new AdaptiveSource(stoi(source["sm"]),source["reg"]);
+	return new AdaptiveSource(stoi(source["sm"]),source["reg_s"]);
       } else if( source["mode"] == "image" || source["mode"] == "grid" ){
-	return new AdaptiveSource(source["mode"],stoi(source["sm"]),stoi(source["spacing"]),source["reg"]);
+	return new AdaptiveSource(source["mode"],stoi(source["sm"]),stoi(source["spacing"]),source["reg_s"]);
       }
     } else {
       return NULL;

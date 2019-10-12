@@ -835,20 +835,6 @@ void BothAlgebra::setAlgebraRuntime(BaseSourcePlane* source,Pert* pert_mass_mode
   M_r_dum.resize(0,0);
   Mt_r_dum.resize(0,0);
 
-  /*
-  // The following steps are needed to calculate RtR for covariance based regularizations
-  // Calculate source regularization
-  if( source->sample_reg && source->reg == "covariance_kernel" ){
-    // Read updated source regularization matrix
-    Eigen::SparseMatrix<double> HH_s(source->H.Ti,source->H.Tj);
-    HH_s.reserve(Eigen::VectorXi::Constant(source->Sm,source->eigenSparseMemoryAllocForH));//overestimating the number of non-zero coefficients per HH_s row (different number for 1st,2nd order derivative etc)
-    for(int i=0;i<source->H.tri.size();i++){  HH_s.insert(source->H.tri[i].i,source->H.tri[i].j) = source->H.tri[i].v;  }
-    double detCs = 0.0;
-    this->setAlgebraField(source,HH_s,this->Cs_inv,detCs);
-    this->likeModel->terms["detCs"] = -detCs/2.0;
-    HH_s.resize(0,0);
-  }
-  */
 
   // Calculate perturbation regularization
   if( pert_mass_model->dpsi->sample_reg && pert_mass_model->dpsi->reg == "covariance_kernel" ){

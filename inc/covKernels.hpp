@@ -23,6 +23,7 @@ public:
   virtual double getCovariance(double r) = 0;
   virtual double getCovarianceSelf() = 0;
   virtual void setParameters(std::vector<Nlpar*> pars) = 0;
+  virtual void printParameters() = 0;
 };
 
 
@@ -35,6 +36,7 @@ public:
   double getCovariance(double r);
   double getCovarianceSelf();
   void setParameters(std::vector<Nlpar*> pars);
+  void printParameters();
   GaussKernel* clone(){
     return new GaussKernel(*this);
   };
@@ -51,6 +53,7 @@ public:
   double getCovariance(double r);
   double getCovarianceSelf();
   void setParameters(std::vector<Nlpar*> pars);
+  void printParameters();
   ModGaussKernel* clone(){
     return new ModGaussKernel(*this);
   };
@@ -66,6 +69,7 @@ public:
   double getCovariance(double r);
   double getCovarianceSelf();
   void setParameters(std::vector<Nlpar*> pars);
+  void printParameters();
   ExpGaussKernel* clone(){
     return new ExpGaussKernel(*this);
   };

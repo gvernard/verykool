@@ -37,6 +37,7 @@ public:
   double getValue();
   int getActive();
   void setNewPrior(BasePrior* prior);
+  void printNlpar();
 
   static std::vector<Nlpar*> nlparsFromJsonVector(const Json::Value myjson);
   static std::vector<std::string> getVectorNames(std::vector<Nlpar*> pars);

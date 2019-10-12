@@ -70,6 +70,16 @@ void Nlpar::setNewPrior(BasePrior* prior){
   this->pri = prior;
 }
 
+void Nlpar::printNlpar(){
+  printf("    Name: %10s\n",this->nam.c_str());
+  printf("     Fix: %10i\n",this->fix);
+  printf("Periodic: %10i\n",this->per);
+  printf("   Value: %10f\n",this->val);
+  printf("   Error: %10f\n",this->err);
+  printf("     Min: %10f\n",this->min);
+  printf("     Max: %10f\n",this->max);
+}
+
 std::map<std::string,double> Nlpar::getSigmaIntervals(const std::vector<double>& x,const std::vector<double>& p,int sigma_interval){
   double Xsigma;
   if( sigma_interval == 3 ){

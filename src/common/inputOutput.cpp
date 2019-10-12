@@ -58,7 +58,9 @@ void Initialization::initialize_program(std::string path,std::string run,Initial
   }
   if( mysource->reg == "covariance_kernel" || mysource->reg == "covariance_kernel_in_identity_out" ){
     mysource->sample_reg = Nlpar::getSampleReg(init->nlpars_reg_s);
+    std::string suffix = Nlpar::removeSuffix(init->nlpars_reg_s); // need to remove _dpsi suffix for the dpsi parameters to update the kernel, then I add it bac
     mysource->kernel = FactoryCovKernel::getInstance()->createCovKernel(init->source["kernel"],init->nlpars_reg_s);
+    Nlpar::addSuffix(init->nlpars_reg_s,suffix);
   }
   mysource->constructH();
 
@@ -68,7 +70,9 @@ void Initialization::initialize_program(std::string path,std::string run,Initial
     pert_mass_model = new Pert(std::stoi(init->perturbations["pix_x"]),std::stoi(init->perturbations["pix_y"]),mydata,init->perturbations["reg_dpsi"]);
     if( init->perturbations["reg_dpsi"] == "covariance_kernel" ){
       pert_mass_model->dpsi->sample_reg = Nlpar::getSampleReg(init->nlpars_reg_dpsi);
+      std::string suffix = Nlpar::removeSuffix(init->nlpars_reg_dpsi); // need to remove _dpsi suffix for the dpsi parameters to update the kernel, then I add it bac
       pert_mass_model->dpsi->kernel = FactoryCovKernel::getInstance()->createCovKernel(init->perturbations["kernel_dpsi"],init->nlpars_reg_dpsi);
+      Nlpar::addSuffix(init->nlpars_reg_dpsi,suffix);
     }
   }
 
@@ -86,7 +90,7 @@ void Initialization::initialize_program(std::string path,std::string run,Initial
     int i=0;
     std::string line;
     double xx,yy,vv;
-    std::ifstream file("/data/users/gvernard/RESULTS/VKL_tests/test_standard/output/smooth_source_irregular.dat");
+    std::ifstream file("/net/callippus/data/users/gvernard/RESULTS/VKL_tests/test_standard/output/smooth_source_irregular.dat");
     while( std::getline(file,line) ){
       std::istringstream ss(line);
       ss >> vv >> xx >> yy;
@@ -203,27 +207,27 @@ void Initialization::parseInputJSON(std::string path,std::string run){
 
 
   //NLPARS: Source regularization
-  this->source["reg"] = root["reg"]["type"].asString();
-  if( this->source["reg"] == "covariance_kernel" || this->source["reg"] == "covariance_kernel_in_identity_out" ){
-    this->source["kernel"] = root["reg"]["subtype"].asString();
+  if( root["parameter_model"] == "standard" ){
+    this->source["reg_s"] = root["reg_s"]["type"].asString();
+    if( this->source["reg_s"] == "covariance_kernel" || this->source["reg_s"] == "covariance_kernel_in_identity_out" ){
+      this->source["kernel"] = root["reg_s"]["subtype"].asString();
+    }
+    this->nlpars_reg_s = Nlpar::nlparsFromJsonVector(root["reg_s"]["nlpars"]);
+  } else {
+    this->source["reg_s"] = root["perturbations"]["reg_s"]["type"].asString();
+    if( this->source["reg_s"] == "covariance_kernel" || this->source["reg_s"] == "covariance_kernel_in_identity_out" ){
+      this->source["kernel"] = root["perturbations"]["reg_s"]["subtype"].asString();
+    }
+    this->nlpars_reg_s = Nlpar::nlparsFromJsonVector(root["perturbations"]["reg_s"]["nlpars"]);
   }
-  this->nlpars_reg_s = Nlpar::nlparsFromJsonVector(root["reg"]["nlpars"]);
-
+  for(int i=0;i<this->nlpars_reg_s.size();i++){
+    this->nlpars_reg_s[i]->nam += "_s";
+  }
 
   //Parameters for the perturbations
   if( root["parameter_model"] == "perturbations_standard" || root["parameter_model"] == "both" ){
     this->perturbations["pix_x"] = root["perturbations"]["pix_x"].asString();
     this->perturbations["pix_y"] = root["perturbations"]["pix_y"].asString();
-
-    //NLPARS: Source regularization
-    this->source["reg"] = root["perturbations"]["reg_s"]["type"].asString();
-    if( this->source["reg"] == "covariance_kernel" || this->source["reg"] == "covariance_kernel_in_identity_out" ){
-      this->source["kernel"] = root["perturbations"]["reg_s"]["subtype"].asString();
-    }
-    this->nlpars_reg_s = Nlpar::nlparsFromJsonVector(root["perturbations"]["reg_s"]["nlpars"]);
-    for(int i=0;i<this->nlpars_reg_s.size();i++){
-      this->nlpars_reg_s[i]->nam += "_s";
-    }
 
     //NLPARS: Dpsi regularization
     this->perturbations["reg_dpsi"] = root["perturbations"]["reg_dpsi"]["type"].asString();
@@ -231,7 +235,7 @@ void Initialization::parseInputJSON(std::string path,std::string run){
       this->perturbations["kernel_dpsi"] = root["perturbations"]["reg_dpsi"]["subtype"].asString();
     }
     this->nlpars_reg_dpsi = Nlpar::nlparsFromJsonVector(root["perturbations"]["reg_dpsi"]["nlpars"]);
-    for(int i=0;i<this->nlpars_reg_s.size();i++){
+    for(int i=0;i<this->nlpars_reg_dpsi.size();i++){
       this->nlpars_reg_dpsi[i]->nam += "_dpsi";
     }
   }

@@ -403,7 +403,7 @@ Json::Value SmoothLikelihood::getActiveJson(){
 
 //virtual
 void SmoothLikelihood::initializeAlgebra(){
-  Nlpar* lambda_s = Nlpar::getParByName("lambda",this->reg_s);
+  Nlpar* lambda_s = Nlpar::getParByName("lambda_s",this->reg_s);
   this->algebra->setAlgebraInit(this->image,this->source,lambda_s->val);
 }
 
@@ -417,7 +417,9 @@ void SmoothLikelihood::updateLikelihoodModel(){
   }
   this->collection->setPhysicalPars(this->physical);
   if( this->source->sample_reg ){
+    std::string suffix = Nlpar::removeSuffix(this->reg_s); // need to remove _s suffix for the source parameters to update the kernel, then I add it back
     this->source->kernel->setParameters(this->reg_s);
+    Nlpar::addSuffix(this->reg_s,suffix);
   }
 
   // Deflect the rays in the updated mass model
@@ -440,7 +442,7 @@ void SmoothLikelihood::updateLikelihoodModel(){
   }
 
   // If lambda is allowed to vary then update the lambda term
-  Nlpar* lambda_s = Nlpar::getParByName("lambda",this->reg_s);
+  Nlpar* lambda_s = Nlpar::getParByName("lambda_s",this->reg_s);
   if( lambda_s->fix == 0 ){
     this->terms["Nslogl_s"] = source->Sm*log(lambda_s->val)/2.0;
   }
@@ -637,6 +639,7 @@ PertLikelihood::PertLikelihood(std::vector<Nlpar*> a,std::vector<Nlpar*> b,Image
   // the interpolation weights of the deflected image grid need to be set before calling constructDs
   this->source->createInterpolationWeights(this->image);
   this->source->constructL(this->image);
+  this->source->constructH();
   //  this->source0->createInterpolationWeights(this->image);
   //  this->source0->constructL(this->image);
   this->source0->constructDs(this->image);
@@ -1110,9 +1113,6 @@ void BothLikelihood::updateLikelihoodModel(){
     }
   }
   this->collection->setPhysicalPars(this->physical);
-  if( this->source->sample_reg ){
-    this->source->kernel->setParameters(this->reg_s);
-  }
   if( this->source->sample_reg ){
     std::string suffix = Nlpar::removeSuffix(this->reg_s); // need to remove _s suffix for the source parameters to update the kernel, then I add it back
     this->source->kernel->setParameters(this->reg_s);

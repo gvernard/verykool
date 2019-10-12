@@ -25,7 +25,11 @@ void ModGaussKernel::setParameters(std::vector<Nlpar*> pars){
   this->cmax = Nlpar::getValueByName("cmax",pars);
   this->sdev = Nlpar::getValueByName("sdev",pars);
 }
-
+void ModGaussKernel::printParameters(){
+  printf("      %10s\n",this->type.c_str());
+  printf("sdev: %10.5f\n",this->sdev);
+  printf("cmax: %10.5f\n",this->cmax);
+}
 
 
 GaussKernel::GaussKernel(std::vector<Nlpar*> pars){
@@ -49,6 +53,11 @@ void GaussKernel::setParameters(std::vector<Nlpar*> pars){
   this->cmax = Nlpar::getValueByName("cmax",pars);
   this->sdev = Nlpar::getValueByName("sdev",pars);
   //  this->fac  = 1.0/(this->sdev*sqrt(2*M_PI));
+}
+void GaussKernel::printParameters(){
+  printf("      %10s\n",this->type.c_str());
+  printf("sdev: %10.5f\n",this->sdev);
+  printf("cmax: %10.5f\n",this->cmax);
 }
 
 
@@ -74,4 +83,10 @@ void ExpGaussKernel::setParameters(std::vector<Nlpar*> pars){
   this->expo = Nlpar::getValueByName("expo",pars);
   this->sdev = Nlpar::getValueByName("sdev",pars);
   this->fac  = 1.0/(this->sdev*sqrt(2*M_PI));
+}
+void ExpGaussKernel::printParameters(){
+  printf("      %10s\n",this->type.c_str());
+  printf("sdev: %10.5f\n",this->sdev);
+  printf("expo: %10.5f\n",this->expo);
+  printf("cmax: %10.5f\n",this->cmax);
 }

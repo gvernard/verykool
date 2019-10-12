@@ -10,7 +10,7 @@ path="RUNS/VKL_paper/section_3.2/new_spiral2/"
 
 
 # Custom array of run names that are found in 'path'
-declare -a runs=("curv" "modgauss" "gauss" "identity")
+declare -a runs=("curv_map" "modgauss_map" "gauss_map" "identity_map")
 
 
 echo | cat > scripts/report.txt
