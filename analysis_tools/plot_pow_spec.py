@@ -107,9 +107,12 @@ for step in range(Nsteps):
 
         if N > 0:
                 mean = np.mean(bin)
+                std  = np.std(bin)
+                print (mean,std)
                 pspeclist  = np.append(pspeclist,mean)                        # Adding each bin mean value to pspeclist
                 #pspecerror    = np.append(pspecerror,mean/np.sqrt(N))           # Adding the error
-                pspecerror = np.append(pspecerror,np.std(bin))
+                #pspecerror = np.append(pspecerror,std)
+
         else:
                 pspeclist  = np.append(pspeclist,0.0)
                 pspecerror = np.append(pspecerror,0.0)
@@ -127,13 +130,15 @@ np.savetxt("ps.dat",table,fmt='%.8e',delimiter=' ',newline='\n')
 
 #--------plot the power spectrum--------------------------
 plt.figure()
-plt.xscale('log')
-plt.yscale('log')
+#plt.xscale('log')
+#plt.yscale('log')
 plt.xlabel('k')
 plt.ylabel('P(k)')
 
-plt.ylim(0.1,20)
-plt.xlim(0.6,20)
+#plt.ylim(0.1,20)
+#plt.xlim(0.6,20)
+plt.ylim(0.1,2.5)
+plt.xlim(0.0,16)
 
 
 # Filtering out zero elements
@@ -142,8 +147,8 @@ bins = l_list[ind]
 vals = pspeclist[ind]
 errs = pspecerror[ind]
 
-plt.plot(bins,vals)
-#plt.errorbar(bins,vals,yerr=[errs,errs])
+#plt.plot(bins,vals)
+plt.errorbar(bins,vals,yerr=[errs,errs])
 
 plt.savefig('ps.pdf',bbox_inches='tight')
 #plt.show()

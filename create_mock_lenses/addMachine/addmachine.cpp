@@ -16,7 +16,7 @@
 
 
 
-void addUniNoiz(int seed,double sigma,int Ni,int Nj,double* data){
+void addUniNoiz(int seed,double sigma,int Ni,int Nj,double* noise){
   const double two_pi = 2.0*3.14159265358979323846;
   double z1,z2,u1,u2;
   srand48(seed);
@@ -30,7 +30,7 @@ void addUniNoiz(int seed,double sigma,int Ni,int Nj,double* data){
     //    z2 = sqrt(-2.0 * log(u1)) * sin(two_pi * u2);
     
     //    noiz[i] = z1*sigma;
-    data[i] += z1*sigma;
+    noise[i] = z1*sigma;
   }
 }
 
@@ -325,7 +325,12 @@ int main(int argc,char* argv[]){
   if( noise_flag == "uniform" ){
     double maxdata = *std::max_element(obs_img.img,obs_img.img+obs_img.Ni*obs_img.Nj);
     double sigma = maxdata/stof(noise["sn"]);
-    addUniNoiz(stoi(noise["seed"]),sigma,obs_img.Ni,obs_img.Nj,obs_img.img);
+    ImagePlane noise_realization(stoi(image["pix_x"]),stoi(image["pix_y"]),stof(image["width"]),stof(image["height"]));
+    addUniNoiz(stoi(noise["seed"]),sigma,obs_img.Ni,obs_img.Nj,noise_realization.img);
+    for(int i=0;i<obs_img.Nm;i++){
+      obs_img.img[i] += noise_realization.img[i];
+    }
+    noise_realization.writeImage(output+"noise_realization.fits");
     std::ofstream myfile(output+"noise.dat",std::ios::out);
     myfile << sigma*sigma << std::endl;
     myfile.close();

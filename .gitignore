@@ -13,6 +13,7 @@ analysis_tools/analyzed_cases/
 analysis_tools/generated_tex_files/*
 analysis_tools/movies/
 analysis_tools/create_gridded_source
+analysis_tools/ps.dat
 documentation/index.html
 scripts/report.txt
 create_mock_lenses/addMachine/addmachine
