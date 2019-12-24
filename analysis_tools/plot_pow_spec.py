@@ -16,9 +16,6 @@ import matplotlib.pyplot as plt
 
 fname = sys.argv[1]
 image = fits.getdata(fname,ext=0)
-dum  = image[::-1,:]
-#dum = np.flipud(dum)
-image=dum
 header = fits.getheader(fname)
 Lx = header['WIDTH']
 Ly = header['HEIGHT']
@@ -29,7 +26,7 @@ ny = header['NAXIS1']
 
 if len(sys.argv) == 3:
         mask = fits.getdata(sys.argv[2],ext=0)
-        data = np.multiply(np.flipud(mask),image)
+        data = np.multiply(mask,image)
 else:
         data = image
 
@@ -42,23 +39,20 @@ pspecs = []  # The list to be filled with power spectra
 
 #FFT & absolute value squared
 fouriertf = np.fft.fftshift(np.fft.fft2(data))
-##fouriertf = np.fft.fftshift(np.fft.fft2(data))
-#fouriertf *= (Lx*Ly)/(nx*ny)
 ##fouriertf *= 1.0/((Lx*Ly)*(nx*ny))
 absval2 = fouriertf.real**2 + fouriertf.imag**2
-#Dimensions of the Fourier transformed image
 
 
 #Axes in Fourier space
-lxlist = np.arange( (-nx/2.0)/Lx, (nx/2.0)/Lx, 1.0/Lx )
-lylist = np.arange( (-ny/2.0)/Ly, (ny/2.0)/Ly, 1.0/Ly )
-#lmax   = np.sqrt( np.max(np.abs(lxlist))**2.0 + np.max(np.abs(lylist))**2.0 )
-lmax   = np.sqrt( pow((nx/2.0)/Lx,2.0) + pow((ny/2.0)/Ly,2.0) )
-lmin   = np.sqrt( pow(1.0/Lx,2.0) + pow(1.0/Ly,2.0) )
+kxlist = np.arange( (-nx/2.0)/Lx, (nx/2.0)/Lx, 1.0/Lx )
+kylist = np.arange( (-ny/2.0)/Ly, (ny/2.0)/Ly, 1.0/Ly )
+#kmax   = np.sqrt( np.max(np.abs(lxlist))**2.0 + np.max(np.abs(lylist))**2.0 )
+kmax   = np.sqrt( pow((nx/2.0)/Lx,2.0) + pow((ny/2.0)/Ly,2.0) )
+kmin   = np.sqrt( pow(1.0/Lx,2.0) + pow(1.0/Ly,2.0) )
 
 
 steplist = np.zeros(Nsteps+1)
-l_list = np.zeros(Nsteps)
+k_list = np.zeros(Nsteps)
 
 
 
@@ -66,8 +60,8 @@ l_list = np.zeros(Nsteps)
 dlin = (lmax-lmin)/Nsteps
 steplist[0] = lmin
 for i in range(1,Nsteps+1):
-        steplist[i] = lmin + i*dlin
-        l_list[i-1] = lmin + i*dlin - dlin/2.0
+        steplist[i] = kmin + i*dlin
+        k_list[i-1] = kmin + i*dlin - dlin/2.0
 #l_list = np.linspace(lmax/(2.0*Nsteps),lmax - lmax/(2.0*Nsteps),Nsteps)
 
 
@@ -97,10 +91,10 @@ for step in range(Nsteps):
 	
         for x in range(nx):
                 for y in range(ny):
-                        lx = lxlist[x]
-                        ly = lylist[y]
-                        l = m.sqrt( lx**2 + ly**2 )
-                        if steplist[step] < l <= steplist[step+1]:
+                        kx = kxlist[x]
+                        ky = kylist[y]
+                        k  = m.sqrt( kx**2 + ky**2 )
+                        if steplist[step] < k <= steplist[step+1]:
                                 bin = np.append(bin, absval2[y][x])
         
         N = len(bin)
@@ -108,17 +102,16 @@ for step in range(Nsteps):
         if N > 0:
                 mean = np.mean(bin)
                 std  = np.std(bin)
-                print (mean,std)
                 pspeclist  = np.append(pspeclist,mean)                        # Adding each bin mean value to pspeclist
                 #pspecerror    = np.append(pspecerror,mean/np.sqrt(N))           # Adding the error
-                #pspecerror = np.append(pspecerror,std)
+                pspecerror = np.append(pspecerror,std)
 
         else:
                 pspeclist  = np.append(pspeclist,0.0)
                 pspecerror = np.append(pspecerror,0.0)
         #print len(bin)
 
-bins = l_list
+bins = k_list
 vals = pspeclist
 errs = pspecerror
 
@@ -143,7 +136,7 @@ plt.xlim(0.0,16)
 
 # Filtering out zero elements
 ind = np.nonzero(pspeclist)
-bins = l_list[ind]
+bins = k_list[ind]
 vals = pspeclist[ind]
 errs = pspecerror[ind]
 
