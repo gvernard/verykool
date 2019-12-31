@@ -38,7 +38,7 @@ int main(int argc,char* argv[]){
 
 
   AdaptiveSource* s_ada_modgauss  = new AdaptiveSource(delaunay->N,"covariance_kernel");
-  std::vector<Nlpar*> modgauss_nlpars = FactoryLikelihoodModel::getInstance()->nlparsFromJsonVector(json_input["modgauss"]);
+  std::vector<Nlpar*> modgauss_nlpars = Nlpar::nlparsFromJsonVector(json_input["modgauss"]);
   BaseCovKernel* modgauss_kernel = FactoryCovKernel::getInstance()->createCovKernel("modgauss",modgauss_nlpars);
   s_ada_modgauss->kernel = modgauss_kernel;
   for(int i=0;i<modgauss_nlpars.size();i++){
@@ -46,7 +46,7 @@ int main(int argc,char* argv[]){
   }
   
   AdaptiveSource* s_ada_gauss  = new AdaptiveSource(delaunay->N,"covariance_kernel");
-  std::vector<Nlpar*> gauss_nlpars = FactoryLikelihoodModel::getInstance()->nlparsFromJsonVector(json_input["gauss"]);
+  std::vector<Nlpar*> gauss_nlpars = Nlpar::nlparsFromJsonVector(json_input["gauss"]);
   BaseCovKernel* gauss_kernel = FactoryCovKernel::getInstance()->createCovKernel("gauss",gauss_nlpars);
   s_ada_gauss->kernel = gauss_kernel;
   for(int i=0;i<gauss_nlpars.size();i++){

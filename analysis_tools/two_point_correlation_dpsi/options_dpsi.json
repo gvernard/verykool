@@ -1,0 +1,85 @@
+{
+    "maskPath": "/home/george/myData/VKL_paper/section_3.3/perturbed_2/free_free_free_map/output/pert_dpsi_mask.fits",
+    "iplane": {
+        "pix_x": 30,
+        "pix_y": 30,
+        "siz_x": 3.5,
+        "siz_y": 3.5
+    },
+    "modgauss": [
+        {
+            "nam": "lambda",
+            "fix": 0,
+            "per": 0,
+            "val": 1,
+            "err": 0,
+            "min": 0.0001,
+            "max": 1000,
+            "pri": {
+                "type": "log10"
+            }
+        },
+        {
+            "nam": "sdev",
+            "fix": 0,
+            "per": 0,
+            "val": 0.15,
+            "err": 0,
+            "min": 0.01,
+            "max": 1,
+            "pri": {
+                "type": "log10"
+            }
+        },
+        {
+            "nam": "cmax",
+            "fix": 1,
+            "per": 0,
+            "val": 0.001,
+            "err": 0,
+            "min": 0.001,
+            "max": 1,
+            "pri": {
+                "type": "uni"
+            }
+        }
+    ],
+    "gauss": [
+        {
+            "nam": "lambda",
+            "fix": 0,
+            "per": 0,
+            "val": 1,
+            "err": 0,
+            "min": 0.0001,
+            "max": 1000,
+            "pri": {
+                "type": "log10"
+            }
+        },
+        {
+            "nam": "sdev",
+            "fix": 0,
+            "per": 0,
+            "val": 0.276,
+            "err": 0,
+            "min": 0.01,
+            "max": 1,
+            "pri": {
+                "type": "log10"
+            }
+        },
+        {
+            "nam": "cmax",
+            "fix": 1,
+            "per": 0,
+            "val": 0.001,
+            "err": 0,
+            "min": 0.001,
+            "max": 1,
+            "pri": {
+                "type": "uni"
+            }
+        }
+    ]
+}
