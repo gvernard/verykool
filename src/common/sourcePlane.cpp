@@ -568,7 +568,7 @@ void FixedSource::constructH(){
     for(int j=0;j<Sj;j++){
       tmp.push_back({  (Si-1)*Sj+j,    (Si-1)*Sj+j,      1.0   });
     }
-
+    
   } else if ( this->reg == "covariance_kernel"  || this->reg == "covariance_in_identity_out" ){//-------------------> covariance matrix
 
     int* nonZeroRow = (int*) calloc(this->Sm,sizeof(int));

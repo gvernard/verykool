@@ -813,6 +813,18 @@ BothAlgebra::BothAlgebra(BothLikelihood* a){
   this->likeModel = a;
 }
 
+void BothAlgebra::setAlgebraInit(BaseSourcePlane* source,Pert* pert_mass_model){
+  // Read updated perturbations regularization matrix
+  Eigen::SparseMatrix<double> HH_dpsi(pert_mass_model->dpsi->Sm,pert_mass_model->dpsi->Sm);
+  HH_dpsi.reserve(Eigen::VectorXi::Constant(pert_mass_model->dpsi->Sm,pert_mass_model->dpsi->eigenSparseMemoryAllocForH));//overestimating the number of non-zero coefficients per HH_dpsi row (different number for 1st,2nd order derivative etc)
+  for(int i=0;i<pert_mass_model->dpsi->H.tri.size();i++){  HH_dpsi.insert(pert_mass_model->dpsi->H.tri[i].i,pert_mass_model->dpsi->H.tri[i].j) = pert_mass_model->dpsi->H.tri[i].v;  }
+  double detCp = 0.0;
+  this->setAlgebraField(pert_mass_model->dpsi,HH_dpsi,this->Cp_inv,detCp);
+  this->likeModel->terms["detCp"] = -detCp/2.0;
+  HH_dpsi.resize(0,0);
+}
+
+
 void BothAlgebra::setAlgebraRuntime(BaseSourcePlane* source,Pert* pert_mass_model){
   this->constructDsDpsi(this->likeModel->image,this->likeModel->source,this->likeModel->pert_mass_model);
   //  std::cout << this->DsDpsi << std::endl;

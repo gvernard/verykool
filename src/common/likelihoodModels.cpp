@@ -1102,6 +1102,7 @@ BothLikelihood::~BothLikelihood(){
 void BothLikelihood::initializeAlgebra(){
   Nlpar* lambda_s = Nlpar::getParByName("lambda_s",this->reg_s);
   this->smooth_algebra->setAlgebraInit(this->image,this->source,lambda_s->val);
+  this->both_algebra->setAlgebraInit(this->source,this->pert_mass_model);
 }
 
 //virtual

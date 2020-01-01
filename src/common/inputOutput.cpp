@@ -58,7 +58,7 @@ void Initialization::initialize_program(std::string path,std::string run,Initial
   }
   if( mysource->reg == "covariance_kernel" || mysource->reg == "covariance_kernel_in_identity_out" ){
     mysource->sample_reg = Nlpar::getSampleReg(init->nlpars_reg_s);
-    std::string suffix = Nlpar::removeSuffix(init->nlpars_reg_s); // need to remove _dpsi suffix for the dpsi parameters to update the kernel, then I add it bac
+    std::string suffix = Nlpar::removeSuffix(init->nlpars_reg_s); // need to remove _s suffix for the source parameters to update the kernel, then I add it back
     mysource->kernel = FactoryCovKernel::getInstance()->createCovKernel(init->source["kernel"],init->nlpars_reg_s);
     Nlpar::addSuffix(init->nlpars_reg_s,suffix);
   }
@@ -74,6 +74,7 @@ void Initialization::initialize_program(std::string path,std::string run,Initial
       pert_mass_model->dpsi->kernel = FactoryCovKernel::getInstance()->createCovKernel(init->perturbations["kernel_dpsi"],init->nlpars_reg_dpsi);
       Nlpar::addSuffix(init->nlpars_reg_dpsi,suffix);
     }
+    pert_mass_model->dpsi->constructH();
   }
 
   if( init->likeModel == "perturbations_standard" ){

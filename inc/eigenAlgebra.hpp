@@ -90,6 +90,7 @@ public:
   BothAlgebra(BothLikelihood*);
   ~BothAlgebra(){};
   void constructDsDpsi(ImagePlane* image,BaseSourcePlane* source,Pert* pert_mass_model);
+  void setAlgebraInit(BaseSourcePlane* source,Pert* pert_mass_model);
   void setAlgebraRuntime(BaseSourcePlane* source,Pert* pert_mass_model);
   void solveSourcePert(BaseSourcePlane* source,Pert* pert_mass_model);
   void getMockData(ImagePlane* mockdata,BaseSourcePlane* source,Eigen::SparseMatrix<double> B);

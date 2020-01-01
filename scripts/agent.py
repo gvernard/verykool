@@ -33,7 +33,8 @@ def main():
     ##############################################################################################
     full_path = path+run+"output/"
     if len(full_path) > 80:
-        print "The full path to the output is too long, MultiNest uses files with a name of max. 100 characters."
+        print("The full path to the output is too long, MultiNest uses files with a name of max. 100 characters.")
+        print("'"+full_path+"' -> "+len(full_path))
         sys.exit()
 
 
@@ -41,13 +42,13 @@ def main():
     # Check/create relative directories and files
     ##############################################################################################
     if not os.path.exists(path+run+"vkl_input.json"):
-        print "'vkl_input.json' file not found!"
+        print("'vkl_input.json' file not found!")
         sys.exit()
         
     if os.path.isdir(path+run+"output"):
         answer = ''
         while answer != 'y' and answer != 'n':
-            answer = raw_input("output directory exists, cleanup? (y/n): ")
+            answer = input("output directory exists, cleanup? (y/n): ")
             
         if answer == 'y':
             for item in os.listdir(path+run+"output"):
@@ -114,10 +115,10 @@ def main():
         
         
         
-    print msg
+    print(msg)
     print(cmd)
     os.system(cmd)
-    print "Execution succesful (results may still be wrong though...)"
+    print("Execution succesful (results may still be wrong though...)")
 
 
 
