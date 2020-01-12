@@ -59,7 +59,7 @@ int main(int argc,char* argv[]){
   vkl_likeModel->initializeAlgebra();
 
   if( proc_rank == 0 ){
-    printf("%+7s\n","...done");
+    printf("%7s\n","...done");
     std::cout << std::string(200,'=') << std::endl;
     fflush(stdout);
   }
@@ -78,7 +78,7 @@ int main(int argc,char* argv[]){
   
   // Finalize output etc
   if( proc_rank == 0 ){
-    printf("%+7s\n","...done");
+    printf("%7s\n","...done");
     std::cout << std::string(200,'=') << std::endl;
     fflush(stdout);
     vkl_likeModel->finalizeLikelihoodModel(init->output);

@@ -52,7 +52,7 @@ int main(int argc,char* argv[]){
 
   vkl_likeModel->initializeAlgebra();
 
-  printf("%+7s\n","...done");
+  printf("%7s\n","...done");
   std::cout << std::string(200,'=') << std::endl;
   fflush(stdout);
   //================= END:INITIALIZATION =======================
@@ -67,7 +67,7 @@ int main(int argc,char* argv[]){
   vkl_minimizer->minimize(init->minimizer,vkl_likeModel,init->output);
   
   // Finalize output etc
-  printf("%+7s\n","...done");
+  printf("%7s\n","...done");
   std::cout << std::string(200,'=') << std::endl;
   fflush(stdout);
   vkl_likeModel->finalizeLikelihoodModel(init->output);

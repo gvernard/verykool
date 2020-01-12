@@ -103,7 +103,7 @@ void BaseLikelihoodModel::finalizeLikelihoodModel(std::string output){
   printf("\n");
   this->outputLikelihoodModel(output);
 
-  printf("%+7s\n","...done");
+  printf("%7s\n","...done");
   std::cout << std::string(200,'=') << std::endl;
   fflush(stdout);  
 }
