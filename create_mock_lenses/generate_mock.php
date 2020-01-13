@@ -153,7 +153,7 @@ echo "done!\n";
 
 echo "Running autoMask . . . ";
 //exec('python '.$exe_path.'autoMask/automask.py ' . $recreate_dir . '/automask.json');
-exec($exe_path.'autoMask/automask ' . $recreate_dir . '/automask.json');
+exec($exe_path.'autoMask2/automask2 ' . $recreate_dir . '/automask.json');
 echo "done!\n";
 
 

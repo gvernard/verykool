@@ -92,6 +92,8 @@ $(OBJ_DIR)/addmachine.o: $(MOCKS_DIR)/addMachine/addmachine.cpp
 	$(GPP) -std=c++11 -I inc -c -o $@ $<
 $(OBJ_DIR)/automask.o: $(MOCKS_DIR)/autoMask/automask.cpp
 	$(GPP) -std=c++11 -I inc -c -o $@ $<
+$(OBJ_DIR)/automask2.o: $(MOCKS_DIR)/autoMask2/automask2.cpp
+	$(GPP) -std=c++11 -I inc -c -o $@ $<
 $(OBJ_DIR)/kappa.o: $(MOCKS_DIR)/createPerturbations/kappa.cpp
 	$(GPP) -std=c++11 -I inc -c -o $@ $<
 $(OBJ_DIR)/initFuncs.o: $(MOCKS_DIR)/FProject/initFuncs.cpp
@@ -137,9 +139,10 @@ other: common $(OBJ_DIR)/createCosmosisValuesPriorsIni.o $(OBJ_DIR)/createEmceeS
 	$(GPP) -std=c++11 -I inc -o $(BIN_DIR)/createEmceeStart $(COMMON_OBJ) $(OBJ_DIR)/createEmceeStart.o $(COMMON_LIBS)
 	@echo ""
 
-mocks: common $(OBJ_DIR)/addmachine.o $(OBJ_DIR)/automask.o $(OBJ_DIR)/kappa.o $(OBJ_DIR)/fproject.o $(FPROJECT_OBJ)
+mocks: common $(OBJ_DIR)/addmachine.o $(OBJ_DIR)/automask.o $(OBJ_DIR)/automask2.o $(OBJ_DIR)/kappa.o $(OBJ_DIR)/fproject.o $(FPROJECT_OBJ)
 	$(GPP) -std=c++11 -I inc -o $(MOCKS_DIR)/addMachine/addmachine $(OBJ_DIR)/addmachine.o $(OBJ_DIR)/imagePlane.o -ljsoncpp -lcfitsio -lCCfits -lfftw3
 	$(GPP) -std=c++11 -I inc -o $(MOCKS_DIR)/autoMask/automask $(OBJ_DIR)/automask.o $(OBJ_DIR)/imagePlane.o -ljsoncpp -lcfitsio -lCCfits -lfftw3
+	$(GPP) -std=c++11 -I inc -o $(MOCKS_DIR)/autoMask2/automask2 $(OBJ_DIR)/automask2.o $(OBJ_DIR)/imagePlane.o -ljsoncpp -lcfitsio -lCCfits -lfftw3
 	$(GPP) -std=c++11 -I inc -o $(MOCKS_DIR)/createPerturbations/kappa $(OBJ_DIR)/kappa.o $(OBJ_DIR)/imagePlane.o -ljsoncpp -lcfitsio -lCCfits
 	$(GPP) -std=c++11 -I inc -I $(MOCKS_DIR)/FProject -o $(MOCKS_DIR)/FProject/fproject $(OBJ_DIR)/fproject.o $(OBJ_DIR)/fastell.o $(OBJ_DIR)/imagePlane.o $(OBJ_DIR)/nonLinearPars.o $(OBJ_DIR)/massModels.o $(OBJ_DIR)/sourcePlane.o $(FPROJECT_OBJ) -ljsoncpp -lcfitsio -lCCfits -lgfortran -lgmp -lCGAL
 
@@ -152,5 +155,5 @@ clean:
 	$(RM) -r $(OBJ_DIR)/* $(LIB_DIR)/*
 
 clean_mocks:
-	$(RM) $(MOCKS_DIR)/addMachine/addmachine $(MOCKS_DIR)/automask/automask $(MOCKS_DIR)/createPerturbations/kappa $(MOCKS_DIR)/FProject/fproject
+	$(RM) $(MOCKS_DIR)/addMachine/addmachine $(MOCKS_DIR)/automask/automask $(MOCKS_DIR)/automask/automask2 $(MOCKS_DIR)/createPerturbations/kappa $(MOCKS_DIR)/FProject/fproject
 
