@@ -146,10 +146,10 @@ int main(int argc,char* argv[]){
   //fclose(fhh);
   
   
-  FILE* fh = fopen("radii.dat","w");
-  fprintf(fh,"%f\n",inner_radius);
-  fprintf(fh,"%f\n",outer_radius);
-  fclose(fh);
+  //  FILE* fh = fopen("radii.dat","w");
+  //  fprintf(fh,"%f\n",inner_radius);
+  //  fprintf(fh,"%f\n",outer_radius);
+  //  fclose(fh);
   //=============== END:FIND RING RADII =======================
 
 

@@ -21,6 +21,7 @@ documentation/index.html
 scripts/report.txt
 create_mock_lenses/addMachine/addmachine
 create_mock_lenses/autoMask/automask
+create_mock_lenses/autoMask2/automask2
 create_mock_lenses/FProject/fproject
 create_mock_lenses/createPerturbations/kappa
 plt_corner.paramnames
