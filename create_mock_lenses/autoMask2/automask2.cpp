@@ -71,7 +71,7 @@ int main(int argc,char* argv[]){
     }
   }
   
-  mydata.writeImage("test.fits");
+  //  mydata.writeImage("test.fits");
   //================= END:INITIALIZATION =======================
   
 
