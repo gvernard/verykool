@@ -8,7 +8,7 @@
 #include "imagePlane.hpp"
 #include "sourcePlane.hpp"
 #include "tableDefinition.hpp"
-#include "eigenAlgebra.hpp"
+//#include "eigenAlgebra.hpp"
 
 
 //Abstract class: BaseMassModel
@@ -530,6 +530,7 @@ void Pert::defl(double xin,double yin,double& xout,double& yout){
   yout = ay;
 }
 
+/*
 void Pert::tableDefl(int Nm,double* xdefl,double* ydefl){
   Eigen::SparseMatrix<double> A(2*Nm,2*this->dpsi->Sm);
   A.reserve(Eigen::VectorXi::Constant(2*Nm,2));//overestimating the mask matrix number of entries per row
@@ -553,7 +554,7 @@ void Pert::tableDefl(int Nm,double* xdefl,double* ydefl){
   A.resize(0,0);
   B.resize(0,0);
 }
-
+*/
 
 void Pert::getConvergence(ImagePlane* kappa){
   double ddx,ddy;

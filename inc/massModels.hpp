@@ -69,7 +69,7 @@ public:
   void updatePert();
   void createAint(ImagePlane* data);
   void createBdev();
-  void tableDefl(int Nm,double* xdefl,double* ydefl);
+  //  void tableDefl(int Nm,double* xdefl,double* ydefl);
   void createCrosses(ImagePlane* image);
   void getConvergence(ImagePlane* kappa);
   
