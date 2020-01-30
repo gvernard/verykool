@@ -8,7 +8,6 @@
 #include "imagePlane.hpp"
 #include "sourcePlane.hpp"
 #include "tableDefinition.hpp"
-//#include "eigenAlgebra.hpp"
 
 
 //Abstract class: BaseMassModel
