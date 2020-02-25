@@ -1,7 +1,0 @@
-void centralPixel(int Ni,int Nj,double Li,double Lj,double* xval,double* yval,int* i0,int* j0);
-void maxCorners(double b,double q,double par,double xl,double yl,double* ix,double* iy,int Ni,int Nj,double* sxmax,double* sxmin,double* symax,double* symin);
-void fixedGrid(double d,double* sxmax,double* sxmin,double* symax,double* symin,double sx0,double sy0);
-void gridSourcePixels(int Si,int Sj,double sxmax,double sxmin,double symax,double symin,double* sx,double* sy);
-void gaussian(int Sj,int Si,double* sx,double* sy,double* s,double size);
-void writeArrayPng(const char* filename, int width, int height, double* buffer);
-double boxMuller(double mean,double sigma);

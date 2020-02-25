@@ -1,2 +1,0 @@
-#!/bin/bash -f
-g++ -std=c++11 -o addmachine ../VeryKooL/imagePlane.cpp addmachine.cpp -lCCfits -ljsoncpp -lfftw3

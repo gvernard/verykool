@@ -1,2 +1,0 @@
-#!/bin/bash -f
-g++ -lpng -o fproject initFuncs.cpp pixposFuncs.cpp massModelFuncs.cpp fproject.cpp

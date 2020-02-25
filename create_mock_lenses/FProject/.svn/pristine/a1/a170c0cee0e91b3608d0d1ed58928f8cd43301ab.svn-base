@@ -1,2 +1,0 @@
-#!/bin/bash -f
-g++ -std=c++11 -o fproject ../VeryKooL/fastell.o ../VeryKooL/imagePlane.cpp ../VeryKooL/massModels.cpp ../VeryKooL/sourcePlane.cpp initFuncs.cpp polyclip.cpp polygons.cpp fproject.cpp -lpng -limgfuncs -ljsoncpp -lCCfits -lgfortran

@@ -1,2 +1,0 @@
-#!/bin/bash -f
-g++ -std=c++11 -o compareFits compareFits.cpp ../VeryKooL/imagePlane.cpp -lCCfits

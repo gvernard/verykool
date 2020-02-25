@@ -1,1 +1,0 @@
-void sis_defl(double b,double q,double pa,double xl,double yl,double xin,double yin,double* xout,double* yout);
