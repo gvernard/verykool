@@ -44,6 +44,8 @@ FPROJECT_DEPS = $(patsubst %,$(MOCKS_DIR)/FProject/%,$(FP_DEPS)) #Pad names with
 FPROJECT_OBJ  = $(patsubst %,$(OBJ_DIR)/%,$(FP_OBJ)) #Pad names with dir
 
 
+$(shell mkdir -p $(OBJ_DIR))
+$(shell mkdir -p $(BIN_DIR))
 
 
 
