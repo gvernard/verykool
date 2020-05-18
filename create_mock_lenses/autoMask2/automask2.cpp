@@ -53,9 +53,9 @@ int main(int argc,char* argv[]){
   //Read clean data
   ImagePlane mydata(outpath+"image.fits",stoi(image["pix_x"]),stoi(image["pix_y"]),stof(image["width"]),stof(image["height"]));
 
+  double img_max = 0.0;
   if( noise_flag == "uniform" ){
     ImagePlane mynoise(outpath+"noise_realization.fits",stoi(image["pix_x"]),stoi(image["pix_y"]),stof(image["width"]),stof(image["height"]));
-    double img_max = 0.0;
     for(int i=0;i<mydata.Nm;i++){
       mydata.img[i] -= mynoise.img[i];
       if( mydata.img[i] > img_max ){
@@ -63,7 +63,6 @@ int main(int argc,char* argv[]){
       }
     }
   } else {
-    double img_max = 0.0;
     for(int i=0;i<mydata.Nm;i++){
       if( mydata.img[i] > img_max ){
 	img_max = mydata.img[i];
