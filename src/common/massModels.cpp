@@ -491,39 +491,41 @@ void Pert::derivativeDirection(int q,int qmax,double den,int* rel_ind,double* co
 }
 
 void Pert::defl(double xin,double yin,double& xout,double& yout){
-  
   double xp = xin - this->dpsi->xmin;
   double yp = this->dpsi->ymax - yin;
-
-  //Indices corresponding to the top left pixel
-  int jc = (int) floor(xp/this->dj);
-  int ic = (int) floor(yp/this->di);
-
-  double g1 = yp - ic*this->di;
-  double g2 = (ic+1)*this->di - yp;
-  double g3 = xp - jc*this->dj;
-  double g4 = (jc+1)*this->dj - xp;
-  double norm = 1.0/(this->di*this->dj);
-
-  //changing to weights for the top left pixel
-  double w00 = g2*g4;
-  double w01 = g2*g3;
-  double w10 = g1*g4;
-  double w11 = g1*g3;
-
-  double f00,f01,f10,f11;
-
-  f00 = this->dpsi_dx[ic*this->dpsi->Sj + jc];
-  f01 = this->dpsi_dx[ic*this->dpsi->Sj + jc+1];
-  f10 = this->dpsi_dx[(ic+1)*this->dpsi->Sj + jc];
-  f11 = this->dpsi_dx[(ic+1)*this->dpsi->Sj + jc+1];
-  double ax = (f00*w00 + f10*w10 + f01*w01 + f11*w11)*norm;
-
-  f00 = this->dpsi_dy[ic*this->dpsi->Sj + jc];
-  f01 = this->dpsi_dy[ic*this->dpsi->Sj + jc+1];
-  f10 = this->dpsi_dy[(ic+1)*this->dpsi->Sj + jc];
-  f11 = this->dpsi_dy[(ic+1)*this->dpsi->Sj + jc+1];
-  double ay = (f00*w00 + f10*w10 + f01*w01 + f11*w11)*norm;
+  double ax,ay;
+  
+  if( this->interp == "bilinear" ){
+    //Indices corresponding to the top left pixel
+    int jc = (int) floor(xp/this->dj);
+    int ic = (int) floor(yp/this->di);
+    
+    double g1 = yp - ic*this->di;
+    double g2 = (ic+1)*this->di - yp;
+    double g3 = xp - jc*this->dj;
+    double g4 = (jc+1)*this->dj - xp;
+    double norm = 1.0/(this->di*this->dj);
+    
+    //changing to weights for the top left pixel
+    double w00 = g2*g4;
+    double w01 = g2*g3;
+    double w10 = g1*g4;
+    double w11 = g1*g3;
+    
+    double f00,f01,f10,f11;
+    
+    f00 = this->dpsi_dx[ic*this->dpsi->Sj + jc];
+    f01 = this->dpsi_dx[ic*this->dpsi->Sj + jc+1];
+    f10 = this->dpsi_dx[(ic+1)*this->dpsi->Sj + jc];
+    f11 = this->dpsi_dx[(ic+1)*this->dpsi->Sj + jc+1];
+    ax = (f00*w00 + f10*w10 + f01*w01 + f11*w11)*norm;
+    
+    f00 = this->dpsi_dy[ic*this->dpsi->Sj + jc];
+    f01 = this->dpsi_dy[ic*this->dpsi->Sj + jc+1];
+    f10 = this->dpsi_dy[(ic+1)*this->dpsi->Sj + jc];
+    f11 = this->dpsi_dy[(ic+1)*this->dpsi->Sj + jc+1];
+    ay = (f00*w00 + f10*w10 + f01*w01 + f11*w11)*norm;
+  }
 
   xout = ax;
   yout = ay;

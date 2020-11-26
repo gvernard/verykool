@@ -53,6 +53,7 @@ public:
   double* dpsi_dy;
   mytable Aint;
   mytable Bdev;
+  std::string interp = "bilinear";
 
   Pert(int Ni,int Nj,double width,double height,std::string reg);
   Pert(int Ni,int Nj,ImagePlane* image,std::string reg);

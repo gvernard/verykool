@@ -1019,6 +1019,16 @@ void AdaptiveSource::createAdaGrid(ImagePlane* image,CollectionMassModels* mycol
       for(int j=j0;j<image->Nj;j=j+this->spacing){
 	this->x[count] = image->defl_x[i*image->Nj+j];
 	this->y[count] = image->defl_y[i*image->Nj+j];
+	// if( std::signbit(this->x[count]) ){
+	//   this->x[count] -= 0.015;
+	// } else {
+	//   this->x[count] += 0.015;
+	// }
+	// if( std::signbit(this->y[count]) ){
+	//   this->y[count] -= 0.015;
+	// } else {
+	//   this->y[count] += 0.015;
+	// }
 	image->active[i*image->Nj+j] = count;
 	count++;
       }
