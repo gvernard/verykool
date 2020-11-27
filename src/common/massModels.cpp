@@ -111,8 +111,9 @@ void Spemd::defl(double xin,double yin,double& xout,double& yout){
 
 //Derived class from BaseMassModel: Pert (perturbations on a grid)
 //===============================================================================================================
-Pert::Pert(int a,int b,double c,double d,std::string reg){
+Pert::Pert(int a,int b,double c,double d,std::string reg,std::string interp){
   this->type = "pert";
+  this->interp = interp;
   this->dpsi = new FixedSource(a,b,c,d,reg);
 
   this->dpsi_dx = (double*) calloc(this->dpsi->Sm,sizeof(double));
@@ -136,8 +137,9 @@ Pert::Pert(int a,int b,double c,double d,std::string reg){
   //  createBdev();
 }
 
-Pert::Pert(int a,int b,ImagePlane* image,std::string reg){
+Pert::Pert(int a,int b,ImagePlane* image,std::string reg,std::string interp){
   this->type = "pert";
+  this->interp = interp;
   this->dpsi = new FixedSource(a,b,image->xmin,image->xmax,image->ymin,image->ymax,reg);
   this->dpsi->inMask(image);
 
@@ -162,8 +164,9 @@ Pert::Pert(int a,int b,ImagePlane* image,std::string reg){
   //  createBdev();
 }
 
-Pert::Pert(std::string filepath,int a,int b,double c,double d,std::string reg){
+Pert::Pert(std::string filepath,int a,int b,double c,double d,std::string reg,std::string interp){
   this->type = "pert";
+  this->interp = interp;
   this->dpsi = new FixedSource(a,b,c,d,reg);
   
   this->dpsi_dx = (double*) calloc(this->dpsi->Sm,sizeof(double));
@@ -193,8 +196,9 @@ Pert::Pert(std::string filepath,int a,int b,double c,double d,std::string reg){
   //  createBdev();
 }
 
-Pert::Pert(FixedSource* new_dpsi){
+Pert::Pert(FixedSource* new_dpsi,std::string interp){
   this->type = "pert";
+  this->interp = interp;
   this->dpsi = new FixedSource(*new_dpsi);
 
   this->dpsi_dx = (double*) calloc(this->dpsi->Sm,sizeof(double));

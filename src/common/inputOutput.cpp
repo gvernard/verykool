@@ -67,7 +67,7 @@ void Initialization::initialize_program(std::string path,std::string run,Initial
 
   // Initialize perturbations --------------------------------------------------------------------------------------------------------------------------------------
   if( init->likeModel == "perturbations_standard" || init->likeModel == "both" ){
-    pert_mass_model = new Pert(std::stoi(init->perturbations["pix_x"]),std::stoi(init->perturbations["pix_y"]),mydata,init->perturbations["reg_dpsi"]);
+    pert_mass_model = new Pert(std::stoi(init->perturbations["pix_x"]),std::stoi(init->perturbations["pix_y"]),mydata,init->perturbations["reg_dpsi"],init->perturbations["interp"]);
     if( init->perturbations["reg_dpsi"] == "covariance_kernel" ){
       pert_mass_model->dpsi->sample_reg = Nlpar::getSampleReg(init->nlpars_reg_dpsi);
       std::string suffix = Nlpar::removeSuffix(init->nlpars_reg_dpsi); // need to remove _dpsi suffix for the dpsi parameters to update the kernel, then I add it bac
@@ -227,8 +227,13 @@ void Initialization::parseInputJSON(std::string path,std::string run){
 
   //Parameters for the perturbations
   if( root["parameter_model"] == "perturbations_standard" || root["parameter_model"] == "both" ){
-    this->perturbations["pix_x"] = root["perturbations"]["pix_x"].asString();
-    this->perturbations["pix_y"] = root["perturbations"]["pix_y"].asString();
+    this->perturbations["pix_x"]  = root["perturbations"]["pix_x"].asString();
+    this->perturbations["pix_y"]  = root["perturbations"]["pix_y"].asString();
+    if( root["perturbations"].isMember("interp") ){
+      this->perturbations["interp"] = root["perturbations"]["interp"].asString();
+    } else {
+      this->perturbations["interp"] = "bilinear";
+    }
 
     //NLPARS: Dpsi regularization
     this->perturbations["reg_dpsi"] = root["perturbations"]["reg_dpsi"]["type"].asString();

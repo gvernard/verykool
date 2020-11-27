@@ -57,7 +57,7 @@ public:
   double* dpsi_dy;
   mytable Aint;
   mytable Bdev;
-  std::string interp = "bicubic";
+  std::string interp;
   gsl_spline2d* x_spline = NULL;
   gsl_spline2d* y_spline = NULL;
   gsl_interp_accel* xacc = gsl_interp_accel_alloc();
@@ -67,10 +67,10 @@ public:
   double* za_x;
   double* za_y;
   
-  Pert(int Ni,int Nj,double width,double height,std::string reg);
-  Pert(int Ni,int Nj,ImagePlane* image,std::string reg);
-  Pert(std::string filename,int Ni,int Nj,double width,double height,std::string reg);
-  Pert(FixedSource* new_dpsi);
+  Pert(int Ni,int Nj,double width,double height,std::string reg,std::string interp);
+  Pert(int Ni,int Nj,ImagePlane* image,std::string reg,std::string interp);
+  Pert(std::string filename,int Ni,int Nj,double width,double height,std::string reg,std::string interp);
+  Pert(FixedSource* new_dpsi,std::string interp);
   ~Pert(){
     delete(dpsi);
     free(dpsi_dx);
@@ -123,7 +123,7 @@ public:
 
   BaseMassModel* createMassModel(const std::string &modelname,std::map<std::string,std::string> pars){
     if( modelname == "pert" ){
-      return new Pert(pars["filename"],std::stoi(pars["Ni"]),std::stoi(pars["Nj"]),std::stof(pars["width"]),std::stof(pars["height"]),pars["reg"]);
+      return new Pert(pars["filename"],std::stoi(pars["Ni"]),std::stoi(pars["Nj"]),std::stof(pars["width"]),std::stof(pars["height"]),pars["reg"],pars["interp"]);
     } else {
       return NULL;
     }
