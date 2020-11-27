@@ -7,6 +7,10 @@
 #include <map>
 #include <iostream>
 
+#include <gsl/gsl_math.h>
+#include <gsl/gsl_interp2d.h>
+#include <gsl/gsl_spline2d.h>
+
 #include "nonLinearPars.hpp"
 #include "imagePlane.hpp"
 #include "sourcePlane.hpp"
@@ -53,8 +57,16 @@ public:
   double* dpsi_dy;
   mytable Aint;
   mytable Bdev;
-  std::string interp = "bilinear";
-
+  std::string interp = "bicubic";
+  gsl_spline2d* x_spline = NULL;
+  gsl_spline2d* y_spline = NULL;
+  gsl_interp_accel* xacc = gsl_interp_accel_alloc();
+  gsl_interp_accel* yacc = gsl_interp_accel_alloc();
+  double* x_tmp;
+  double* y_tmp;
+  double* za_x;
+  double* za_y;
+  
   Pert(int Ni,int Nj,double width,double height,std::string reg);
   Pert(int Ni,int Nj,ImagePlane* image,std::string reg);
   Pert(std::string filename,int Ni,int Nj,double width,double height,std::string reg);
@@ -63,6 +75,14 @@ public:
     delete(dpsi);
     free(dpsi_dx);
     free(dpsi_dy);
+    gsl_spline2d_free(x_spline);
+    gsl_spline2d_free(y_spline);
+    gsl_interp_accel_free(xacc);
+    gsl_interp_accel_free(yacc);
+    free(x_tmp);
+    free(y_tmp);
+    free(za_x);
+    free(za_y);
   }
   void defl(double xin,double yin,double& xout,double& yout);
   void replaceDpsi(double* new_dpsi);

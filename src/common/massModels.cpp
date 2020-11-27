@@ -124,6 +124,15 @@ Pert::Pert(int a,int b,double c,double d,std::string reg){
   this->di = this->dpsi->height/(this->dpsi->Si);
   this->dj = this->dpsi->width/(this->dpsi->Sj);
 
+  if( this->interp == "bilinear" ){
+    const gsl_interp2d_type* T = gsl_interp2d_bilinear;
+    this->x_spline = gsl_spline2d_alloc(T,this->dpsi->Sj,this->dpsi->Si);
+    this->y_spline = gsl_spline2d_alloc(T,this->dpsi->Sj,this->dpsi->Si);
+  } else {
+    const gsl_interp2d_type* T = gsl_interp2d_bicubic;
+    this->x_spline = gsl_spline2d_alloc(T,this->dpsi->Sj,this->dpsi->Si);
+    this->y_spline = gsl_spline2d_alloc(T,this->dpsi->Sj,this->dpsi->Si);
+  }
   //  createBdev();
 }
 
@@ -141,6 +150,15 @@ Pert::Pert(int a,int b,ImagePlane* image,std::string reg){
   this->di = this->dpsi->height/(this->dpsi->Si);
   this->dj = this->dpsi->width/(this->dpsi->Sj);
 
+  if( this->interp == "bilinear" ){
+    const gsl_interp2d_type* T = gsl_interp2d_bilinear;
+    this->x_spline = gsl_spline2d_alloc(T,this->dpsi->Sj,this->dpsi->Si);
+    this->y_spline = gsl_spline2d_alloc(T,this->dpsi->Sj,this->dpsi->Si);
+  } else {
+    const gsl_interp2d_type* T = gsl_interp2d_bicubic;
+    this->x_spline = gsl_spline2d_alloc(T,this->dpsi->Sj,this->dpsi->Si);
+    this->y_spline = gsl_spline2d_alloc(T,this->dpsi->Sj,this->dpsi->Si);
+  }
   //  createBdev();
 }
 
@@ -156,6 +174,16 @@ Pert::Pert(std::string filepath,int a,int b,double c,double d,std::string reg){
 
   this->di = this->dpsi->height/(this->dpsi->Si);
   this->dj = this->dpsi->width/(this->dpsi->Sj);
+
+  if( this->interp == "bilinear" ){
+    const gsl_interp2d_type* T = gsl_interp2d_bilinear;
+    this->x_spline = gsl_spline2d_alloc(T,this->dpsi->Sj,this->dpsi->Si);
+    this->y_spline = gsl_spline2d_alloc(T,this->dpsi->Sj,this->dpsi->Si);
+  } else {
+    const gsl_interp2d_type* T = gsl_interp2d_bicubic;
+    this->x_spline = gsl_spline2d_alloc(T,this->dpsi->Sj,this->dpsi->Si);
+    this->y_spline = gsl_spline2d_alloc(T,this->dpsi->Sj,this->dpsi->Si);
+  }
 
   ImagePlane* image = new ImagePlane(filepath,a,b,c,d);
   replaceDpsi(image->img);
@@ -177,6 +205,16 @@ Pert::Pert(FixedSource* new_dpsi){
 
   this->di = this->dpsi->height/(this->dpsi->Si);
   this->dj = this->dpsi->width/(this->dpsi->Sj);
+
+  if( this->interp == "bilinear" ){
+    const gsl_interp2d_type* T = gsl_interp2d_bilinear;
+    this->x_spline = gsl_spline2d_alloc(T,this->dpsi->Sj,this->dpsi->Si);
+    this->y_spline = gsl_spline2d_alloc(T,this->dpsi->Sj,this->dpsi->Si);
+  } else {
+    const gsl_interp2d_type* T = gsl_interp2d_bicubic;
+    this->x_spline = gsl_spline2d_alloc(T,this->dpsi->Sj,this->dpsi->Si);
+    this->y_spline = gsl_spline2d_alloc(T,this->dpsi->Sj,this->dpsi->Si);
+  }
 
   updatePert();
   //  createBdev();
@@ -231,6 +269,30 @@ void Pert::updatePert(){
   this->dpsi_dx[(Si-1)*Sj+Sj-1] = (this->dpsi->src[(Si-1)*Sj+Sj-1]-this->dpsi->src[(Si-1)*Sj+Sj-2])/dj;
   this->dpsi_dy[(Si-1)*Sj+Sj-1] = (this->dpsi->src[(Si-1)*Sj+Sj-1]-this->dpsi->src[(Si-2)*Sj+Sj-1])/di;
 
+
+  
+  // Get list of x and y values
+  this->x_tmp = (double*) malloc(Sj*sizeof(double));
+  for(int j=0;j<Sj;j++){
+    x_tmp[j] = this->dpsi->x[j];
+  }
+  this->y_tmp = (double*) malloc(Si*sizeof(double));
+  for(int i=0;i<Si;i++){
+    y_tmp[i] = this->dpsi->ymax - this->dpsi->y[i*Sj];
+  }
+  this->za_x = (double*) malloc(Si*Sj*sizeof(double));
+  this->za_y = (double*) malloc(Si*Sj*sizeof(double));
+
+  for(int i=0;i<Si;i++){
+    for(int j=0;j<Sj;j++){
+      //gsl_spline2d_set(this->x_spline,this->za,j,i,this->dpsi_dx[(Si-1-i)*Sj+j]);
+      //gsl_spline2d_set(this->y_spline,this->za,j,i,this->dpsi_dy[(Si-1-i)*Sj+j]);
+      gsl_spline2d_set(this->x_spline,this->za_x,j,i,this->dpsi_dx[i*Sj+j]);
+      gsl_spline2d_set(this->y_spline,this->za_y,j,i,this->dpsi_dy[i*Sj+j]);
+    }
+  }
+  gsl_spline2d_init(this->x_spline,this->x_tmp,this->y_tmp,this->za_x,Sj,Si);
+  gsl_spline2d_init(this->y_spline,this->x_tmp,this->y_tmp,this->za_y,Sj,Si);
 }
 
 void Pert::createBdev(){
@@ -491,12 +553,13 @@ void Pert::derivativeDirection(int q,int qmax,double den,int* rel_ind,double* co
 }
 
 void Pert::defl(double xin,double yin,double& xout,double& yout){
-  double xp = xin - this->dpsi->xmin;
-  double yp = this->dpsi->ymax - yin;
   double ax,ay;
   
-  if( this->interp == "bilinear" ){
-    //Indices corresponding to the top left pixel
+  if( this->interp == "bilinear" ){  
+    double xp = xin - this->dpsi->xmin;
+    double yp = this->dpsi->ymax - yin;
+    
+    //Indices corresponding to the bottom left pixel corner
     int jc = (int) floor(xp/this->dj);
     int ic = (int) floor(yp/this->di);
     
@@ -506,14 +569,14 @@ void Pert::defl(double xin,double yin,double& xout,double& yout){
     double g4 = (jc+1)*this->dj - xp;
     double norm = 1.0/(this->di*this->dj);
     
-    //changing to weights for the top left pixel
+    //changing to weights for the bottom left pixel corner
     double w00 = g2*g4;
     double w01 = g2*g3;
     double w10 = g1*g4;
     double w11 = g1*g3;
     
     double f00,f01,f10,f11;
-    
+
     f00 = this->dpsi_dx[ic*this->dpsi->Sj + jc];
     f01 = this->dpsi_dx[ic*this->dpsi->Sj + jc+1];
     f10 = this->dpsi_dx[(ic+1)*this->dpsi->Sj + jc];
@@ -525,6 +588,19 @@ void Pert::defl(double xin,double yin,double& xout,double& yout){
     f10 = this->dpsi_dy[(ic+1)*this->dpsi->Sj + jc];
     f11 = this->dpsi_dy[(ic+1)*this->dpsi->Sj + jc+1];
     ay = (f00*w00 + f10*w10 + f01*w01 + f11*w11)*norm;
+
+  } else {
+    double xp = xin;
+    double yp = this->dpsi->ymax - yin;
+    double y0 = this->dpsi->ymax - this->dpsi->y[0];
+    double y1 = this->dpsi->ymax - this->dpsi->y[(this->dpsi->Si-1)*this->dpsi->Sj];
+    if( xp <= this->dpsi->x[0] || this->dpsi->x[this->dpsi->Sj-1] <= xp || yp <= y0 || y1 <= yp ){
+      ax = 0.0;
+      ay = 0.0;
+    } else {
+      ax = gsl_spline2d_eval(this->x_spline,xp,yp,xacc,yacc);
+      ay = gsl_spline2d_eval(this->y_spline,xp,yp,xacc,yacc);
+    }
   }
 
   xout = ax;
