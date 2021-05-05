@@ -35,6 +35,7 @@ public:
   void setMassPars(std::vector<Nlpar*> nlpars);
   void printMassPars();
   virtual void defl(double xin,double yin,double& xout,double& yout) = 0;
+  virtual double psi(double xin,double yin) = 0;
 };
 
 
@@ -42,12 +43,14 @@ class Sie: public BaseMassModel{
 public:
   Sie(std::vector<Nlpar*> nlpars);
   void defl(double xin,double yin,double& xout,double& yout);
+  double psi(double xin,double yin);
 };
 
 class Spemd: public BaseMassModel{
 public:
   Spemd(std::vector<Nlpar*> nlpars);
   void defl(double xin,double yin,double& xout,double& yout);
+  double psi(double xin,double yin){return 0.0;};
 };
 
 class Pert: public BaseMassModel{
@@ -85,6 +88,7 @@ public:
     free(za_y);
   }
   void defl(double xin,double yin,double& xout,double& yout);
+  double psi(double xin,double yin);
   void replaceDpsi(double* new_dpsi);
   void addDpsi(double* corrections);
   void updatePert();

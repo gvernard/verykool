@@ -74,6 +74,11 @@ void Sie::defl(double xin,double yin,double& xout,double& yout){
   yout = ay;
 }
 
+double Sie::psi(double xin,double yin){
+  return 0.0;
+}
+
+
 //Derived class from BaseMassModel: Spemd (Softened Power-law Elliptical Mass Density)
 //===============================================================================================================
 Spemd::Spemd(std::vector<Nlpar*> nlpars){
@@ -610,6 +615,11 @@ void Pert::defl(double xin,double yin,double& xout,double& yout){
   xout = ax;
   yout = ay;
 }
+
+double Pert::psi(double xin,double yin){
+  return 0.0;
+}
+
 
 /*
 void Pert::tableDefl(int Nm,double* xdefl,double* ydefl){
