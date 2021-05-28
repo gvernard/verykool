@@ -1174,6 +1174,13 @@ void BothLikelihood::updateLikelihoodModel(){
 
   // Solve for the source and perturbations (r), calculate the chi2, reg, and detA terms
   this->both_algebra->solveSourcePert(this->source,this->pert_mass_model);
+  
+  // Manual chi2 term
+  double chi2 = 0.0;
+  for(int i=0;i<this->model->Nm;i++){
+    chi2 += this->image->S.tri[i].v*pow((this->model->img[i] - this->image->img[i]),2)/this->image->C.tri[i].v;
+  }
+  this->terms["chi2"] = -chi2/2.0;
 }
 
 

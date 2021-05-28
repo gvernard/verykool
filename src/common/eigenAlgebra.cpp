@@ -966,19 +966,25 @@ void BothAlgebra::solveSourcePert(BaseSourcePlane* source,Pert* pert_mass_model)
   r = A_inv*(this->Mt_r*this->likeModel->smooth_algebra->StCS*this->likeModel->smooth_algebra->d);
   A_inv.resize(0,0);
 
+  // for(int j=0;j<source->Sm;j++){
+  //   r[j] = 1.0;
+  // }
+  // for(int j=0;j<pert_mass_model->dpsi->Sm;j++){
+  //   r[source->Sm+j] = 0.0;
+  // }
 
   // Set the edge values of dpsi to zero
-  for(int j=0;j<pert_mass_model->dpsi->Sj;j++){
-    r[source->Sm+j] = 0.0;
-  }
-  for(int i=1;i<pert_mass_model->dpsi->Si-1;i++){
-    r[source->Sm+i*pert_mass_model->dpsi->Sj] = 0.0;
-    r[source->Sm+i*pert_mass_model->dpsi->Sj+pert_mass_model->dpsi->Sj-1] = 0.0;
-  }
-  for(int j=0;j<pert_mass_model->dpsi->Sj;j++){
-    r[source->Sm+(pert_mass_model->dpsi->Si-1)*pert_mass_model->dpsi->Sj+j] = 0.0;
-  }
-
+  // for(int j=0;j<pert_mass_model->dpsi->Sj;j++){
+  //   r[source->Sm+j] = 0.0;
+  // }
+  // for(int i=1;i<pert_mass_model->dpsi->Si-1;i++){
+  //   r[source->Sm+i*pert_mass_model->dpsi->Sj] = 0.0;
+  //   r[source->Sm+i*pert_mass_model->dpsi->Sj+pert_mass_model->dpsi->Sj-1] = 0.0;
+  // }
+  // for(int j=0;j<pert_mass_model->dpsi->Sj;j++){
+  //   r[source->Sm+(pert_mass_model->dpsi->Si-1)*pert_mass_model->dpsi->Sj+j] = 0.0;
+  // }
+  
   // Get the chi-squared term
   Eigen::VectorXd y  = this->likeModel->smooth_algebra->d - (this->M_r*r);
   Eigen::VectorXd yt = y.transpose();
