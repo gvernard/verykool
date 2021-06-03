@@ -1174,13 +1174,14 @@ void BothLikelihood::updateLikelihoodModel(){
 
   // Solve for the source and perturbations (r), calculate the chi2, reg, and detA terms
   this->both_algebra->solveSourcePert(this->source,this->pert_mass_model);
-  
+
   // Manual chi2 term
-  double chi2 = 0.0;
-  for(int i=0;i<this->model->Nm;i++){
-    chi2 += this->image->S.tri[i].v*pow((this->model->img[i] - this->image->img[i]),2)/this->image->C.tri[i].v;
-  }
-  this->terms["chi2"] = -chi2/2.0;
+//   this->getModel();
+//   double chi2 = 0.0;
+//   for(int i=0;i<this->model->Nm;i++){
+//     chi2 += this->image->S.tri[i].v*pow((this->model->img[i] - this->image->img[i]),2)/this->image->C.tri[i].v;
+//   }
+//   this->terms["chi2"] = -chi2/2.0;
 }
 
 
@@ -1322,6 +1323,10 @@ void BothLikelihood::getModel(){
   this->collection->all_defl(this->image);
 }
 
+void BothLikelihood::getModel2(){
+  this->both_algebra->getMockData(this->model,this->source,this->pert_mass_model);
+}
+
 //virtual
 void BothLikelihood::getAllNamesValues(std::vector<std::string>& names,std::vector<double>& values){
   std::map<std::string,int> active_ind;
@@ -1358,7 +1363,7 @@ void BothLikelihood::getAllNamesValues(std::vector<std::string>& names,std::vect
     if( this->reg_s[i]->getActive() ){
       value = this->maps[active_ind[name]];
     } else {
-      value = this->reg_s[i]->getValue();
+     value = this->reg_s[i]->getValue();
     }
     names.push_back(name);
     values.push_back(value);

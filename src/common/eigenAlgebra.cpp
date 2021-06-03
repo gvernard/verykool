@@ -905,6 +905,18 @@ void BothAlgebra::getMockData(ImagePlane* mockdata,BaseSourcePlane* source,Eigen
   Eigen::Map<Eigen::VectorXd>(mockdata->img,tmp.size()) = tmp;
 }
 
+void BothAlgebra::getMockData(ImagePlane* mockdata,BaseSourcePlane* source,Pert* pert_mass_model){
+  Eigen::VectorXd r(source->Sm+pert_mass_model->dpsi->Sm);
+  for(int j=0;j<source->Sm;j++){
+    r[j] = source->src[j];
+  }
+  for(int j=0;j<pert_mass_model->dpsi->Sm;j++){
+    r[source->Sm+j] = pert_mass_model->dpsi->src[j];
+  }
+  Eigen::VectorXd y = this->M_r*r;
+  Eigen::Map<Eigen::VectorXd>(mockdata->img,y.size()) = y;
+}
+
 
 void BothAlgebra::constructDsDpsi(ImagePlane* image,BaseSourcePlane* source,Pert* pert_mass_model){
   Eigen::SparseMatrix<double> DsDpsi_dum(image->Nm,pert_mass_model->dpsi->Sm);
@@ -969,10 +981,6 @@ void BothAlgebra::solveSourcePert(BaseSourcePlane* source,Pert* pert_mass_model)
   // for(int j=0;j<source->Sm;j++){
   //   r[j] = 1.0;
   // }
-  // for(int j=0;j<pert_mass_model->dpsi->Sm;j++){
-  //   r[source->Sm+j] = 0.0;
-  // }
-
   // Set the edge values of dpsi to zero
   // for(int j=0;j<pert_mass_model->dpsi->Sj;j++){
   //   r[source->Sm+j] = 0.0;
@@ -991,6 +999,36 @@ void BothAlgebra::solveSourcePert(BaseSourcePlane* source,Pert* pert_mass_model)
   double chi2        = yt.dot(this->likeModel->smooth_algebra->StCS*y);
   this->likeModel->terms["chi2"] = -chi2/2.0;
 
+  /*  
+  double* tmp_r = (double*) malloc(pert_mass_model->dpsi->Sm*sizeof(double));
+  for(int j=0;j<pert_mass_model->dpsi->Sm;j++){
+    tmp_r[j] = r[source->Sm+j];
+    r[source->Sm+j] = 0.0;
+  }
+  // Get the chi-squared term
+  Eigen::VectorXd y2  = this->likeModel->smooth_algebra->d - (this->M_r*r);
+  Eigen::VectorXd y2t = y2.transpose();
+  double tmp_chi2     = y2t.dot(this->likeModel->smooth_algebra->StCS*y2);
+
+  for(int i=0;i<source->Sm;i++){
+    source->src[i] = r[i];
+  }
+  Eigen::Map<Eigen::VectorXd> s(source->src,source->Sm);
+  Eigen::SparseMatrix<double> LL(source->L.Ti,source->L.Tj);
+  LL.reserve(Eigen::VectorXi::Constant(source->L.Ti,4));//setting the non-zero coefficients per row of the lensing matrix (4 for bi-linear interpolation scheme, etc)
+  for(int i=0;i<source->L.tri.size();i++){  LL.insert(source->L.tri[i].i,source->L.tri[i].j) = source->L.tri[i].v;  }
+  Eigen::VectorXd tmp   = this->likeModel->smooth_algebra->d - this->likeModel->smooth_algebra->B*LL*s;
+  Eigen::VectorXd tmp_t = tmp.transpose();
+  double new_chi2       = tmp_t.dot(this->likeModel->smooth_algebra->StCS*tmp);
+
+  std::cout << "    AAAAAA " << chi2 << " " << tmp_chi2 << " " << new_chi2 << std::endl;
+
+  for(int j=0;j<pert_mass_model->dpsi->Sm;j++){
+    r[source->Sm+j] = tmp_r[j];
+  }
+  free(tmp_r);
+  */
+  
   // Get the regularization term (adding the block matrix is already incorporated in RtR)
   Eigen::VectorXd rt = r.transpose();
   double reg         = rt.dot(this->RtR*r);

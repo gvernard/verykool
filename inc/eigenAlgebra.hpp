@@ -94,7 +94,9 @@ public:
   void setAlgebraRuntime(BaseSourcePlane* source,Pert* pert_mass_model);
   void solveSourcePert(BaseSourcePlane* source,Pert* pert_mass_model);
   void getMockData(ImagePlane* mockdata,BaseSourcePlane* source,Eigen::SparseMatrix<double> B);
+  void getMockData(ImagePlane* mockdata,BaseSourcePlane* source,Pert* pert_mass_model);
 
+  
   BothLikelihood* likeModel;
   Eigen::SparseMatrix<double> DsDpsi;
   Eigen::SparseMatrix<double> RtR;

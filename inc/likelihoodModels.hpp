@@ -135,6 +135,7 @@ public:
   void getAllNamesValues(std::vector<std::string>& names,std::vector<double>& values);
   Json::Value getActiveJson();
   void getModel();
+  void getModel2();
   void initializeAlgebra();
   void updateLikelihoodModel();
   void initialOutputLikelihoodModel(std::string output);
