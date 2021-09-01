@@ -130,6 +130,7 @@ Pert::Pert(int a,int b,double c,double d,std::string reg,std::string interp){
   this->di = this->dpsi->height/(this->dpsi->Si);
   this->dj = this->dpsi->width/(this->dpsi->Sj);
 
+  /*
   if( this->interp == "bilinear" ){
     const gsl_interp2d_type* T = gsl_interp2d_bilinear;
     this->x_spline = gsl_spline2d_alloc(T,this->dpsi->Sj,this->dpsi->Si);
@@ -139,6 +140,7 @@ Pert::Pert(int a,int b,double c,double d,std::string reg,std::string interp){
     this->x_spline = gsl_spline2d_alloc(T,this->dpsi->Sj,this->dpsi->Si);
     this->y_spline = gsl_spline2d_alloc(T,this->dpsi->Sj,this->dpsi->Si);
   }
+  */
   //  createBdev();
 }
 
@@ -166,6 +168,7 @@ Pert::Pert(int a,int b,ImagePlane* image,std::string reg,std::string interp){
     this->x_spline = gsl_spline2d_alloc(T,this->dpsi->Sj,this->dpsi->Si);
     this->y_spline = gsl_spline2d_alloc(T,this->dpsi->Sj,this->dpsi->Si);
   }
+
   //  createBdev();
 }
 
@@ -192,7 +195,7 @@ Pert::Pert(std::string filepath,int a,int b,double c,double d,std::string reg,st
     this->x_spline = gsl_spline2d_alloc(T,this->dpsi->Sj,this->dpsi->Si);
     this->y_spline = gsl_spline2d_alloc(T,this->dpsi->Sj,this->dpsi->Si);
   }
-
+  
   ImagePlane* image = new ImagePlane(filepath,a,b,c,d);
   replaceDpsi(image->img);
   delete(image);

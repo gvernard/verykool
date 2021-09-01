@@ -28,7 +28,7 @@ COSMOSIS_LIBS  = -lcosmosis
 # Setting up common variables
 COMMON_SRC   = src/common
 COMMON_FLAGS = -std=c++11 -fPIC -g -frounding-math
-COMMON_LIBS  = -l:libgfortran.so.4 -lCCfits -lcfitsio -ljsoncpp -lgmp -lCGAL -lgsl -lgslcblas
+COMMON_LIBS  = -l:libgfortran.so.5 -lCCfits -lcfitsio -ljsoncpp -lgmp -lCGAL -lgsl -lgslcblas
 DEPS         = imagePlane.hpp inputOutput.hpp massModels.hpp sourcePlane.hpp sourceProfile.hpp eigenAlgebra.hpp nonLinearPars.hpp likelihoodModels.hpp covKernels.hpp
 OBJ          = imagePlane.o   inputOutput.o   massModels.o   sourcePlane.o   sourceProfile.o   eigenAlgebra.o   nonLinearPars.o   likelihoodModels.o   covKernels.o   fastell.o
 COMMON_DEPS  = $(patsubst %,$(INC_DIR)/%,$(DEPS)) #Pad names with dir
@@ -148,11 +148,11 @@ mocks: common $(OBJ_DIR)/addmachine.o $(OBJ_DIR)/automask.o $(OBJ_DIR)/automask2
 	$(GPP) -std=c++11 -I inc -o $(MOCKS_DIR)/autoMask/automask $(OBJ_DIR)/automask.o $(OBJ_DIR)/imagePlane.o -ljsoncpp -lcfitsio -lCCfits -lfftw3
 	$(GPP) -std=c++11 -I inc -o $(MOCKS_DIR)/autoMask2/automask2 $(OBJ_DIR)/automask2.o $(OBJ_DIR)/imagePlane.o -ljsoncpp -lcfitsio -lCCfits -lfftw3
 	$(GPP) -std=c++11 -I inc -o $(MOCKS_DIR)/createPerturbations/kappa $(OBJ_DIR)/kappa.o $(OBJ_DIR)/imagePlane.o -ljsoncpp -lcfitsio -lCCfits
-	$(GPP) -std=c++11 -I inc -I $(MOCKS_DIR)/FProject -o $(MOCKS_DIR)/FProject/fproject $(OBJ_DIR)/fproject.o $(OBJ_DIR)/fastell.o $(OBJ_DIR)/imagePlane.o $(OBJ_DIR)/nonLinearPars.o $(OBJ_DIR)/massModels.o $(OBJ_DIR)/sourcePlane.o $(FPROJECT_OBJ) -ljsoncpp -lcfitsio -lCCfits -l:libgfortran.so.4 -lgmp -lCGAL
+	$(GPP) -std=c++11 -I inc -I $(MOCKS_DIR)/FProject -o $(MOCKS_DIR)/FProject/fproject $(OBJ_DIR)/fproject.o $(OBJ_DIR)/fastell.o $(OBJ_DIR)/imagePlane.o $(OBJ_DIR)/nonLinearPars.o $(OBJ_DIR)/massModels.o $(OBJ_DIR)/sourcePlane.o $(FPROJECT_OBJ) -ljsoncpp -lcfitsio -lCCfits -l:libgfortran.so.5 -lgmp -lCGAL
 
 # src/common/source_plane.o
 support: analysis_tools/create_gridded_source.cpp 
-	$(GPP) -std=c++11 -I inc -o analysis_tools/create_gridded_source -I $(MOCKS_DIR)/FProject $(OBJ_DIR)/fastell.o $(OBJ_DIR)/sourcePlane.o $(OBJ_DIR)/massModels.o $(OBJ_DIR)/imagePlane.o $(OBJ_DIR)/nonLinearPars.o $(OBJ_DIR)/sourceProfile.o analysis_tools/create_gridded_source.cpp -ljsoncpp -lcfitsio -lCCfits -l:libgfortran.so.4 -lgmp -lCGAL
+	$(GPP) -std=c++11 -I inc -o analysis_tools/create_gridded_source -I $(MOCKS_DIR)/FProject $(OBJ_DIR)/fastell.o $(OBJ_DIR)/sourcePlane.o $(OBJ_DIR)/massModels.o $(OBJ_DIR)/imagePlane.o $(OBJ_DIR)/nonLinearPars.o $(OBJ_DIR)/sourceProfile.o analysis_tools/create_gridded_source.cpp -ljsoncpp -lcfitsio -lCCfits -l:libgfortran.so.5 -lgmp -lCGAL
 
 
 clean:

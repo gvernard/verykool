@@ -166,7 +166,7 @@ public:
   void createDelaunay();
   void writeTriangles();
   void setGrid(std::map<std::string,std::string> pars){};
-  bool pointInPolygon(double x,double y){};
+  bool pointInPolygon(double x,double y);
   void writeVertexFaces(int index,std::string output);
   //  void boundPolygon();
 
@@ -222,6 +222,7 @@ public:
     } else {
       return NULL;
     }
+    return NULL; // should never reach here
   }
 
 private:

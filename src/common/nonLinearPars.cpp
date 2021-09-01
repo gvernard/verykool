@@ -211,6 +211,7 @@ double Nlpar::getValueByName(std::string nam,std::vector<Nlpar*> pars){
       return pars[i]->getValue();
     }
   }
+  return 0.0; // should never reach here
 }
 
 Nlpar* Nlpar::getParByName(std::string name,std::vector<Nlpar*> pars){

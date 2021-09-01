@@ -1,5 +1,5 @@
 #!/bin/bash
-path="RUNS/section_3.3/final_upd/"
+path="RUNS/section_3.4/perturbed_complex_final/"
 
 
 # Scan the given path and create alist with all the names (except 'data')
@@ -10,7 +10,7 @@ path="RUNS/section_3.3/final_upd/"
 
 
 # Custom array of run names that are found in 'path'
-declare -a runs=("fff_gauss_gauss_n3_map" "xff_gauss_curv_n3_map" "xff_gauss_gauss_n3_map" "xxf_gauss_gauss_n3_map")
+declare -a runs=("fff_exp_gauss_n3_map" "fxf_exp_gauss_n3_map" "smooth_exp_n1_map" "xff_exp_gauss_n3_map" "xfx_exp_gauss_n3_map" "xxf_exp_curv_n3_map" "xxf_exp_gauss_n3_map" "xxx_exp_gauss_n3_map" "xxx_exp_gauss_n2_map")
 
 
 echo | cat > scripts/report.txt

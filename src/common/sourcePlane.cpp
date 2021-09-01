@@ -1236,6 +1236,11 @@ void AdaptiveSource::createDelaunay(){
 }
 
 //non-virtual
+bool AdaptiveSource::pointInPolygon(double x,double y){
+  return false;
+}
+
+//non-virtual
 double AdaptiveSource::triangleArea(a_triangle triangle){
   double xa = this->x[triangle.a];
   double ya = this->y[triangle.a];

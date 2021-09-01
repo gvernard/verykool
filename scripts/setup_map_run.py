@@ -2,7 +2,7 @@ import os
 import sys
 import json
 import common_funcs
-
+import glob
 
 
 
@@ -13,13 +13,37 @@ case = sys.argv[1] # full path to the case
 j_input  = common_funcs.get_json(case+"vkl_input.json",True)
 
 
+# Find name
 pmodel = j_input['parameter_model']
 if pmodel == 'both':
-    prefix = 'both'
+    pmodel_name = 'both'
 elif pmodel == 'perturbations_standard':
-    prefix = 'pert'
+    pmodel_name = 'pert'
 elif pmodel == 'standard':
-    prefix = 'smooth'
+    pmodel_name = 'smooth'
+
+
+# Find timestep
+list_to_check = ['output.json']
+existing = [os.path.basename(x) for x in glob.glob(case+'output/'+pmodel_name+'_*')]
+missing = []
+for myfile in list_to_check:
+    if pmodel_name+'_'+myfile not in existing:
+        missing.append(pmodel_name+'_'+myfile)
+    
+if len(missing)>0:
+    # find timestep
+    dum = [os.path.basename(x) for x in glob.glob(case+'output/*_'+pmodel_name+'_model.fits')]
+    timesteps = []
+    for i in range(0,len(dum)):
+        dumdum = dum[i].split('_')
+        timesteps.append(int(dumdum[0]))
+    timesteps.sort()
+    prefix = str(timesteps[-1])+'_'+pmodel_name
+else:
+    prefix = pmodel_name
+print(prefix)
+
 j_output = common_funcs.get_json(case+"output/"+prefix+"_output.json",True)
 active = j_output["json_active"]
 
