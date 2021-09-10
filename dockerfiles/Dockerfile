@@ -125,9 +125,6 @@ RUN git clone https://github.com/JohannesBuchner/MultiNest.git \
     &&  make install
 
 
-### Uncomment the line below to use cache up to here and update the libraries and code with their latest versions
-ARG DUMMY_DATE=2011-11-04
-
 ENV PATH $PATH:$LIBDIR/openmpi/bin:$LIBDIR/MultiNest/bin
 ENV CPATH $CPATH:$LIBDIR/cfitsio/include:$LIBDIR/CCfits/include:$LIBDIR/gmp/include:$LIBDIR/mpfr/include:$LIBDIR/boost/include:$LIBDIR/CGAL/include:$LIBDIR/jsoncpp/include:$LIBDIR/gsl/include:$LIBDIR/eigen/include/eigen3:$LIBDIR/openmpi/include:$LIBDIR/multinest/include
 ENV LIBRARY_PATH $LIBRARY_PATH:$LIBDIR/cfitsio/lib:$LIBDIR/CCfits/lib:$LIBDIR/gmp/lib:$LIBDIR/mpfr/lib:$LIBDIR/boost/lib:$LIBDIR/CGAL/lib:$LIBDIR/jsoncpp/lib:$LIBDIR/gsl/lib:$LIBDIR/openmpi/lib:$LIBDIR/multinest/lib
@@ -136,6 +133,9 @@ ENV LD_LIBRARY_PATH $LD_LIBRARY_PATH:$LIBDIR/cfitsio/lib:$LIBDIR/CCfits/lib:$LIB
 
 
 
+
+### Uncomment the line below to use cache up to here and update the libraries and code with their latest versions
+ARG DUMMY_DATE=2011-11-04
 
 
 # Install 'gerlumphpp' and 'vkl_lib' libraries
