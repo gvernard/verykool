@@ -135,7 +135,7 @@ ENV LD_LIBRARY_PATH $LD_LIBRARY_PATH:$LIBDIR/cfitsio/lib:$LIBDIR/CCfits/lib:$LIB
 
 
 ### Uncomment the line below to use cache up to here and update the libraries and code with their latest versions
-ARG DUMMY_DATE=2011-11-04
+#ARG DUMMY_DATE=2011-11-04
 
 
 # Install 'gerlumphpp' and 'vkl_lib' libraries
