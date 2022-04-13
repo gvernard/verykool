@@ -32,7 +32,7 @@ wei  = ola[:,0]
 mypost = ola[:,1]
 
 
-ena = MCSamples(samples=pars,names=names,labels=labels,settings={"ignore_rows": 0.0,"smooth_scale_2D":0.3,"mult_bias_correction_order":1})
+ena = MCSamples(samples=pars,names=names,labels=labels,settings={"ignore_rows": 0.0,"fine_bins_1D":800,"smooth_scale_1D":0.5,"mult_bias_correction_order":5})
 
 min_non_zero = np.min(mypost[np.nonzero(mypost)])
 mypost = np.where(mypost<min_non_zero,min_non_zero,mypost)
@@ -46,16 +46,20 @@ for p in names:
     #print('-----',orig)
     mypar = mystats.parWithName(p)
 
-    mean     = mypar.mean
-    s1_lower = mypar.limits[0].lower
-    s1_upper = mypar.limits[0].upper
+    if p in ["lambda","lambda_s","lambda_dpsi","sdev","sdev_s","sdev_dpsi"]:
+        mean     = mypar.mean
+        s1_lower = mypar.mean - mypar.err
+        s1_upper = mypar.mean + mypar.err
+        # mean     = np.power(10.0,mypar.mean)
+        # s1_lower = np.power(10.0,mypar.limits[0].lower)
+        # s1_upper = np.power(10.0,mypar.limits[0].upper)
+    else:
+        mean     = mypar.mean
+        s1_lower = mypar.limits[0].lower
+        s1_upper = mypar.limits[0].upper
 
-    # if p in ["lambda","lambda_s","lambda_dpsi","sdev","sdev_s","sdev_dpsi"]:
-    #     mean     = np.power(10.0,mypar.mean)
-    #     s1_lower = np.power(10.0,mypar.limits[0].lower)
-    #     s1_upper = np.power(10.0,mypar.limits[0].upper)
-    
-    print(p,mean,s1_upper,s1_lower)
+        
+    print(p,mypar.limits[0].limitType(),mean,s1_upper,s1_lower)
     myjson["collapsed_active"][p]["mean"] = mean
     myjson["collapsed_active"][p]["s1_low"] = s1_lower
     myjson["collapsed_active"][p]["s1_high"] = s1_upper
