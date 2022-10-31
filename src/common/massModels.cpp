@@ -42,9 +42,14 @@ void Sie::defl(double xin,double yin,double& xout,double& yout){
   double x0 = this->mpars["x0"];
   double y0 = this->mpars["y0"];
 
+  double cospa = cos(pa);
+  double sinpa = sin(pa);
+  double dx = (xin-x0);
+  double dy = (yin-y0);
+  
   //rotate the coordinate system according to position angle and translate to the lens center
-  double x_t =  (xin-x0)*cos(pa) + (yin-y0)*sin(pa);
-  double y_t = -(xin-x0)*sin(pa) + (yin-y0)*cos(pa);
+  double x_t =  dx*cospa + dy*sinpa;
+  double y_t = -dx*sinpa + dy*cospa;
 
   if( fabs(x_t) < 0.0001 && fabs(y_t) < 0.0001 ){
     if( std::signbit(x_t) ){
@@ -65,13 +70,10 @@ void Sie::defl(double xin,double yin,double& xout,double& yout){
 
   double ax_t = (b/sqrt(fac))*atan(x_t*fac2);
   double ay_t = (b/sqrt(fac))*atanh(y_t*fac2);
-  
+
   //rotate back according to position angle, no need to translate (this is equivalent to rotating by -pa using the same equations as above)
-  double ax =  ax_t*cos(pa) - ay_t*sin(pa);
-  double ay =  ax_t*sin(pa) + ay_t*cos(pa);
-  
-  xout = ax;
-  yout = ay;
+  xout =  ax_t*cospa - ay_t*sinpa;
+  yout =  ax_t*sinpa + ay_t*cospa;
 }
 
 double Sie::psi(double xin,double yin){
@@ -89,17 +91,22 @@ Spemd::Spemd(std::vector<Nlpar*> nlpars){
 
 void Spemd::defl(double xin,double yin,double& xout,double& yout){
   double q  = this->mpars["q"];
-  double e  = this->mpars["e"];
-  double b  = pow(this->mpars["b"],2.0*e)*(2.0-2.0*e)/(q*2.0);
+  double e  = (this->mpars["gam"]-1.0)/2.0;
+  double b  = pow(this->mpars["b"]/q,2*e)*(1.0-e);
   double pa = this->mpars["pa"] * 0.01745329251;//in rad
   double x0 = this->mpars["x0"];
   double y0 = this->mpars["y0"];
   double s2 = this->mpars["s"] * this->mpars["s"];
   double defl[2] = {0.0,0.0};
 
+  double cospa = cos(pa);
+  double sinpa = sin(pa);
+  double dx = (xin-x0);
+  double dy = (yin-y0);
+  
   //rotate according to position angle and translate to the lens center
-  double x_t =  (xin-x0)*cos(pa) + (yin-y0)*sin(pa);
-  double y_t = -(xin-x0)*sin(pa) + (yin-y0)*cos(pa);
+  double x_t =  dx*cospa + dy*sinpa;
+  double y_t = -dx*sinpa + dy*cospa;
 
   fastelldefl_(&x_t,&y_t,&b,&e,&q,&s2,defl);
 
@@ -107,11 +114,8 @@ void Spemd::defl(double xin,double yin,double& xout,double& yout){
   double ay_t = defl[1];
 
   //rotate back according to position angle, no need to translate
-  double ax =  ax_t*cos(pa) - ay_t*sin(pa);
-  double ay =  ax_t*sin(pa) + ay_t*cos(pa);
-  
-  xout = ax;
-  yout = ay;
+  xout =  ax_t*cospa - ay_t*sinpa;
+  yout =  ax_t*sinpa + ay_t*cospa;
 }
 
 //Derived class from BaseMassModel: Pert (perturbations on a grid)

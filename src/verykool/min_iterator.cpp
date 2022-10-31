@@ -4,6 +4,7 @@
 
 #include <iostream>
 #include <string>
+#include <json/json.h>
 
 void Iterator::minimize(std::map<std::string,std::string> opt,BaseLikelihoodModel* like_model,const std::string output){
   int maxiter = std::stoi(opt["maxiter"]);

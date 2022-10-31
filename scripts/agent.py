@@ -98,7 +98,11 @@ def main():
     if mode == "original":
         msg = "Executing original code, good luck:"
         if mpi_flag:
-            cmd = "mpirun -np " + str(options["nproc"]) + " " + vkl_dir + "bin/verykool " + path + " " + run
+            host = socket.gethostname()
+            if host == "gamatos2020":
+                cmd = "mpirun --use-hwthread-cpus -np " + str(options["nproc"]) + " " + vkl_dir + "bin/verykool " + path + " " + run
+            else:
+                cmd = "mpirun -np " + str(options["nproc"]) + " " + vkl_dir + "bin/verykool " + path + " " + run
         else:
             cmd = vkl_dir + "bin/verykool_test " + path + " " + run
             #cmd = "valgrind --track-origins=yes " + vkl_dir + "bin/verykool_test " + path + " " + run
