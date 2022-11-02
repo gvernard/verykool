@@ -27,7 +27,6 @@ create_mock_lenses/createPerturbations/kappa
 plt_corner.paramnames
 plt_corner.ranges
 plt_corner.txt
-configure_command.txt
 
 libtool
 aux-dist
