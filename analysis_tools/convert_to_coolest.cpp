@@ -20,8 +20,19 @@
 int main(int argc,char* argv[]){
   std::string case_path = argv[1];
   std::string run_name = argv[2];
-  std::string step = argv[3];
-  std::string fixed_file = argv[4];
+  
+  std::string step;
+  std::string fixed_file;
+
+  if( argc == 4 ){
+    // No time step given, use final output files
+    step = "";
+    fixed_file = argv[3];
+  } else {
+    step = argv[3];
+    step = step + "_";
+    fixed_file = argv[4];
+  }
 
   // setting some nuissance variables
   Json::Value::Members jmembers;
@@ -51,7 +62,7 @@ int main(int argc,char* argv[]){
 
   // Read VKL output parameter file
   Json::Value output_json;
-  fin.open((runname+"output/"+step+"_"+lname+"_output.json").c_str(),std::ifstream::in);
+  fin.open((runname+"output/"+step+lname+"_output.json").c_str(),std::ifstream::in);
   fin >> output_json;
   fin.close();
 
@@ -101,28 +112,28 @@ int main(int argc,char* argv[]){
   nlpars_physical = Nlpar::nlparsFromJsonVector(input_json["physical"]["nlpars"]);
   for(int i=0;i<nlpars_physical.size();i++){
     Json::Value point_estimate;
-
     if( nlpars_physical[i]->fix == 0 ){
       // get value from output
       point_estimate["value"] = output_json["collapsed_active"][nlpars_physical[i]->nam]["map"];
     } else {
       // use fixed input value
       point_estimate["value"] = nlpars_physical[i]->val;
-    }
-    
+    }    
     Json::Value param;
     param["point_estimate"] = point_estimate;
     param["posterior_stats"] = posterior_stats;
     param["prior"] = prior;
-
     mass_model_1["parameters"][names_lookup[nlpars_physical[i]->nam]] = param;
   }
+
+  // Convert position angle from cartesian to East-of-North  
+  mass_model_1["parameters"]["phi_ext"]["point_estimate"]["value"] = mass_model_1["parameters"]["phi_ext"]["point_estimate"]["value"].asDouble() - 90;
   
   gamma["mass_model"].append( mass_model_1 );
   lensing_entities.append( gamma );
 
 
-    // Loop over lenses and add them to the list of lensing entities
+  // Loop over lenses and add them to the list of lensing entities
   jmembers = input_json["lenses"].getMemberNames();
   for(int m=0;m<jmembers.size();m++){
     std::vector<Nlpar*> nlpars_lens;
@@ -136,10 +147,15 @@ int main(int argc,char* argv[]){
     lens["light_model"] = Json::Value(Json::arrayValue);
 
 
-    if( input_json["lenses"][jmembers[m]]["subtype"].asString() == "spemd" ){
-      mass_model_1["type"] = "SPEMD";
+    if( input_json["lenses"][jmembers[m]]["subtype"].asString() == "spemd" || input_json["lenses"][jmembers[m]]["subtype"].asString() == "pemd"){      
+      if( input_json["lenses"][jmembers[m]]["subtype"].asString() == "spemd" ){
+	mass_model_1["type"] = "SPEMD";
+	names_lookup = {{"x0","center_x"},{"y0","center_y"},{"gam","gamma"},{"pa","phi"},{"q","q"},{"b","theta_E"},{"s","r_core"}};
+      } else {
+	mass_model_1["type"] = "PEMD";
+	names_lookup = {{"x0","center_x"},{"y0","center_y"},{"gam","gamma"},{"pa","phi"},{"q","q"},{"b","theta_E"}};
+      }
       mass_model_1["parameters"] = Json::Value();
-      names_lookup = {{"x0","center_x"},{"y0","center_y"},{"gam","gamma"},{"pa","phi"},{"q","q"},{"b","theta_E"},{"s","r_core"}};
 
       for(int i=0;i<nlpars_lens.size();i++){
 	Json::Value point_estimate;
@@ -154,15 +170,14 @@ int main(int argc,char* argv[]){
 	param["point_estimate"] = point_estimate;
 	param["posterior_stats"] = posterior_stats;
 	param["prior"] = prior;
-
 	mass_model_1["parameters"][names_lookup[nlpars_lens[i]->nam]] = param;
       }
 
-      // NO conversion needed between the VKL and COOLEST parameters for the SPEMD profile.
-      // This is especially true for the strength of the deflections, i.e. b_VKL.
+      // No conversion needed for the strength of the deflections, i.e. b_VKL.
+      // Convert position angle from cartesian to East-of-North
+      mass_model_1["parameters"]["phi"]["point_estimate"]["value"] = mass_model_1["parameters"]["phi"]["point_estimate"]["value"].asDouble() - 90;
       
       lens["mass_model"].append( mass_model_1 );
-
     } else if( input_json["lenses"][jmembers[m]]["subtype"].asString() == "sie" ){
       mass_model_1["type"] = "SIE";
       mass_model_1["parameters"] = Json::Value();
@@ -180,19 +195,20 @@ int main(int argc,char* argv[]){
 	Json::Value param;
 	param["point_estimate"] = point_estimate;
 	param["posterior_stats"] = posterior_stats;
-	param["prior"] = prior;
-	
+	param["prior"] = prior;	
 	mass_model_1["parameters"][names_lookup[nlpars_lens[i]->nam]] = param;
-      }
-      
+      }      
 
       // Convert Einstein radius from VKL to COOLEST
       double vkl_b = mass_model_1["parameters"]["theta_E"]["point_estimate"]["value"].asDouble(); // It is still 'b'!
       double vkl_q = mass_model_1["parameters"]["q"]["point_estimate"]["value"].asDouble();
       mass_model_1["parameters"]["theta_E"]["point_estimate"]["value"] = vkl_b/sqrt(vkl_q);
-      
+      // Convert position angle from cartesian to East-of-North
+      mass_model_1["parameters"]["phi"]["point_estimate"]["value"] = mass_model_1["parameters"]["phi"]["point_estimate"]["value"].asDouble() - 90;
+
+      lens["mass_model"].append( mass_model_1 );
     } else {
-      std::cout << "Unknown mass model! Must be: 'spemd', 'sie'" << std::endl;
+      std::cout << "Unknown mass model! Must be: 'spemd', 'pemd', or 'sie'" << std::endl;
       return 0;
     }
     
@@ -203,7 +219,7 @@ int main(int argc,char* argv[]){
   // Add the source as a separate lensing entity
   
   // First create the .fits table for the irregular grid
-  FILE* fh = fopen((runname+"output/"+step+"_"+lname+"_source_irregular.dat").c_str(),"r");
+  FILE* fh = fopen((runname+"output/"+step+lname+"_source_irregular.dat").c_str(),"r");
   std::vector<float> src_x;
   std::vector<float> src_y;
   std::vector<float> src_z;
