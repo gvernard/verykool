@@ -425,6 +425,15 @@ void SmoothLikelihood::updateLikelihoodModel(){
   // Deflect the rays in the updated mass model
   this->collection->all_defl(this->image);
 
+  /*
+  int indices[4] = {0,this->image->Nj-1,this->image->Nm-this->image->Nj,this->image->Nm-1};
+  for(int k=0;k<4;k++){
+    int index = indices[k];
+    printf("%10.4f %10.4f - %10.4f %10.4f\n",this->image->x[index],this->image->y[index],this->image->defl_x[index],this->image->defl_y[index]);
+  }
+  this->collection->models[0]->printMassPars();
+  */
+
   // Set the adaptive source in the updated mass model
   if( this->source->type == "adaptive" ){
     AdaptiveSource* ada = dynamic_cast<AdaptiveSource*>(this->source);
@@ -446,12 +455,17 @@ void SmoothLikelihood::updateLikelihoodModel(){
   if( lambda_s->fix == 0 ){
     this->terms["Nslogl_s"] = source->Sm*log(lambda_s->val)/2.0;
   }
-
+  
   // Update all the needed algebraic tables, e.g. M, Mt, Mt*Cd*M + l*Cs, Cs and detCs (if needed)
   this->algebra->setAlgebraRuntime(this->image,this->source,lambda_s->val);
 
   // Solve for the source, calculate the chi2, reg, and detA terms
   this->algebra->solveSource(this->source,lambda_s->val);
+
+  this->terms["Nslogl_s"] = 0.0;
+  this->terms["detCs"] = 0.0;
+  this->terms["detA"] = 0.0;
+  this->terms["reg"] = 0.0;
 }
 
 //virtual
@@ -494,6 +508,24 @@ void SmoothLikelihood::outputLikelihoodModel(std::string output){
   delete(matrix_s);
   */
 
+
+  /*
+  // Write the deflection angles
+  ImagePlane* defl_x = new ImagePlane(this->image->Ni,this->image->Nj,this->image->width,this->image->height);
+  ImagePlane* defl_y = new ImagePlane(this->image->Ni,this->image->Nj,this->image->width,this->image->height);
+  for(int i=0;i<this->image->Ni;i++){
+    for(int j=0;j<this->image->Nj;j++){
+      defl_x->img[i*defl_x->Nj+j] = this->image->defl_x[i*this->image->Nj+j];
+      defl_y->img[i*defl_x->Nj+j] = this->image->defl_y[i*this->image->Nj+j];
+    }
+  }
+  defl_x->writeImage(output+"defl_x.fits");
+  delete(defl_x);
+  defl_y->writeImage(output+"defl_y.fits");
+  delete(defl_y);
+  */
+
+  
   // Create mock data (lensed MAP source)
   this->getModel();
   this->model->writeImage(output + "smooth_model.fits");

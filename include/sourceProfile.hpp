@@ -143,7 +143,7 @@ private:
 
 class fromFITS: public BaseProfile {
 public:
-  fromFITS(std::string filename,int Ni,int Nj,double height,double width,double x0,double y0);
+  fromFITS(std::string filename,int Ni,int Nj,double height,double width,double x0,double y0,double scale);
   ~fromFITS(){
     delete(mySource);
   }
@@ -159,7 +159,7 @@ private:
   double y0;
   ImagePlane* mySource;
 
-  void scaleProfile();
+  void scaleProfile(double scale);
 };
 
 

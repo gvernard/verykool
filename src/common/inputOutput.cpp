@@ -282,7 +282,7 @@ void Initialization::parseInputJSON(std::string path,std::string run){
       double width         = jsource0["width"].asDouble();
       double x0            = jsource0["x0"].asDouble();
       double y0            = jsource0["y0"].asDouble();
-      this->prof_source0 = new fromFITS(filename,Ni,Nj,height,width,x0,y0);
+      this->prof_source0 = new fromFITS(filename,Ni,Nj,height,width,x0,y0,0.0);
       
     }
   }

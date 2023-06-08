@@ -82,6 +82,8 @@ def main():
     if options["nproc"] > 1:
         mpi_flag = True
             
+    parameter_model = options["parameter_model"]
+
         
         
     # Directory and file check based on the input options
@@ -117,7 +119,8 @@ def main():
         cmd = "bash " + path + run + "auto_run_cosmosis.sh"
 
         
-        
+
+    
         
     print(msg)
     print(cmd)
@@ -126,8 +129,29 @@ def main():
 
 
 
+    # Convert to the COOLEST standard
+    ##############################################################################################
+    if os.path.isfile(path+run+"coolest_fixed_input.json"):
+        print("Converting output to COOLEST...",end="")
+        subprocess.call([vkl_dir+"analysis_tools/convert_to_coolest",path,run,path+run+"coolest_fixed_input.json"])
+        print("done")
 
 
+
+
+
+    # Plot results
+    ##############################################################################################
+    if parameter_model == "standard":
+        print("Plotting output...",end="")
+        subprocess.call(["python",vkl_dir+"analysis_tools/plot_all_smooth.py",path,run])
+        print("done")
+
+
+
+
+
+    
 
 
 

@@ -2,6 +2,7 @@
 
 #include "imagePlane.hpp"
 #include "sourcePlane.hpp"
+#include "sourceProfile.hpp"
 #include "massModels.hpp"
 #include "likelihoodModels.hpp"
 
@@ -248,6 +249,40 @@ void SmoothAlgebra::solveSource(BaseSourcePlane* source,double lambda){
   Eigen::Map<Eigen::VectorXd>(source->src,s.size()) = s;
   A_inv.resize(0,0);
 
+
+
+  /*
+  // Read in any source
+  std::string fname = "/home/giorgos/myData/tmp_vkl_test/test_delta_psf/molet_sim_delta/output/delta-x_source_super.fits";
+  int Ni = 300;
+  int Nj = 300;
+  double h = 4.0;
+  double w = 4.0;
+  fromFITS read_source(fname,Ni,Nj,h,w,0,0,1000);
+
+  // Create an analytic source
+  std::map<std::string,double> par_map;
+  par_map.insert(std::pair<std::string,double>("x0",-0.05));
+  par_map.insert(std::pair<std::string,double>("y0",0.05));
+  par_map.insert(std::pair<std::string,double>("pa",10));
+  par_map.insert(std::pair<std::string,double>("q",0.64));
+  par_map.insert(std::pair<std::string,double>("i_eff",0.3));
+  par_map.insert(std::pair<std::string,double>("r_eff",0.2));
+  par_map.insert(std::pair<std::string,double>("n",1));
+  Sersic anal_source(par_map);
+  
+  // Assign adaptive source values from the read-in source
+  for(int j=0;j<source->Sm;j++){
+    double xx = source->x[j];
+    double yy = source->y[j];
+    //source->src[j] = read_source.value(xx,yy);
+    source->src[j] = anal_source.function_value(xx,yy);
+  }
+  */
+  
+
+
+  
   /*
   // Read in a matching source
   FILE* fh2 = fopen("/net/argo/data/users/gvernard/RESULTS/VKL_MODELS/test_modelling_perturbations/test_6_nopert/base_run/output/vkl_source_irregular.dat","r");

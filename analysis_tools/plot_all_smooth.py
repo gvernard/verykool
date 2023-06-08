@@ -18,7 +18,6 @@ from astropy.io import fits
 
 
 import matplotlib.colors as colors
-from matplotlib.mlab import bivariate_normal
 
 class MidpointNormalize(colors.Normalize):
     def __init__(self, vmin=None, vmax=None, midpoint=None, clip=False):
@@ -37,9 +36,11 @@ run  = sys.argv[2]
 if len(sys.argv) > 3:
     step = sys.argv[3]
     out_path  = path+run+'output/'+str(step)+'_'
+    out_img_path = ''
 else:
     step = ''
-    out_path  = path+run+'output/'
+    out_path = path+run+'output/'
+    out_img_path = path+run+'output/'
 
 mycmap_div    = 'Spectral'
 mycmap_seq    = 'YlGnBu'
@@ -53,7 +54,7 @@ if os.path.isfile(data_path+'source.fits'):
     srcrange  = max(srcwidth,srcheight)/2.0
     hdulist.close()
 else:
-    srcrange = 0.5
+    srcrange = 1.0
 
 #srcrange = 2.5
 
@@ -97,7 +98,7 @@ srcyticks = np.append(srcyticks,srcrange)
 #########################################################################################################################
 
 # Read data
-im_data  = fits.getdata(data_path+'image.fits',ext=0)
+im_data  = fits.getdata(data_path+'data.fits',ext=0)
 im_data  = im_data[::-1,:]
 # Read model
 im_model = fits.getdata(out_path+'smooth_model.fits',ext=0)
@@ -165,6 +166,9 @@ im_res = im_res[::-1,:]
 if pars["maskpath"] != "0":
     im_res = im_res*np.flipud(np.array(mask))
 
+#noise_map = np.flipud(fits.getdata(data_path+'noise_map.fits',ext=0))
+#im_res = np.divide(im_res,noise_map)
+    
 #tmp = np.flipud(im_res)
 #hdu = fits.PrimaryHDU(tmp)
 #hdu.writeto('new.fits',clobber=True)
@@ -175,6 +179,7 @@ limit = max([abs(np.amax(im_res)),abs(np.amin(im_res))])
 # Plot residuals
 res = fig.add_subplot(233)
 res.set_title('RESIDUAL')
+#res.set_title('norm RESIDUAL')
 res.set_xlabel('arcsec')
 res.set_ylabel('arcsec')
 im = res.imshow(im_res,interpolation='none',cmap=mycmap_div,extent=[xmin,xmax,ymin,ymax],vmin=-limit,vmax=limit)
@@ -325,6 +330,6 @@ plt.colorbar(col,cax=cax,format="%6.4f")
 
 
 plt.tight_layout()
-plt.savefig('all.pdf',bbox_inches='tight')
-plt.savefig('all.png',bbox_inches='tight')
+#plt.savefig('all.pdf',bbox_inches='tight')
+plt.savefig(out_img_path+"all.png",bbox_inches='tight')
 #plt.show()
