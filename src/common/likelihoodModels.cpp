@@ -490,12 +490,14 @@ void SmoothLikelihood::outputLikelihoodModel(std::string output){
   // Output reconstructed source
   this->source->outputSource(output + "smooth_");
 
+  
   // Output errors of reconstructed source
   double* errors = (double*) calloc(this->source->Sm,sizeof(double));
   this->algebra->getSourceErrors(this->source->Sm,errors);
   this->source->outputSourceErrors(errors,output + "smooth_");
   free(errors);
-
+    
+  
   /*  
   // Write the regularization matrix of the source as an image
   ImagePlane* matrix_s = new ImagePlane(this->source->Sm,this->source->Sm,1.0,1.0);

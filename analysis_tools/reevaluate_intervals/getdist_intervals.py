@@ -32,15 +32,17 @@ wei  = ola[:,0]
 mypost = ola[:,1]
 
 
-ena = MCSamples(samples=pars,names=names,labels=labels,settings={"ignore_rows": 0.0,"fine_bins_1D":800,"smooth_scale_1D":0.5,"mult_bias_correction_order":5})
+#ena = MCSamples(samples=pars,names=names,labels=labels,settings={"ignore_rows": 0.0,"fine_bins_1D":800,"smooth_scale_1D":0.5,"mult_bias_correction_order":1})
+ena = MCSamples(samples=pars,names=names,labels=labels,settings={"ignore_rows": 0.0,"smooth_scale_1D":0.5,"mult_bias_correction_order":1})
 
 min_non_zero = np.min(mypost[np.nonzero(mypost)])
 mypost = np.where(mypost<min_non_zero,min_non_zero,mypost)
-ena.reweightAddingLogLikes(-np.log(mypost))
+ena.reweightAddingLogLikes(mypost)
 
 
 #print(ena.getTable(limit=1).tableTex())
 mystats = ena.getMargeStats()
+print(mystats)
 for p in names:
     #orig = ena.getInlineLatex(p,limit=1)
     #print('-----',orig)
@@ -59,7 +61,7 @@ for p in names:
         s1_upper = mypar.limits[0].upper
 
         
-    print(p,mypar.limits[0].limitType(),mean,s1_upper,s1_lower)
+    #print(p,mypar.limits[0].limitType(),mean,s1_upper,s1_lower)
     myjson["collapsed_active"][p]["mean"] = mean
     myjson["collapsed_active"][p]["s1_low"] = s1_lower
     myjson["collapsed_active"][p]["s1_high"] = s1_upper

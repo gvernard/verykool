@@ -173,7 +173,10 @@ int main(int argc,char* argv[]){
 	mass_model_1["parameters"][names_lookup[nlpars_lens[i]->nam]] = param;
       }
 
-      // No conversion needed for the strength of the deflections, i.e. b_VKL.
+      // Convert Einstein radius from VKL to COOLEST
+      double vkl_b = mass_model_1["parameters"]["theta_E"]["point_estimate"]["value"].asDouble(); // It is still 'b'!
+      double vkl_q = mass_model_1["parameters"]["q"]["point_estimate"]["value"].asDouble();
+      mass_model_1["parameters"]["theta_E"]["point_estimate"]["value"] = vkl_b/sqrt(vkl_q);
       // Convert position angle from cartesian to East-of-North
       mass_model_1["parameters"]["phi"]["point_estimate"]["value"] = mass_model_1["parameters"]["phi"]["point_estimate"]["value"].asDouble() - 90;
       

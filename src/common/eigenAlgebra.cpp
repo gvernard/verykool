@@ -10,83 +10,6 @@
 #include <cmath>
 
 
-// Class: BaseAlgebra
-//===============================================================================================================
-void BaseAlgebra::setAlgebraField(BaseSourcePlane* source,Eigen::SparseMatrix<double> mat_in,Eigen::SparseMatrix<double>& mat_out,double& det_out){
-  Eigen::SparseMatrix<double> out(source->Sm,source->Sm);
-
-  if( source->reg == "covariance_kernel" || source->reg == "identity" ){
-    this->getInverseAndDet(mat_in,out,det_out);
-  } else {
-    // calculate the product HtH of a derivative based H matrix
-    Eigen::SparseMatrix<double> mat_in_t(mat_in.rows(),mat_in.cols());
-    mat_in_t = mat_in.transpose();
-    out = (mat_in_t * mat_in);    
-    mat_in_t.resize(0,0);
-    det_out = -this->getDeterminant(out); // the minus sign is because Cs is actually (HtH)^-1
-  }
-  
-  mat_out = out;
-  out.resize(0,0);
-}
-
-void BaseAlgebra::getInverseAndDet(Eigen::SparseMatrix<double> mat_in,Eigen::SparseMatrix<double>& mat_out,double& det_out){
-  Eigen::Matrix<double,Eigen::Dynamic,Eigen::Dynamic> inv(mat_in.rows(),mat_in.cols());
-  Eigen::SimplicialLDLT<Eigen::SparseMatrix<double> > solver;
-  Eigen::VectorXd idc(mat_in.cols()),c(mat_in.cols());
-  double det = 0.0;
-
-  // get inverse
-  solver.compute(mat_in);
-  for(int i=0;i<mat_in.rows();i++){
-    for(int j=0;j<idc.size();j++){
-      idc[j] = 0;
-    }
-    idc[i] = 1;
-    //this needs to be done in two steps, otherwise it does not work when using LU
-    c = solver.solve(idc);
-    inv.col(i) = c;
-  }
-
-  // get determinant of mat_in (NOT its inverse)
-  Eigen::VectorXd diag = solver.vectorD();
-  diag = solver.vectorD();
-  for(int i=0;i<diag.size();i++){
-    det += log( *(diag.data()+i) );
-    //    dum = *(diag.data()+i);
-    //    if( dum > 1.e-20 ){
-    //      det += log( dum );
-    //    }
-  }
-
-  det_out = det;
-  mat_out = inv.sparseView();
-  inv.resize(0,0);
-}
-
-double BaseAlgebra::getDeterminant(Eigen::SparseMatrix<double> mat){
-  Eigen::SimplicialLDLT< Eigen::SparseMatrix<double> > solver;
-  Eigen::VectorXd diag;
-  double dum;
-  
-  double det = 0.0;
-  solver.analyzePattern(mat);
-  solver.factorize(mat);
-  diag = solver.vectorD();
-  for(int i=0;i<diag.size();i++){
-    //    std::cout << " " << *(diag.data()+i);
-    det += log( *(diag.data()+i) );
-    //    dum = *(diag.data()+i);
-    //    if( dum > 1.e-20 ){
-    //      det += log( dum );
-    //    }
-  }
-  //  std::cout << std::endl << std::endl;
-
-  return det;
-}
-
-
 // Class: SmoothAlgebra
 //===============================================================================================================
 SmoothAlgebra::SmoothAlgebra(BaseLikelihoodModel* a){
@@ -234,12 +157,14 @@ void SmoothAlgebra::setAlgebraRuntime(ImagePlane* image,BaseSourcePlane* source,
 }
 
 
+
 // Solve for the source and calculate likelihood terms at every iteration
 void SmoothAlgebra::solveSource(BaseSourcePlane* source,double lambda){
   // Get the inverse and the det of A
   Eigen::SparseMatrix<double> A_inv(source->Sm,source->Sm);
   double detA = 0.0;
   this->getInverseAndDet(this->A,A_inv,detA);
+  
   this->likeModel->terms["detA"] = -detA/2.0;
 
   //Get the Most Probable solution for the source

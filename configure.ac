@@ -7,7 +7,7 @@ AC_PREFIX_DEFAULT($PWD)
 
 AC_SUBST(VKL_HOME,$PWD)
 
-CXX=mpic++
+CXX=/home/giorgos/myLibraries/openmpi/bin/mpic++
 
 AC_PROG_CXX
 AC_PROG_F77
@@ -129,12 +129,31 @@ AC_ARG_WITH([multinest],
     [
 	ac_new_CPPFLAGS+=" -I${withval}/include"
 	ac_new_LDFLAGS+=" -L${withval}/lib -Wl,-rpath -Wl,${withval}/lib"
-	ac_new_LIBS+=" -lmultinest"
+	ac_new_LIBS+=" -lmultinest_mpi"
     ],
     [
 	AC_CHECK_LIB(multinest,main,[],[AC_MSG_ERROR("you need to have the multinest library installed.")])
 	AC_CHECK_HEADERS(multinest.h,[],[AC_MSG_ERROR("you need to have the multinest header files installed.")])
     ])
+
+
+
+
+AC_ARG_WITH([cuda],
+   [  --with-cuda=PATH    prefix where cuda is installed [default=/usr/local/cuda]])
+
+if test -n "$with_cuda"
+then
+   CUDA_CFLAGS="-I$with_cuda/include"
+   CUDA_LIBS="-lcudart -lcusparse -lcusolver"
+   CUDA_LDFLAGS="-L$with_cuda/lib64"
+   NVCC="$with_cuda/bin/nvcc"
+else
+   CUDA_CFLAGS="-I/usr/local/cuda/include"
+   CUDA_LIBS="-lcudart -lcusparse -lcusolver"
+   CUDA_LDFLAGS="-L/usr/local/cuda/lib64"
+   NVCC="nvcc"
+fi
 
 dnl echo $ac_new_CPPFLAGS
 dnl echo $ac_new_LDFLAGS
@@ -151,6 +170,18 @@ dnl echo $LIBS
 AC_SUBST([CPPFLAGS])
 AC_SUBST([LDFLAGS])
 AC_SUBST([LIBS])
+
+
+#CUDA_CFLAGS="-std=c++17 --tag=CXX --compiler-options '-fPIC' -Wno-deprecated-gpu-targets"
+#CUDA_LIBS="-lcudart -lcusparse -lcusolver"
+#NVCC="nvcc"
+
+AC_SUBST(CUDA_CFLAGS)
+AC_SUBST(CUDA_LIBS)
+AC_SUBST(CUDA_LDFLAGS)
+AC_SUBST(NVCC)
+
+
 
 
 AC_CONFIG_FILES([Makefile])

@@ -89,7 +89,7 @@ def main():
     # Directory and file check based on the input options
     ##############################################################################################
     if mode == "cosmosis":
-        create_pipeline(path,run,options,vkl_dir)
+        cosmosis_create_pipeline(path,run,options,vkl_dir)
         subprocess.call([vkl_dir+"bin/createCosmosisValuesPriorsIni",path,run])
 
 
@@ -102,7 +102,8 @@ def main():
         if mpi_flag:
             host = socket.gethostname()
             if host == "gamatos2020":
-                cmd = "mpirun --use-hwthread-cpus -np " + str(options["nproc"]) + " " + vkl_dir + "bin/verykool " + path + " " + run
+                cmd = "/home/giorgos/myLibraries/openmpi/bin/mpirun --use-hwthread-cpus -np " + str(options["nproc"]) + " " + vkl_dir + "bin/verykool " + path + " " + run
+                #cmd = "/home/giorgos/myLibraries/openmpi/bin/mpirun -np " + str(options["nproc"]) + " " + vkl_dir + "bin/verykool " + path + " " + run
             else:
                 cmd = "mpirun -np " + str(options["nproc"]) + " " + vkl_dir + "bin/verykool " + path + " " + run
         else:
@@ -115,7 +116,7 @@ def main():
             exe_command = "mpirun -n " + str(options["nproc"]) + " cosmosis --mpi"
         else:
             exe_command = "cosmosis"
-        create_bash_script(path,run,options,cosmo_lib_dir,conda_env,vkl_dir,exe_command)
+        cosmosis_create_bash_script(path,run,options,cosmo_lib_dir,conda_env,vkl_dir,exe_command)
         cmd = "bash " + path + run + "auto_run_cosmosis.sh"
 
         
@@ -155,7 +156,7 @@ def main():
 
 
 
-def create_bash_script(path,run,options,cosmo_lib_dir,conda_env,vkl_dir,exe_command):
+def cosmosis_create_bash_script(path,run,options,cosmo_lib_dir,conda_env,vkl_dir,exe_command):
     f = open(path+run+"auto_run_cosmosis.sh","w")
     f.write("#!/bin/bash\n")
     f.write("# This is an automatically generated file!\n")
@@ -166,7 +167,7 @@ def create_bash_script(path,run,options,cosmo_lib_dir,conda_env,vkl_dir,exe_comm
     f.close()
 
 
-def create_pipeline(path,run,options,vkl_dir):
+def cosmosis_create_pipeline(path,run,options,vkl_dir):
     f = open(path+run+"cosmosis_pipeline.ini","w")
     f.write("[runtime]\n")
     f.write("sampler = " + options["minimizer"]["type"][9:] + "\n")

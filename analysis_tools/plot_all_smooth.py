@@ -166,8 +166,8 @@ im_res = im_res[::-1,:]
 if pars["maskpath"] != "0":
     im_res = im_res*np.flipud(np.array(mask))
 
-#noise_map = np.flipud(fits.getdata(data_path+'noise_map.fits',ext=0))
-#im_res = np.divide(im_res,noise_map)
+noise_map = np.flipud(fits.getdata(data_path+'noise_map.fits',ext=0))
+im_res = np.divide(im_res,noise_map)
     
 #tmp = np.flipud(im_res)
 #hdu = fits.PrimaryHDU(tmp)
@@ -178,8 +178,8 @@ limit = max([abs(np.amax(im_res)),abs(np.amin(im_res))])
 
 # Plot residuals
 res = fig.add_subplot(233)
-res.set_title('RESIDUAL')
-#res.set_title('norm RESIDUAL')
+#res.set_title('RESIDUAL')
+res.set_title('norm RESIDUAL')
 res.set_xlabel('arcsec')
 res.set_ylabel('arcsec')
 im = res.imshow(im_res,interpolation='none',cmap=mycmap_div,extent=[xmin,xmax,ymin,ymax],vmin=-limit,vmax=limit)
@@ -221,7 +221,7 @@ for c in content:
     for i in range(1,length,2):
         points.append([cell[i],cell[i+1]])
 
-    polygon = Polygon(points,True)
+    polygon = Polygon(points,closed=True)
     polygons.append(polygon)
 
     zvalues.append( cell[0] )
@@ -229,7 +229,9 @@ for c in content:
 
 
 # Set color scale
-limit = max([max_true,abs(max(zvalues)),abs(min(zvalues))])
+#limit = max([max_true,abs(max(zvalues)),abs(min(zvalues))])
+limit = 0.045
+
 
 
 # Plot real source if it exists
@@ -298,7 +300,7 @@ for c in content:
     for i in range(1,length,2):
         points.append([cell[i],cell[i+1]])
 
-    polygon = Polygon(points,True)
+    polygon = Polygon(points,closed=True)
     polygons.append(polygon)
 
     zvalues.append( cell[0] )

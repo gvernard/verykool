@@ -194,6 +194,7 @@ void MultiNestDumper(int& nSamples,int& nlive,int& nPar,double** physLive,double
   }
   fclose(fh);
 
+
   // Calculating the mean and the lower and upper 1-sigma bounds
   std::vector<double> prob(nSamples);
   for(int j=0;j<nSamples;j++){
@@ -211,6 +212,18 @@ void MultiNestDumper(int& nSamples,int& nlive,int& nPar,double** physLive,double
     e->pars->s1_high[i] = stats["high"];
   }
 
+
+  printf("%10s %10s %10s %10s %10s %10s\n","name","mean","low","high","maxlike","map");
+  for(int i=0;i<nPar;i++){
+    double mean    = e->pars->active[i]->pri->fromUnitCube( paramConstr[0][i] );
+    double low     = e->pars->active[i]->pri->fromUnitCube( paramConstr[0][i] - paramConstr[0][nPar+i] );
+    double high    = e->pars->active[i]->pri->fromUnitCube( paramConstr[0][i] + paramConstr[0][nPar+i] );
+    double maxlike = e->pars->active[i]->pri->fromUnitCube( paramConstr[0][2*nPar+i] );
+    double map     = e->pars->active[i]->pri->fromUnitCube( paramConstr[0][3*nPar+i] );
+    printf("%10s %10f %10f %10f %10f %10f\n",e->pars->active[i]->nam.c_str(),mean,low,high,maxlike,map);
+  }
+
+  
   e->minimizer->output(e->output);
 }
 
