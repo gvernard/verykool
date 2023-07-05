@@ -8,7 +8,14 @@ import glob
 
 case = sys.argv[1] # full path to the case
 
-
+if len(sys.argv) > 2:
+    mode = sys.argv[2] # mode (map,maxlike,mean)
+    if mode not in ["map","maxlike","mean"]:
+        print("Second command line argument must be one of: map, maxlike, mean")
+        sys.exit()
+else:
+    mode = "maxlike"
+print(mode)    
 
 j_input  = common_funcs.get_json(case+"vkl_input.json",True)
 
@@ -24,7 +31,7 @@ elif pmodel == 'standard':
 
 
 # Find timestep
-list_to_check = ['output.json']
+list_to_check = ['minimizer_output.json']
 existing = [os.path.basename(x) for x in glob.glob(case+'output/'+pmodel_name+'_*')]
 missing = []
 for myfile in list_to_check:
@@ -44,14 +51,8 @@ else:
     prefix = pmodel_name
 print(prefix)
 
-j_output = common_funcs.get_json(case+"output/"+prefix+"_output.json",True)
-active = j_output["json_active"]
-
-#keys = j_output['collapsed_active'].keys()
-#maps = {}
-#for key in keys:
-#    maps[key] = round(j_output['collapsed_active'][key]["map"],5)
-#print(maps)
+j_output = common_funcs.get_json(case+"output/"+prefix+"_minimizer_output.json",True)
+active = j_output["parameters"]
 
 
 ### Set minimizer to test and nproc to 1
@@ -63,54 +64,45 @@ j_input["minimizer"]["type"] = "test"
 ### Check and update individual groups of parameters
 
 # Lenses
-for key,lens in active["lenses"].items():
-    if len(lens) != 0:
-        lenses_input = j_input["lenses"][key]["nlpars"]
-        for obj in lens:
-            for in_obj in lenses_input:
-                if obj["nam"] == in_obj["nam"]:
-                    in_obj["val"] = obj["map"]
-                    break
-    
-# shear magnitude and angle
-if "physical" in active:
-    for obj in active["physical"]:
-        for in_obj in j_input["physical"]["nlpars"]:
-            if obj["nam"] == in_obj["nam"]:
-                in_obj["val"] = obj["map"]
-                break
+for key,lens in j_input["lenses"].items():
+    for obj in lens["nlpars"]:
+        full_name = key+"_"+obj["nam"]
+        if full_name in active:
+            obj["val"] = active[full_name][mode]
 
-# source regularization            
-if "reg_s" in active:
-    if pmodel == 'standard':
+# Shear magnitude and angle
+for obj in j_input["physical"]["nlpars"]:
+    full_name = obj["nam"]
+    if full_name in active:
+        obj["val"] = active[full_name][mode]
+
+# Source regularization
+if "reg_s" in j_input:
+    if pmodel in ['standard','smooth']:
         regs_input = j_input["reg_s"]["nlpars"]
     else:
         regs_input = j_input["perturbations"]["reg_s"]["nlpars"]
-    for obj in active["reg_s"]:
-        for in_obj in regs_input:
-            dum = obj["nam"].split('_')
-            name = dum[0]
-            if in_obj["nam"] == name:
-                in_obj["val"] = obj["map"]
-                break
+    for obj in regs_input:
+        full_name = obj["nam"]+"_s"
+        if full_name in active:
+            obj["val"] = active[full_name][mode]
 
-# perturbations regularization
-if "reg_dpsi" in active:
+# Perturbations regularization
+if "reg_dpsi" in j_input:
     regdpsi_input = j_input["perturbations"]["reg_dpsi"]["nlpars"]
-    for obj in active["reg_dpsi"]:
-        for in_obj in regdpsi_input:
-            dum = obj["nam"].split('_')
-            name = dum[0]
-            if in_obj["nam"] == name:
-                in_obj["val"] = obj["map"]
-                break
+    for obj in regdpsi_input:
+        full_name = obj["nam"]+"_dpsi"
+        if full_name in active:
+            obj["val"] = active[full_name][mode]
 
 
-# Create the new case dir at the same path as the input case
+
+
+### Create the new case dir at the same path as the input case
 dum = os.path.normpath(case).split('/')
 case_name = os.path.basename(dum[-1])
 case_path = '/'.join(dum[:-1])+'/'
-new_name = case_name+'_map'
+new_name = case_name+'_'+mode
 
 if not os.path.exists(case_path+new_name):
     os.makedirs(case_path+new_name)

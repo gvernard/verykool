@@ -42,14 +42,9 @@ libcpu_la_CPPFLAGS = -Iinclude
 
 
 
-
 libcommon_la_SOURCES= \
-	src/verykool/min_iterator.cpp \
-	src/verykool/min_multinest.cpp \
-	src/verykool/min_test.cpp \
 	src/common/covKernels.cpp \
 	src/common/imagePlane.cpp \
-	src/common/inputOutput.cpp \
 	src/common/likelihoodModels.cpp \
 	src/common/eigenAlgebra.cpp \
 	src/common/massModels.cpp \
@@ -60,6 +55,7 @@ libcommon_la_SOURCES= \
 libcommon_la_CXXFLAGS = -std=c++17 -fPIC -g -frounding-math
 libcommon_la_CPPFLAGS = -Iinclude
 libcommon_la_LIBADD = -lcpu -lcfitsio -lCCfits -ljsoncpp -lgsl -lgslcblas -lboost_system -lmpfr -lgmp -lCGAL -l:libgfortran.so.5
+
 
 
 
@@ -84,27 +80,38 @@ libcommon_la_LIBADD = -lcpu -lcfitsio -lCCfits -ljsoncpp -lgsl -lgslcblas -lboos
 
 
 
-
-
-
 bin_PROGRAMS = \
-	verykool_test \
-	verykool
+	verykool \
+	coolest_conversion
 
 
 verykool_SOURCES = \
+	src/verykool/inputOutput.cpp \
+	src/verykool/min_test.cpp \
+	src/verykool/min_multinest.cpp \
+	src/verykool/min_iterator.cpp \
 	src/verykool/verykool.cpp
 verykool_CXXFLAGS = -std=c++11 -fopenmp -g -frounding-math
 verykool_CPPFLAGS = -Iinclude
-verykool_LDADD = -lmultinest_mpi -lcommon 
+verykool_LDADD = -lmultinest_mpi -lcommon
 
 
-verykool_test_SOURCES = \
-	src/verykool/verykool_test.cpp
-verykool_test_CXXFLAGS = -std=c++11 -g -frounding-math
-verykool_test_CPPFLAGS = -Iinclude
-verykool_test_LDADD =  -lcommon
+coolest_conversion_SOURCES = \
+	analysis_tools/coolest_conversion.cpp
+coolest_conversion_CXXFLAGS = -std=c++17 -g -frounding-math
+coolest_conversion_CPPFLAGS = -Iinclude
+coolest_conversion_LDADD = -lcommon
+
+
+
+
+bin_SCRIPTS = \
+	scripts/vkl_driver \
+	scripts/vkl_analyzer
+CLEANFILES = $(bin_SCRIPTS)
+
+
 
 
 install-exec-hook:
-	rm $(bin_PROGRAMS) $(lib_LTLIBRARIES)
+	rm $(bin_PROGRAMS) $(bin_SCRIPTS) $(lib_LTLIBRARIES)

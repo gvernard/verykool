@@ -8,6 +8,7 @@ lib/
 *.gif
 *.pyc
 *.aux
+analysis_tools_old/
 analysis_tools/**/*.fits
 analysis_tools/two_point_correlation_dpsi/theo_matrix_correlation_dpsi
 analysis_tools/two_point_correlation/theo_matrix_correlation
@@ -16,7 +17,7 @@ analysis_tools/analyzed_cases/
 analysis_tools/generated_tex_files/*
 analysis_tools/movies/
 analysis_tools/create_gridded_source
-analysis_tools/convert_to_coolest
+analysis_tools/coolest_conversion
 analysis_tools/ps.dat
 documentation/index.html
 scripts/report.txt

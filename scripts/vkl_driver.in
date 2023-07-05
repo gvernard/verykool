@@ -1,0 +1,64 @@
+#!/bin/bash
+
+
+
+path=$1
+run=$2
+vkl_home=@VKL_HOME@"/"
+full_path=${path}/${run}/
+out_path=${path}/${run}/"output/"
+
+
+
+# Check length of path + run. MultiNest supports up to 100 characters for the full path.
+##############################################################################################
+if [ ${#out_path} -gt 80 ]
+then
+   echo "The full input path is too long, MultiNest uses files with a name of max. 100 characters."
+   echo "'"${out_path}"' -> "${#out_path}
+   exit
+fi
+
+
+
+# Check for input file and get input options
+##############################################################################################
+if [[ ! -f "${full_path}vkl_input.json" ]]
+then
+    echo "'vkl_input.json' file not found!"
+    exit
+fi
+injson=`cat ${full_path}vkl_input.json`
+minimizer=`echo ${injson} | @AM_JQ@ '.minimizer.type' | @SED@ -e 's/^"//' -e 's/"$//'`
+parameter_model=`echo ${injson} | @AM_JQ@ '.parameter_model' | @SED@ -e 's/^"//' -e 's/"$//'`
+nproc=`echo ${injson} | @AM_JQ@ '.nproc'`
+
+
+
+# Check/create output and analysis directories
+##############################################################################################
+if [ -d ${out_path} ]
+then
+    while true; do
+	read -p "output directory exists, cleanup? (y/n): " yn
+	case $yn in
+            [Yy]* ) rm -rf ${out_path} ${full_path}"analysis" && @MKDIR_P@ ${out_path} ${full_path}"analysis"; break;;
+            [Nn]* ) exit;;
+            * ) echo "Please answer yes or no.";;
+	esac
+    done
+else
+    @MKDIR_P@ ${out_path} ${full_path}"analysis"
+fi
+
+
+
+# Execute main code
+##############################################################################################
+msg="Executing original code, good luck:"
+cmd="@MPIRUN@ --use-hwthread-cpus -np "${nproc}" "${vkl_home}"bin/verykool "${path}" "${run}
+
+echo $msg
+echo $cmd
+eval $cmd
+echo "Execution succesful (results may still be wrong though...)"

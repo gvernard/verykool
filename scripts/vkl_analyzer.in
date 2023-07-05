@@ -1,0 +1,59 @@
+#!/bin/bash
+
+
+
+path=$1
+run=$2
+
+vkl_home=@VKL_HOME@"/"
+full_path=${path}/${run}/
+injson=`cat ${full_path}vkl_input.json`
+minimizer=`echo ${injson} | @AM_JQ@ '.minimizer.type' | @SED@ -e 's/^"//' -e 's/"$//'`
+parameter_model=`echo ${injson} | @AM_JQ@ '.parameter_model' | @SED@ -e 's/^"//' -e 's/"$//'`
+
+
+
+
+# Check/create analysis directory
+##############################################################################################
+if [ ! -d ${full_path}"analysis" ]
+then
+    @MKDIR_P@ ${full_path}"analysis"
+fi
+
+
+
+# Perform analysis
+##############################################################################################
+eval "$(conda shell.bash hook)"
+conda activate vkl
+
+if [ $parameter_model == "standard" ]
+then
+    echo -n "Plotting best solution..."
+    eval "python "${vkl_home}"analysis_tools/analyze_plot_smooth.py "${path}" "${run}
+    echo "done"
+
+    if [ $minimizer == "multinest" ]
+    then
+        echo -n "Plotting corner..."
+        eval "python "${vkl_home}"analysis_tools/analyze_corner.py "${path}" "${run}
+        echo "done"
+        echo -n "Getting confidence limits..."
+        eval "python "${vkl_home}"analysis_tools/analyze_limits.py "${path}" "${run}
+        echo "done"
+    fi
+fi
+
+
+
+# # Convert to the COOLEST standard
+# ##############################################################################################
+if [[ -f "${full_path}/coolest_initialization.json" ]]
+then
+    echo -n "Converting output to COOLEST..."
+    eval ${vkl_home}"bin/coolest_conversion "${path}" "${run}" "${path}/${run}/"coolest_initialization.json"
+    echo "done"
+else
+    echo "No COOLEST initialization .json file found - cannot convert to COOLEST"
+fi

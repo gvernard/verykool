@@ -10,14 +10,6 @@ void Iterator::minimize(std::map<std::string,std::string> opt,BaseLikelihoodMode
   int maxiter = std::stoi(opt["maxiter"]);
   std::cout << "Doing " << maxiter << " iterations" << std::endl;
 
-  // This is just to fill the containers of the 'best' parameters
-  for(int i=0;i<like_model->active.size();i++){
-    like_model->maps[i]    = like_model->active[i]->val;
-    like_model->means[i]   = like_model->active[i]->val;
-    like_model->s1_low[i]  = 0;
-    like_model->s1_high[i] = 0;
-  }
-
   this->output_counter = 0;
   for(int i=0;i<maxiter;i++){
     this->iterations = i;
@@ -55,7 +47,7 @@ void Iterator::minimize(std::map<std::string,std::string> opt,BaseLikelihoodMode
   */
 }
 
-void Iterator::output(std::string output){
+void Iterator::outputMinimizer(std::string output){
   Json::Value min_out;
   min_out["iterations"] = this->iterations;
 
@@ -64,7 +56,7 @@ void Iterator::output(std::string output){
   jsonfile.close();
 }
 
-void Iterator::finalizeMinimizer(std::string output){
+void Iterator::finalizeMinimizer(std::string output,BaseLikelihoodModel* mypars){
   std::ifstream src2((output + std::to_string(this->output_counter) + this->name + "_minimizer_output.json").c_str(),std::ios::binary);
   std::ofstream dst2((output + this->name + "_minimizer_output.json").c_str(), std::ios::binary);
   dst2 << src2.rdbuf();

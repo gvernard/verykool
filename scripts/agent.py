@@ -29,7 +29,7 @@ def main():
     
     
     
-    # Check length of path + run. MultiNest supports up to 100 characters for the full path.
+!    # Check length of path + run. MultiNest supports up to 100 characters for the full path.
     ##############################################################################################
     full_path = path+run+"output/"
     if len(full_path) > 80:
@@ -51,7 +51,8 @@ def main():
             answer = input("output directory exists, cleanup? (y/n): ")
             
         if answer == 'y':
-            for item in os.listdir(path+run+"output"):
+            items = os.listdir(path+run+"output") + os.listdir(path+run+"analysis")
+            for item in items:
                 item_path = os.path.join(path+run+"output",item)
                 try:
                     if os.path.isfile(item_path):
@@ -72,20 +73,18 @@ def main():
     input_str = re.sub(re.compile("/\*.*?\*/",re.DOTALL),"",input_str)
     input_str = re.sub(re.compile("//.*?\n" ),"",input_str)
     options   = json.loads(input_str)
+
+    minimizer = options["minimizer"]["type"]
     
     if options["minimizer"]["type"] in original:
         mode = "original"
     elif options["minimizer"]["type"] in cosmosis:
         mode = "cosmosis"
         
-    mpi_flag = False
-    if options["nproc"] > 1:
-        mpi_flag = True
-            
     parameter_model = options["parameter_model"]
 
-        
-        
+
+    
     # Directory and file check based on the input options
     ##############################################################################################
     if mode == "cosmosis":
@@ -99,17 +98,9 @@ def main():
     ##############################################################################################
     if mode == "original":
         msg = "Executing original code, good luck:"
-        if mpi_flag:
-            host = socket.gethostname()
-            if host == "gamatos2020":
-                cmd = "/home/giorgos/myLibraries/openmpi/bin/mpirun --use-hwthread-cpus -np " + str(options["nproc"]) + " " + vkl_dir + "bin/verykool " + path + " " + run
-                #cmd = "/home/giorgos/myLibraries/openmpi/bin/mpirun -np " + str(options["nproc"]) + " " + vkl_dir + "bin/verykool " + path + " " + run
-            else:
-                cmd = "mpirun -np " + str(options["nproc"]) + " " + vkl_dir + "bin/verykool " + path + " " + run
-        else:
-            cmd = vkl_dir + "bin/verykool_test " + path + " " + run
-            #cmd = "valgrind --track-origins=yes " + vkl_dir + "bin/verykool_test " + path + " " + run
-            #cmd = vkl_dir + "bin/verykool " + path + " " + run
+        cmd = "/home/giorgos/myLibraries/openmpi/bin/mpirun --use-hwthread-cpus -np " + str(options["nproc"]) + " " + vkl_dir + "bin/verykool " + path + " " + run
+        #cmd = "valgrind --track-origins=yes " + vkl_dir + "bin/verykool_test " + path + " " + run
+        #cmd = vkl_dir + "bin/verykool " + path + " " + run
     else:
         msg = "Executing cosmosis code, good luck:"
         if mpi_flag:
@@ -129,24 +120,32 @@ def main():
     print("Execution succesful (results may still be wrong though...)")
 
 
-
-    # Convert to the COOLEST standard
-    ##############################################################################################
-    if os.path.isfile(path+run+"coolest_fixed_input.json"):
-        print("Converting output to COOLEST...",end="")
-        subprocess.call([vkl_dir+"analysis_tools/convert_to_coolest",path,run,path+run+"coolest_fixed_input.json"])
-        print("done")
-
-
-
-
-
-    # Plot results
+    # Perform analysis
     ##############################################################################################
     if parameter_model == "standard":
-        print("Plotting output...",end="")
-        subprocess.call(["python",vkl_dir+"analysis_tools/plot_all_smooth.py",path,run])
+        print("Plotting best solution...",end="")
+        subprocess.call(["python",vkl_dir+"analysis_tools/analyze_plot_smooth.py",path,run])
         print("done")
+
+        if minimizer == "multinest":
+            print("Plotting corner...",end="")
+            subprocess.call(["python",vkl_dir+"analysis_tools/analyze_corner.py",path,run])
+            print("done")
+            print("Getting confidence limits...",end="")
+            subprocess.call(["python",vkl_dir+"analysis_tools/analyze_limits.py",path,run])
+            print("done")
+
+
+    # # Convert to the COOLEST standard
+    # ##############################################################################################
+    # if os.path.isfile(path+run+"coolest_fixed_input.json"):
+    #     print("Converting output to COOLEST...",end="")
+    #     subprocess.call([vkl_dir+"analysis_tools/convert_to_coolest",path,run,path+run+"coolest_fixed_input.json"])
+    #     print("done")
+
+
+
+
 
 
 

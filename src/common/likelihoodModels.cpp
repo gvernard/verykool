@@ -17,27 +17,16 @@
 //Abstract class: BaseLikelihoodModel
 //===============================================================================================================
 //non-virtual
-std::vector<double> BaseLikelihoodModel::getActiveValues(){
-  std::vector<double> values;
-  for(int i=0;i<this->active.size();i++){
-    values.push_back( this->active[i]->val );
-  }
-  return values;
-}
-
-//non-virtual
-std::vector<std::string> BaseLikelihoodModel::getActiveNlparNames(){
-  std::vector<std::string> names;
-  for(int i=0;i<this->active.size();i++){
-    names.push_back( this->active[i]->nam );
-  }
-  return names;
-}
-
-//non-virtual
 void BaseLikelihoodModel::updateActive(std::vector<double> values){
   for(int i=0;i<this->active.size();i++){
     this->active[i]->val = values[i];
+  }
+}
+
+//non-virtual
+void BaseLikelihoodModel::updateActive(std::unordered_map<std::string,double> values){
+  for(int i=0;i<this->active.size();i++){
+    this->active[i]->val = values[this->active[i]->nam];
   }
 }
 
@@ -86,33 +75,7 @@ double BaseLikelihoodModel::getLogLike(){
   return sum;
 }
 
-//non-virtual
-void BaseLikelihoodModel::finalizeLikelihoodModel(std::string output){
-  printf("%-16s%20s\n","Starting output ",this->name.c_str());
-  fflush(stdout);
-  
-  // update active with MAP parameters
-  for(int i=0;i<this->active.size();i++){
-    this->active[i]->val = this->maps[i];
-  }
-
-  this->updateLikelihoodModel();
-  this->getLogLike();
-  this->printActive();
-  this->printTerms();
-  printf("\n");
-  this->outputLikelihoodModel(output);
-
-  printf("%7s\n","...done");
-  std::cout << std::string(200,'=') << std::endl;
-  fflush(stdout);  
-}
-
 BaseLikelihoodModel::~BaseLikelihoodModel(){
-  free(maps);
-  free(means);
-  free(s1_low);
-  free(s1_high);
   delete(model);
   delete(res);
 }
@@ -157,11 +120,6 @@ SmoothLikelihood::SmoothLikelihood(std::vector<Nlpar*> a,std::vector<Nlpar*> b,s
       this->active_names.push_back( this->reg_s[i]->nam );
     }
   }
-
-  this->maps    = (double*) malloc(this->active.size()*sizeof(double));
-  this->means   = (double*) malloc(this->active.size()*sizeof(double));
-  this->s1_low  = (double*) malloc(this->active.size()*sizeof(double));
-  this->s1_high = (double*) malloc(this->active.size()*sizeof(double));
 
   terms["Nilog2pi"] = 0.0;
   terms["Nslogl_s"]   = 0.0;
@@ -287,119 +245,6 @@ std::vector<Nlpar*> SmoothLikelihood::getPhysicalPars(){
 std::vector<Nlpar*> SmoothLikelihood::getMassModelPars(int i){
   return this->lenses[i];
 }
-
-//virtual
-void SmoothLikelihood::getAllNamesValues(std::vector<std::string>& names,std::vector<double>& values){
-  std::map<std::string,int> active_ind;
-  for(int i=0;i<this->active.size();i++){
-    active_ind[this->active[i]->nam] = i;
-  }
-  double value;
-  std::string name;
-
-  for(int i=0;i<this->physical.size();i++){
-    name = this->physical[i]->getName();
-    if( this->physical[i]->getActive() ){
-      value = this->maps[active_ind[name]];
-    } else {
-      value = this->physical[i]->getValue();
-    }
-    names.push_back(name);
-    values.push_back(value);
-  }
-  for(int i=0;i<this->reg_s.size();i++){
-    name = this->reg_s[i]->getName();
-    if( this->reg_s[i]->getActive() ){
-      value = this->maps[active_ind[name]];
-    } else {
-      value = this->reg_s[i]->getValue();
-    }
-    names.push_back(name);
-    values.push_back(value);
-  }
-  for(int j=0;j<this->lenses.size();j++){
-    for(int i=0;i<this->lenses[j].size();i++){
-      name = this->lenses[j][i]->getName();
-      if( this->lenses[j][i]->getActive() ){
-	value = this->maps[active_ind[name]];
-      } else {
-	value = this->lenses[j][i]->getValue();
-      }
-      names.push_back(this->lens_names[j] + "_" + name);
-      values.push_back(value);
-    }
-  }
-}
-
-
-//virtual
-Json::Value SmoothLikelihood::getActiveJson(){
-  Json::Value all;
-
-  std::map<std::string,int> active_ind;
-  for(int i=0;i<this->active.size();i++){
-    active_ind[this->active[i]->nam] = i;
-  }
-
-  Json::Value physical = Json::Value(Json::arrayValue);
-  for(int i=0;i<this->physical.size();i++){
-    if( this->physical[i]->getActive() ){
-      std::string name = this->physical[i]->getName();
-      Json::Value dum;
-      dum["nam"]     = name;
-      dum["map"]     = this->maps[active_ind[name]];
-      dum["mean"]    = this->means[active_ind[name]];
-      dum["s1_low"]  = this->s1_low[active_ind[name]];
-      dum["s1_high"] = this->s1_high[active_ind[name]];
-      physical.append(dum);
-    }
-  }
-  if( physical.size() != 0 ){
-    all["physical"] = physical;
-  }
-
-  Json::Value jreg = Json::Value(Json::arrayValue);
-  for(int i=0;i<this->reg_s.size();i++){
-    if( this->reg_s[i]->getActive() ){
-      std::string name = this->reg_s[i]->getName();
-      Json::Value dum;
-      dum["nam"]     = name;
-      dum["map"]     = this->maps[active_ind[name]];
-      dum["mean"]    = this->means[active_ind[name]];
-      dum["s1_low"]  = this->s1_low[active_ind[name]];
-      dum["s1_high"] = this->s1_high[active_ind[name]];
-      jreg.append(dum);
-    }
-  }
-  if( jreg.size() != 0 ){
-    all["reg"] = jreg;
-  }
-
-  Json::Value lenses;
-  for(int j=0;j<this->lenses.size();j++){
-    Json::Value lens = Json::Value(Json::arrayValue);
-    for(int i=0;i<this->lenses[j].size();i++){
-      if( this->lenses[j][i]->getActive() ){
-	std::string name = this->lenses[j][i]->getName();
-	Json::Value dum;
-	dum["nam"]     = name;
-	dum["map"]     = this->maps[active_ind[name]];
-	dum["mean"]    = this->means[active_ind[name]];
-	dum["s1_low"]  = this->s1_low[active_ind[name]];
-	dum["s1_high"] = this->s1_high[active_ind[name]];
-	lens.append(dum);
-      }
-    }
-    lenses[lens_names[j]] = lens;
-  }
-  if( lenses.size() != 0 ){
-    all["lenses"] = lenses;
-  }
-
-  return all;
-}
-
-
 
 //virtual
 void SmoothLikelihood::initializeAlgebra(){
@@ -536,49 +381,6 @@ void SmoothLikelihood::outputLikelihoodModel(std::string output){
   this->getResidual();
   this->res->writeImage(output + "smooth_residual.fits");
   
-  // Output various quantities in json format
-  Json::Value json_output;
-  
-  // Print and write to json the parameters and their associated uncertainties from the parameter model
-  // 1: collapsed list of ALL the parameter names and MAP values
-  Json::Value pars;
-  std::vector<double> values;
-  std::vector<std::string> names;
-  this->getAllNamesValues(names,values);
-  for(int i=0;i<names.size();i++){
-    //    std::cout << it->first << " " << it->second << std::endl;
-    printf("%10s %10.5f\n",names[i].c_str(),values[i]);
-    pars[names[i]] = values[i];
-  }
-  json_output["collapsed_all"] = pars;
-  
-  // 2: collapsed list of the ACTIVE parameter names and MAP, mean, 1-sigma lower and 1-sigma upper bounds
-  Json::Value collapsed_active;
-  for(int i=0;i<this->active_names.size();i++){
-    Json::Value active_par;
-    active_par["map"]     = this->maps[i];
-    active_par["mean"]    = this->means[i];
-    active_par["s1_low"]  = this->s1_low[i];
-    active_par["s1_high"] = this->s1_high[i];
-    collapsed_active[this->active_names[i]] = active_par;
-  }
-  json_output["collapsed_active"] = collapsed_active;
-  
-  // 3: same as above, but the non-linear parameter json structure is preserved
-  Json::Value json_active = this->getActiveJson();
-  json_output["json_active"] = json_active;
-
-  // 4: likelihood terms
-  Json::Value terms;
-  for(std::unordered_map<std::string,double>::iterator it=this->terms.begin();it!=this->terms.end();it++){
-    terms[it->first] = it->second;
-  }
-  json_output["terms"] = terms;
-
-  std::ofstream jsonfile(output+"smooth_output.json");
-  jsonfile << json_output;
-  jsonfile.close();
-
   /*  
   // Write linear Dpsi
   Pert* pert_mass_model = new Pert(20,20,image->width,image->height,"gradient");
@@ -683,11 +485,6 @@ PertLikelihood::PertLikelihood(std::vector<Nlpar*> a,std::vector<Nlpar*> b,Image
   this->pert_mass_model->createCrosses(this->image);
   this->pert_mass_model->dpsi->constructH();
 
-  this->maps    = (double*) malloc(this->active.size()*sizeof(double));
-  this->means   = (double*) malloc(this->active.size()*sizeof(double));
-  this->s1_low  = (double*) malloc(this->active.size()*sizeof(double));
-  this->s1_high = (double*) malloc(this->active.size()*sizeof(double));
-
   terms["Nilog2pi"] = 0.0;
   terms["Nslogl_s"] = 0.0;
   if( this->source->reg == "curvature_in_identity_out" || this->source->reg == "covariance_kernel_in_identity_out" ){
@@ -762,83 +559,6 @@ void PertLikelihood::printTerms(){
   printf(" %16f",terms["reg"]);
   printf(" %16f",terms["evidence"]);
   printf("\n");
-}
-
-//virtual
-void PertLikelihood::getAllNamesValues(std::vector<std::string>& names,std::vector<double>& values){
-  std::map<std::string,int> active_ind;
-  for(int i=0;i<this->active.size();i++){
-    active_ind[this->active[i]->nam] = i;
-  }
-  double value;
-  std::string name;
-
-  for(int i=0;i<this->reg_s.size();i++){
-    name = this->reg_s[i]->getName();
-    if( this->reg_s[i]->getActive() ){
-      value = this->maps[active_ind[name]];
-    } else {
-      value = this->reg_s[i]->getValue();
-    }
-    names.push_back(name);
-    values.push_back(value);
-  }
-  for(int i=0;i<this->reg_dpsi.size();i++){
-    name = this->reg_dpsi[i]->getName();
-    if( this->reg_dpsi[i]->getActive() ){
-      value = this->maps[active_ind[name]];
-    } else {
-      value = this->reg_dpsi[i]->getValue();
-    }
-    names.push_back(name);
-    values.push_back(value);
-  }
-}
-
-//virtual
-Json::Value PertLikelihood::getActiveJson(){
-  Json::Value all;
-
-  std::map<std::string,int> active_ind;
-  for(int i=0;i<this->active.size();i++){
-    active_ind[this->active[i]->nam] = i;
-  }
-
-  Json::Value reg_s = Json::Value(Json::arrayValue);
-  for(int i=0;i<this->reg_s.size();i++){
-    if( this->reg_s[i]->getActive() ){
-      std::string name = this->reg_s[i]->getName();
-      Json::Value dum;
-      dum["nam"]     = name;
-      dum["map"]     = this->maps[active_ind[name]];
-      dum["mean"]    = this->means[active_ind[name]];
-      dum["s1_low"]  = this->s1_low[active_ind[name]];
-      dum["s1_high"] = this->s1_high[active_ind[name]];
-      reg_s.append(dum);
-    }
-  }
-  if( reg_s.size() != 0 ){
-    all["reg_s"] = reg_s;
-  }
-
-  Json::Value reg_dpsi = Json::Value(Json::arrayValue);
-  for(int i=0;i<this->reg_dpsi.size();i++){
-    if( this->reg_dpsi[i]->getActive() ){
-      std::string name = this->reg_dpsi[i]->getName();
-      Json::Value dum;
-      dum["nam"]     = name;
-      dum["map"]     = this->maps[active_ind[name]];
-      dum["mean"]    = this->means[active_ind[name]];
-      dum["s1_low"]  = this->s1_low[active_ind[name]];
-      dum["s1_high"] = this->s1_high[active_ind[name]];
-      reg_dpsi.append(dum);
-    }
-  }
-  if( reg_dpsi.size() != 0 ){
-    all["reg_dpsi"] = reg_dpsi;
-  }
-
-  return all;
 }
 
 //virtual
@@ -988,49 +708,6 @@ void PertLikelihood::outputLikelihoodModel(std::string output){
   pert_mass_model->getConvergence(kappa);
   kappa->writeImage(output + "pert_convergence.fits");
   delete(kappa);
-
-
-  // Output various quantities in json format
-  Json::Value json_output;
-  
-  // Print and write to json the parameters and their associated uncertainties from the parameter model
-  // 1: collapsed list of ALL the parameter names and MAP values
-  Json::Value pars;
-  std::vector<double> values;
-  std::vector<std::string> names;
-  this->getAllNamesValues(names,values);
-  for(int i=0;i<names.size();i++){
-    std::cout << names[i] << " " << values[i] << std::endl;
-    pars[names[i]] = values[i];
-  }
-  json_output["collapsed_all"] = pars;
-  
-  // 2: collapsed list of the ACTIVE parameter names and MAP, mean, 1-sigma lower and 1-sigma upper bounds
-  Json::Value collapsed_active;
-  for(int i=0;i<this->active_names.size();i++){
-    Json::Value active_par;
-    active_par["map"]     = this->maps[i];
-    active_par["mean"]    = this->means[i];
-    active_par["s1_low"]  = this->s1_low[i];
-    active_par["s1_high"] = this->s1_high[i];
-    collapsed_active[this->active_names[i]] = active_par;
-  }
-  json_output["collapsed_active"] = collapsed_active;
-  
-  // 3: same as above, but the non-linear parameter json structure is preserved
-  Json::Value json_active = this->getActiveJson();
-  json_output["json_active"] = json_active;
-
-  // 4: likelihood terms
-  Json::Value terms;
-  for(std::unordered_map<std::string,double>::iterator it=this->terms.begin();it!=this->terms.end();it++){
-    terms[it->first] = it->second;
-  }
-  json_output["terms"] = terms;
-
-  std::ofstream jsonfile(output+"pert_output.json");
-  jsonfile << json_output;
-  jsonfile.close();
 }
 
 
@@ -1095,11 +772,6 @@ BothLikelihood::BothLikelihood(std::vector<Nlpar*> phys,std::vector< std::vector
       this->active_names.push_back( this->reg_dpsi[i]->nam );
     }
   }
-
-  this->maps    = (double*) malloc(this->active.size()*sizeof(double));
-  this->means   = (double*) malloc(this->active.size()*sizeof(double));
-  this->s1_low  = (double*) malloc(this->active.size()*sizeof(double));
-  this->s1_high = (double*) malloc(this->active.size()*sizeof(double));
   
   terms["Nilog2pi"] = 0.0;
   terms["Nslogl_s"] = 0.0;
@@ -1290,49 +962,6 @@ void BothLikelihood::outputLikelihoodModel(std::string output){
   pert_mass_model->getConvergence(kappa);
   kappa->writeImage(output + "both_convergence.fits");
   delete(kappa);
-
-
-  // Output various quantities in json format
-  Json::Value json_output;
-  
-  // Print and write to json the parameters and their associated uncertainties from the parameter model
-  // 1: collapsed list of ALL the parameter names and MAP values
-  Json::Value pars;
-  std::vector<double> values;
-  std::vector<std::string> names;
-  this->getAllNamesValues(names,values);
-  for(int i=0;i<names.size();i++){
-    std::cout << names[i] << " " << values[i] << std::endl;
-    pars[names[i]] = values[i];
-  }
-  json_output["collapsed_all"] = pars;
-  
-  // 2: collapsed list of the ACTIVE parameter names and MAP, mean, 1-sigma lower and 1-sigma upper bounds
-  Json::Value collapsed_active;
-  for(int i=0;i<this->active_names.size();i++){
-    Json::Value active_par;
-    active_par["map"]     = this->maps[i];
-    active_par["mean"]    = this->means[i];
-    active_par["s1_low"]  = this->s1_low[i];
-    active_par["s1_high"] = this->s1_high[i];
-    collapsed_active[this->active_names[i]] = active_par;
-  }
-  json_output["collapsed_active"] = collapsed_active;
-  
-  // 3: same as above, but the non-linear parameter json structure is preserved
-  Json::Value json_active = this->getActiveJson();
-  json_output["json_active"] = json_active;
-
-  // 4: likelihood terms
-  Json::Value terms;
-  for(std::unordered_map<std::string,double>::iterator it=this->terms.begin();it!=this->terms.end();it++){
-    terms[it->first] = it->second;
-  }
-  json_output["terms"] = terms;
-
-  std::ofstream jsonfile(output+"both_output.json");
-  jsonfile << json_output;
-  jsonfile.close();
 }
 
 //virtual
@@ -1360,144 +989,6 @@ void BothLikelihood::getModel(){
 void BothLikelihood::getModel2(){
   this->both_algebra->getMockData(this->model,this->source,this->pert_mass_model);
 }
-
-//virtual
-void BothLikelihood::getAllNamesValues(std::vector<std::string>& names,std::vector<double>& values){
-  std::map<std::string,int> active_ind;
-  for(int i=0;i<this->active.size();i++){
-    active_ind[this->active[i]->nam] = i;
-  }
-  double value;
-  std::string name;
-
-  for(int i=0;i<this->physical.size();i++){
-    name = this->physical[i]->getName();
-    if( this->physical[i]->getActive() ){
-      value = this->maps[active_ind[name]];
-    } else {
-      value = this->physical[i]->getValue();
-    }
-    names.push_back(name);
-    values.push_back(value);
-  }
-  for(int j=0;j<this->lenses.size();j++){
-    for(int i=0;i<this->lenses[j].size();i++){
-      name = this->lenses[j][i]->getName();
-      if( this->lenses[j][i]->getActive() ){
-	value = this->maps[active_ind[name]];
-      } else {
-	value = this->lenses[j][i]->getValue();
-      }
-      names.push_back(this->lens_names[j] + "_" + name);
-      values.push_back(value);
-    }
-  }
-  for(int i=0;i<this->reg_s.size();i++){
-    name = this->reg_s[i]->getName();
-    if( this->reg_s[i]->getActive() ){
-      value = this->maps[active_ind[name]];
-    } else {
-     value = this->reg_s[i]->getValue();
-    }
-    names.push_back(name);
-    values.push_back(value);
-  }
-  for(int i=0;i<this->reg_dpsi.size();i++){
-    name = this->reg_dpsi[i]->getName();
-    if( this->reg_dpsi[i]->getActive() ){
-      value = this->maps[active_ind[name]];
-    } else {
-      value = this->reg_dpsi[i]->getValue();
-    }
-    names.push_back(name);
-    values.push_back(value);
-  }
-}
-
-//virtual
-Json::Value BothLikelihood::getActiveJson(){
-  Json::Value all;
-
-  std::map<std::string,int> active_ind;
-  for(int i=0;i<this->active.size();i++){
-    active_ind[this->active[i]->nam] = i;
-  }
-
-  Json::Value physical = Json::Value(Json::arrayValue);
-  for(int i=0;i<this->physical.size();i++){
-    if( this->physical[i]->getActive() ){
-      std::string name = this->physical[i]->getName();
-      Json::Value dum;
-      dum["nam"]     = name;
-      dum["map"]     = this->maps[active_ind[name]];
-      dum["mean"]    = this->means[active_ind[name]];
-      dum["s1_low"]  = this->s1_low[active_ind[name]];
-      dum["s1_high"] = this->s1_high[active_ind[name]];
-      physical.append(dum);
-    }
-  }
-  if( physical.size() != 0 ){
-    all["physical"] = physical;
-  }
-
-  Json::Value lenses;
-  for(int j=0;j<this->lenses.size();j++){
-    Json::Value lens = Json::Value(Json::arrayValue);
-    for(int i=0;i<this->lenses[j].size();i++){
-      if( this->lenses[j][i]->getActive() ){
-	std::string name = this->lenses[j][i]->getName();
-	Json::Value dum;
-	dum["nam"]     = name;
-	dum["map"]     = this->maps[active_ind[name]];
-	dum["mean"]    = this->means[active_ind[name]];
-	dum["s1_low"]  = this->s1_low[active_ind[name]];
-	dum["s1_high"] = this->s1_high[active_ind[name]];
-	lens.append(dum);
-      }
-    }
-    lenses[lens_names[j]] = lens;
-  }
-  if( lenses.size() != 0 ){
-    all["lenses"] = lenses;
-  }
-
-  Json::Value reg_s = Json::Value(Json::arrayValue);
-  for(int i=0;i<this->reg_s.size();i++){
-    if( this->reg_s[i]->getActive() ){
-      std::string name = this->reg_s[i]->getName();
-      Json::Value dum;
-      dum["nam"]     = name;
-      dum["map"]     = this->maps[active_ind[name]];
-      dum["mean"]    = this->means[active_ind[name]];
-      dum["s1_low"]  = this->s1_low[active_ind[name]];
-      dum["s1_high"] = this->s1_high[active_ind[name]];
-      reg_s.append(dum);
-    }
-  }
-  if( reg_s.size() != 0 ){
-    all["reg_s"] = reg_s;
-  }
-
-  Json::Value reg_dpsi = Json::Value(Json::arrayValue);
-  for(int i=0;i<this->reg_dpsi.size();i++){
-    if( this->reg_dpsi[i]->getActive() ){
-      std::string name = this->reg_dpsi[i]->getName();
-      Json::Value dum;
-      dum["nam"]     = name;
-      dum["map"]     = this->maps[active_ind[name]];
-      dum["mean"]    = this->means[active_ind[name]];
-      dum["s1_low"]  = this->s1_low[active_ind[name]];
-      dum["s1_high"] = this->s1_high[active_ind[name]];
-      reg_dpsi.append(dum);
-    }
-  }
-  if( reg_dpsi.size() != 0 ){
-    all["reg_dpsi"] = reg_dpsi;
-  }
-
-  return all;
-}
-
 
 
 
