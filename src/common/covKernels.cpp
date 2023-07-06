@@ -90,3 +90,37 @@ void ExpGaussKernel::printParameters(){
   printf("expo: %10.5f\n",this->expo);
   printf("cmax: %10.5f\n",this->cmax);
 }
+
+
+
+MatternKernel::MatternKernel(std::vector<Nlpar*> pars){
+  this->type  = "mattern";
+  this->setParameters(pars);
+}
+MatternKernel::MatternKernel(const MatternKernel& other){
+  this->sdev = other.sdev;
+  this->eta  = other.eta;
+}
+double MatternKernel::getCovariance(double r){
+  double fac  = sqrt(2.0*this->eta)*r/this->sdev;
+  double fac1 = pow(2.0,1.0-this->eta)/tgamma(this->eta);
+  double fac2 = pow(fac,this->eta);
+  double fac3 = std::cyl_bessel_k(this->eta,fac);
+  double cov  = fac1*fac2*fac3;
+  return cov;
+}
+double MatternKernel::getCovarianceSelf(){
+  double cov = 1.0;
+  return cov;
+}
+void MatternKernel::setParameters(std::vector<Nlpar*> pars){
+  this->cmax = Nlpar::getValueByName("cmax",pars);
+  this->eta  = Nlpar::getValueByName("eta",pars);
+  this->sdev = Nlpar::getValueByName("sdev",pars);
+}
+void MatternKernel::printParameters(){
+  printf("      %10s\n",this->type.c_str());
+  printf("sdev: %10.5f\n",this->sdev);
+  printf(" eta: %10.5f\n",this->eta);
+  printf("cmax: %10.5f\n",this->cmax);
+}

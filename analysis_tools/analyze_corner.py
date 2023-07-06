@@ -123,8 +123,7 @@ ena.reweightAddingLogLikes(mypost)
 for i in range(0,len(ena.getParamNames().names)):
     ena.getParamNames().names[i].label = labels[i]
 
-g = plots.getSubplotPlotter(subplot_size=4)
-g.settings.rcSizes()
+g = plots.getSubplotPlotter(subplot_size=2)
 g.triangle_plot([ena],param_limits=mapping,filled=True)
 #g.triangle_plot([ena],filled=True)
 

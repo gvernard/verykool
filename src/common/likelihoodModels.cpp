@@ -310,7 +310,7 @@ void SmoothLikelihood::updateLikelihoodModel(){
   this->terms["Nslogl_s"] = 0.0;
   this->terms["detCs"] = 0.0;
   this->terms["detA"] = 0.0;
-  this->terms["reg"] = 0.0;
+  //this->terms["reg"] = 0.0;
 }
 
 //virtual

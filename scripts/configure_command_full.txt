@@ -1,1 +1,0 @@
-./configure --with-cfitsio=/home/giorgos/myLibraries/cfitsio --with-CCfits=/home/giorgos/myLibraries/CCfits --with-jsoncpp=/home/giorgos/myLibraries/jsoncpp --with-boost=/home/giorgos/myLibraries/boost --with-mpfr=/home/giorgos/myLibraries/mpfr --with-gmp=/home/giorgos/myLibraries/gmp --with-CGAL=/home/giorgos/myLibraries/CGAL --with-multinest=/home/giorgos/myLibraries/multinest

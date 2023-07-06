@@ -3,7 +3,7 @@ import sys
 import json
 import common_funcs
 import glob
-
+import shutil
 
 
 case = sys.argv[1] # full path to the case
@@ -111,3 +111,5 @@ f = open(case_path+new_name+"/vkl_input.json","w")
 json.dump(j_input,f,indent=4,separators=(',',': '))
 f.close()
 
+if os.path.exists(case+'coolest_initialization.json'):
+    shutil.copyfile(case+'coolest_initialization.json',case_path+new_name+'/coolest_initialization.json')
