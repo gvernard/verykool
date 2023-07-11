@@ -5,13 +5,12 @@ AM_INIT_AUTOMAKE([foreign subdir-objects])
 AC_CONFIG_MACRO_DIRS([m4])
 AC_PREFIX_DEFAULT($PWD)
 
-CXX=/home/giorgos/myLibraries/openmpi/bin/mpic++
-MPIRUN=/home/giorgos/myLibraries/openmpi/bin/mpirun
+MPIRUN=mpirun
 
 AC_SUBST(VKL_HOME,$PWD)
 AC_SUBST(MPIRUN,$MPIRUN)
 
-AC_PROG_CXX
+AC_PROG_CXX([mpic++])
 AC_PROG_F77
 AC_PROG_MKDIR_P # MKDIR_P
 AC_PROG_SED # SED
@@ -100,7 +99,7 @@ AC_ARG_WITH([boost],
 	ac_new_LIBS+=" -lboost_system"
     ],
     [
-	AC_CHECK_LIB(boost,main,[],[AC_MSG_ERROR("you need to have the boost library installed.")])
+	AC_CHECK_LIB(boost_system,main,[],[AC_MSG_ERROR("you need to have the boost library installed.")])
 	AC_CHECK_HEADERS(boost/limits.hpp,[],[AC_MSG_ERROR("you need to have the boost header files installed.")])
     ])
 
@@ -152,7 +151,14 @@ AC_ARG_WITH([multinest],
 	AC_CHECK_HEADERS(multinest.h,[],[AC_MSG_ERROR("you need to have the multinest header files installed.")])
     ])
 
-
+AC_ARG_WITH([eigen],
+    [AS_HELP_STRING([--with-eigen=prefix],[give the path to the eigen library and header files.])],
+    [
+	ac_new_CPPFLAGS+=" -I${withval}/include/eigen3"
+    ],
+    [
+	AC_CHECK_HEADERS([Eigen/Dense],[],[AC_MSG_ERROR("you need to have the Eigen header files installed.")])
+    ])
 
 
 AC_ARG_WITH([cuda],
