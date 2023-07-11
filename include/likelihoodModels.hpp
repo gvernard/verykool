@@ -27,10 +27,6 @@ public:
   std::vector<Nlpar*> active;
   std::vector<std::string> active_names;
   std::unordered_map<std::string,double> terms;
-  double* maps    = NULL;
-  double* means   = NULL;
-  double* s1_low  = NULL;
-  double* s1_high = NULL;
   ImagePlane* image;
   ImagePlane* model;
   ImagePlane* res;
@@ -40,23 +36,17 @@ public:
   BaseLikelihoodModel(){};
   ~BaseLikelihoodModel();
 
-  std::vector<double> getActiveValues();
-  std::vector<std::string> getActiveNlparNames();
   void updateActive(std::vector<double> values);
+  void updateActive(std::unordered_map<std::string,double> values);
   void printActive();
-  //  void printTerms();
   double getLogLike();
   void getResidual();
 
   virtual void printTerms() = 0;
-  virtual void getAllNamesValues(std::vector<std::string>& names,std::vector<double>& values) = 0;
-  virtual Json::Value getActiveJson() = 0;
-
   virtual void initializeAlgebra() = 0;
   virtual void updateLikelihoodModel() = 0;
   virtual void initialOutputLikelihoodModel(std::string output) = 0;
   virtual void outputLikelihoodModel(std::string output) = 0;
-  void finalizeLikelihoodModel(std::string output);
 };
 
 
@@ -77,11 +67,9 @@ public:
   void deriveLinearDpsi(Pert* pert_mass_model,ImagePlane* img_grid);
   std::vector<Nlpar*> getPhysicalPars();
   std::vector<Nlpar*> getMassModelPars(int i);
-
+  
   //virtual
   void printTerms();
-  void getAllNamesValues(std::vector<std::string>& names,std::vector<double>& values);
-  Json::Value getActiveJson();
   void getModel();
   void initializeAlgebra();
   void updateLikelihoodModel();
@@ -106,8 +94,6 @@ public:
 
   //virtual
   void printTerms();
-  void getAllNamesValues(std::vector<std::string>& names,std::vector<double>& values);
-  Json::Value getActiveJson();
   void getModel();
   void initializeAlgebra();
   void updateLikelihoodModel();
@@ -132,8 +118,6 @@ public:
 
   //virtual
   void printTerms();
-  void getAllNamesValues(std::vector<std::string>& names,std::vector<double>& values);
-  Json::Value getActiveJson();
   void getModel();
   void getModel2();
   void initializeAlgebra();

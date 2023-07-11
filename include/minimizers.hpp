@@ -25,9 +25,9 @@ public:
   };
   ~BaseMinimizer(){};
 
-  virtual void minimize(std::map<std::string,std::string> minimizer,BaseLikelihoodModel* mypars,const std::string output) = 0;
-  virtual void output(std::string output) = 0;
-  virtual void finalizeMinimizer(std::string output) = 0;
+  virtual void minimize(std::map<std::string,std::string> minimizer,BaseLikelihoodModel* lmodel,const std::string output) = 0;
+  virtual void outputMinimizer(std::string output) = 0;
+  virtual void finalizeMinimizer(std::string output,BaseLikelihoodModel* lmodel) = 0;
 };
 
 
@@ -41,9 +41,9 @@ public:
   };
   ~Nothing(){};
   
-  void minimize(std::map<std::string,std::string> minimizer,BaseLikelihoodModel* mypars,const std::string output);
-  void output(std::string output);
-  void finalizeMinimizer(std::string output){};
+  void minimize(std::map<std::string,std::string> minimizer,BaseLikelihoodModel* lmodel,const std::string output);
+  void outputMinimizer(std::string output);
+  void finalizeMinimizer(std::string output,BaseLikelihoodModel* lmodel);
 };
 
 
@@ -56,16 +56,14 @@ public:
   };
   ~MultiNest(){};
   int counter;
-  int total_samples;
-  int replacements;
 
-  void minimize(std::map<std::string,std::string> opt,BaseLikelihoodModel* pars,const std::string output);
-  void output(std::string output);
-  void finalizeMinimizer(std::string output);
+  void minimize(std::map<std::string,std::string> opt,BaseLikelihoodModel* lmodel,const std::string output);
+  void outputMinimizer(std::string output){};
+  void finalizeMinimizer(std::string output,BaseLikelihoodModel* lmodel);
 };
 
 struct extras{
-  BaseLikelihoodModel* pars;
+  BaseLikelihoodModel* lmodel;
   std::string output;
   MultiNest* minimizer;
 };
@@ -73,6 +71,9 @@ struct extras{
 // These two functions have to be declared outside the class (declaring them static does not work) because of the definition of the nested::run function (requires function pointer, not method pointer).
 void MultiNestLogLike(double* Cube,int& ndim,int& npars,double& lnew,void* e);
 void MultiNestDumper(int& nSamples,int& nlive,int& nPar,double** physLive,double** posterior,double** paramConstr,double& maxLogLike,double& logZ,double& INSlogZ,double& logZerr,void* e);
+
+
+
 
 
 // Iterator class
@@ -86,12 +87,10 @@ public:
   int iterations;
   int output_counter;
   
-  void minimize(std::map<std::string,std::string> opt,BaseLikelihoodModel* mypars,const std::string output);
-  void output(std::string output);
-  void finalizeMinimizer(std::string output);
+  void minimize(std::map<std::string,std::string> opt,BaseLikelihoodModel* lmodel,const std::string output);
+  void outputMinimizer(std::string output);
+  void finalizeMinimizer(std::string output,BaseLikelihoodModel* lmodel);
 };
-
-
 
 
 

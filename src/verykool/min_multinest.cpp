@@ -16,8 +16,8 @@
 
 //Functions related to the calculation of the Bayesian evidence and parameter estimation using MultiNest
 //==============================================================================================================================
-void MultiNest::minimize(std::map<std::string,std::string> opt,BaseLikelihoodModel* pars,const std::string output){
-  int myndims = pars->active.size();
+void MultiNest::minimize(std::map<std::string,std::string> opt,BaseLikelihoodModel* lmodel,const std::string output){
+  int myndims = lmodel->active.size();
   
   int IS         = 0;				// do Nested Importance Sampling?
   int mmodal     = 0;				// do mode separation?
@@ -35,7 +35,7 @@ void MultiNest::minimize(std::map<std::string,std::string> opt,BaseLikelihoodMod
 
   int pWrap[ndims];				// which parameters to have periodic boundary conditions?
   for(int i=0;i<ndims;i++){
-    pWrap[i] = pars->active[i]->per;
+    pWrap[i] = lmodel->active[i]->per;
   }
 
   std::string strroot = output + "mn-";         // root for output files
@@ -58,28 +58,28 @@ void MultiNest::minimize(std::map<std::string,std::string> opt,BaseLikelihoodMod
   //  void* context  = 0;			// not required by MultiNest, any additional information user wants to pass
 
   this->counter = 0;
-  extras myextras = {pars,output,this};
+  extras myextras = {lmodel,output,this};
 
 
   // Initial output from the minimizer:
   // File with the parameter names
-  std::ofstream f_names(output + this->name + "_postdist.paramnames",std::ofstream::out);
-  for(int i=0;i<pars->active_names.size();i++){
-    f_names << pars->active_names[i];
+  std::ofstream f_names(output + lmodel->name + "_postdist.paramnames",std::ofstream::out);
+  for(int i=0;i<lmodel->active_names.size();i++){
+    f_names << lmodel->active_names[i];
     f_names << " ";
-    f_names << pars->active_names[i];
+    f_names << lmodel->active_names[i];
     f_names << std::endl;
   }
   f_names.close();
 
   // File with the parameter ranges
-  std::ofstream f_ranges(output + this->name + "_postdist.ranges",std::ofstream::out);
-  for(int i=0;i<pars->active.size();i++){
-    f_ranges << pars->active_names[i];
+  std::ofstream f_ranges(output + lmodel->name + "_postdist.ranges",std::ofstream::out);
+  for(int i=0;i<lmodel->active.size();i++){
+    f_ranges << lmodel->active_names[i];
     f_ranges << " ";
-    f_ranges << pars->active[i]->min;
+    f_ranges << lmodel->active[i]->min;
     f_ranges << " ";
-    f_ranges << pars->active[i]->max;
+    f_ranges << lmodel->active[i]->max;
     f_ranges << std::endl;
   }
   f_ranges.close();
@@ -104,17 +104,17 @@ void MultiNestLogLike(double* Cube,int& ndim,int& npars,double& lnew,void* myext
 
   //Update values for active parameters
   std::vector<double> new_pars;
-  for(int i=0;i<e->pars->active.size();i++){
-    new_pars.push_back( e->pars->active[i]->pri->fromUnitCube(Cube[i]) );
+  for(int i=0;i<e->lmodel->active.size();i++){
+    new_pars.push_back( e->lmodel->active[i]->pri->fromUnitCube(Cube[i]) );
     //    printf(" %25.18e",e->pars->active[i]->pri->fromUnitCube(Cube[i]));
   }
   //  std::cout << std::endl;
       
-  e->pars->updateActive(new_pars);
-  e->pars->updateLikelihoodModel();
-  lnew = e->pars->getLogLike();
-  e->pars->printActive();
-  e->pars->printTerms();
+  e->lmodel->updateActive(new_pars);
+  e->lmodel->updateLikelihoodModel();
+  lnew = e->lmodel->getLogLike();
+  e->lmodel->printActive();
+  e->lmodel->printTerms();
 }
 
 
@@ -148,8 +148,9 @@ void MultiNestDumper(int& nSamples,int& nlive,int& nPar,double** physLive,double
   FILE* fh;
 
   e->minimizer->counter++;
-  e->pars->outputLikelihoodModel(e->output + std::to_string(e->minimizer->counter) + "_");
 
+  
+  // Minimizer specific output
   /*
   // lastlive holds the parameter values for the last set of live points, and has the same structure as nlpars, with an array of nlive points for each parameter
   std::vector<double*> lastlive(nPar);
@@ -178,12 +179,12 @@ void MultiNestDumper(int& nSamples,int& nlive,int& nPar,double** physLive,double
     postdist[j][0] = posterior[0][nSamples*(Ncols-2)+j]; // loglike
     postdist[j][1] = posterior[0][nSamples*(Ncols-1)+j]; // posterior probability
     for(int i=0;i<Ncols-2;i++){
-      postdist[j][i+2] = e->pars->active[i]->pri->fromUnitCube( posterior[0][nSamples*i+j] );
+      postdist[j][i+2] = e->lmodel->active[i]->pri->fromUnitCube( posterior[0][nSamples*i+j] );
     }
   }
 
   // File for the corner plot
-  fh = fopen( (e->output + std::to_string(e->minimizer->counter) + "_" + e->minimizer->name + "_postdist.txt").c_str() ,"w");
+  fh = fopen( (e->output + std::to_string(e->minimizer->counter) + "_" + e->lmodel->name + "_postdist.txt").c_str() ,"w");
   for(int j=0;j<nSamples;j++){
     fprintf(fh," %25.18e",postdist[j][0]); // loglike
     fprintf(fh," %25.18e",postdist[j][1]); // posterior
@@ -194,49 +195,116 @@ void MultiNestDumper(int& nSamples,int& nlive,int& nPar,double** physLive,double
   }
   fclose(fh);
 
-  // Calculating the mean and the lower and upper 1-sigma bounds
-  std::vector<double> prob(nSamples);
-  for(int j=0;j<nSamples;j++){
-    prob[j] = postdist[j][1];
-  }
-  for(int i=0;i<Ncols-2;i++){
-    std::vector<double> par(nSamples);
-    for(int j=0;j<nSamples;j++){
-      par[j] = postdist[j][i+2];
-    }
-    std::map<std::string,double> stats = Nlpar::getSigmaIntervals(par,prob,1);
-    e->pars->maps[i]    = e->pars->active[i]->pri->fromUnitCube( paramConstr[0][i] );
-    e->pars->means[i]   = stats["mean"];
-    e->pars->s1_low[i]  = stats["low"];
-    e->pars->s1_high[i] = stats["high"];
-  }
 
-  e->minimizer->output(e->output);
-}
-
-//virtual
-void MultiNest::output(std::string output){
+  
+  Json::Value min_out;
+  min_out["minimizer"] = e->minimizer->type;
+  
   // Read the mn-resume file and write the number of total samples and replacements
   std::string dum;
-  std::ifstream infile(output + "mn-resume.dat");
-  infile >> dum >> this->replacements >> this->total_samples;
+  int total_samples;
+  int replacements;
+  std::ifstream infile(e->output + "mn-resume.dat");
+  infile >> dum >> replacements >> total_samples;
   infile.close();
+  min_out["total_samples"] = total_samples;
+  min_out["replacements"]  = replacements;
 
-  Json::Value min_out;
-  min_out["total_samples"] = this->total_samples;
-  min_out["replacements"]  = this->replacements;
 
-  std::ofstream jsonfile(output + std::to_string(this->counter) + "_" + this->name + "_minimizer_output.json");
+  // Write the mean, sdev, maxlike, and MAP values for each parameter
+  // Calculating the mean and the lower and upper 1-sigma bounds
+  Json::Value parameters,par_json;
+  double mean,sdev,maxlike,map;
+  std::string name;
+  std::vector<double> map_pars;
+  printf("%10s %15s %15s %15s %15s %10s\n","","Mean (dubious)","Sdev (dubious)","Maxlike","MAP","");
+  for(int i=0;i<nPar;i++){
+    name    = e->lmodel->active_names[i]; // Need to have the right prefix, e.g. in the case of multiple lenses
+    mean    = e->lmodel->active[i]->pri->fromUnitCube( paramConstr[0][i] );
+    sdev    = e->lmodel->active[i]->pri->fromUnitCube( paramConstr[0][nPar+i] );
+    maxlike = e->lmodel->active[i]->pri->fromUnitCube( paramConstr[0][2*nPar+i] );
+    map     = e->lmodel->active[i]->pri->fromUnitCube( paramConstr[0][3*nPar+i] );
+    par_json["mean"] = mean;
+    par_json["sdev"] = sdev;
+    par_json["maxlike"] = maxlike;
+    par_json["map"] = map;
+    parameters[name] = par_json;
+    map_pars.push_back( map );
+    printf("%10s %15.10f %15.10f %15.10f %15.10f %-10s\n",name.c_str(),mean,sdev,maxlike,map,name.c_str());
+  }
+  min_out["parameters"] = parameters;
+  
+  std::ofstream jsonfile(e->output + std::to_string(e->minimizer->counter) + "_" + e->lmodel->name + "_minimizer_output.json");
   jsonfile << min_out;
   jsonfile.close();
+
+
+
+  //Update values for active parameters
+  e->lmodel->updateActive(map_pars);
+  e->lmodel->updateLikelihoodModel();
+  e->lmodel->outputLikelihoodModel(e->output + std::to_string(e->minimizer->counter) + "_");  
 }
 
 //non-virtual
-void MultiNest::finalizeMinimizer(std::string output){
-  std::ifstream src((output + std::to_string(this->counter) + "_" + this->name + "_postdist.txt").c_str(),std::ios::binary);
-  std::ofstream dst((output + this->name + "_postdist.txt").c_str(), std::ios::binary);
+void MultiNest::finalizeMinimizer(std::string output,BaseLikelihoodModel* lmodel){
+  printf("%-16s%20s\n","Starting output ",this->name.c_str());
+  fflush(stdout);
+
+  
+  // Copy files to the final ones (without the step prefix)
+  std::ifstream src((output + std::to_string(this->counter) +  "_" + lmodel->name + "_postdist.txt").c_str(),std::ios::binary);
+  std::ofstream dst((output + lmodel->name + "_postdist.txt").c_str(), std::ios::binary);
   dst << src.rdbuf();
-  std::ifstream src2((output + std::to_string(this->counter) + "_" + this->name + "_minimizer_output.json").c_str(),std::ios::binary);
-  std::ofstream dst2((output + this->name + "_minimizer_output.json").c_str(), std::ios::binary);
+  std::ifstream src2((output + std::to_string(this->counter) + "_" + lmodel->name + "_minimizer_output.json").c_str(),std::ios::binary);
+  std::ofstream dst2((output + lmodel->name + "_minimizer_output.json").c_str(), std::ios::binary);
   dst2 << src2.rdbuf();
+
+  
+  // Update likelihood model with MAP parameters
+  Json::Value out_json;
+  std::ifstream fin((output + lmodel->name + "_minimizer_output.json").c_str());
+  fin >> out_json;
+
+  printf("%s\n","   Printing results for the Max. Likelihood solution:");
+  std::unordered_map<std::string,double> maps;
+  Json::Value::Members jmembers;
+  std::string key,key1,key2;
+  jmembers = out_json["parameters"].getMemberNames();
+  for(int i=0;i<jmembers.size();i++){
+    Json::Value tmp = jmembers[i]; // This is needed to cast the key into a json value before converting it to a string.
+    std::string str = tmp.asString();
+    double value = out_json["parameters"][jmembers[i]]["maxlike"].asDouble();
+
+    std::stringstream ss(str);
+    if( str.length() > 2 ){
+      std::string last_two = str.substr( str.length()-2,str.length() );
+
+      if( last_two.compare("_s") == 0 ){
+	key = str;
+      } else {
+	std::getline(ss,key,'_');
+	std::getline(ss,key,'_');
+      }
+    } else {
+      key = str;
+    }
+
+    std::pair<std::string,double> mypair (key,value);
+    maps.insert( mypair );
+  }
+
+  
+  lmodel->updateActive(maps);
+  lmodel->updateLikelihoodModel();
+  lmodel->getLogLike();
+  lmodel->printActive();
+  lmodel->printTerms();
+  printf("\n");
+  lmodel->outputLikelihoodModel(output);
+
+
+  printf("%7s\n","...done");
+  std::cout << std::string(200,'=') << std::endl;
+  fflush(stdout);
 }

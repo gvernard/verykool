@@ -77,6 +77,22 @@ private:
   double fac;
 };
 
+class MatternKernel: public BaseCovKernel {
+public:
+  double eta;  // Mattern exponent
+  double sdev; // correlation length
+
+  MatternKernel(std::vector<Nlpar*> pars);
+  MatternKernel(const MatternKernel& other);
+  double getCovariance(double r);
+  double getCovarianceSelf();
+  void setParameters(std::vector<Nlpar*> pars);
+  void printParameters();
+  MatternKernel* clone(){
+    return new MatternKernel(*this);
+  };
+};
+
 class FactoryCovKernel {//This is a singleton class.
 public:
   FactoryCovKernel(FactoryCovKernel const&) = delete;//Stop the compiler generating methods of copy the object.
@@ -94,6 +110,8 @@ public:
       return new GaussKernel(pars);
     } else if( kernel_type == "expgauss" ){
       return new ExpGaussKernel(pars);
+    } else if( kernel_type == "mattern" ){
+      return new MatternKernel(pars);      
     } else {
       return NULL;
     }

@@ -137,7 +137,7 @@ void mySimplex::minimize(std::map<std::string,std::string> opt,ImagePlane* image
 
 
 
-void mySimplex::output(){
+void mySimplex::outputMinimizer(){
   // Simplex finished
 }
 

@@ -5,12 +5,16 @@ AM_INIT_AUTOMAKE([foreign subdir-objects])
 AC_CONFIG_MACRO_DIRS([m4])
 AC_PREFIX_DEFAULT($PWD)
 
-AC_SUBST(VKL_HOME,$PWD)
+CXX=/home/giorgos/myLibraries/openmpi/bin/mpic++
+MPIRUN=/home/giorgos/myLibraries/openmpi/bin/mpirun
 
-CXX=mpic++
+AC_SUBST(VKL_HOME,$PWD)
+AC_SUBST(MPIRUN,$MPIRUN)
 
 AC_PROG_CXX
 AC_PROG_F77
+AC_PROG_MKDIR_P # MKDIR_P
+AC_PROG_SED # SED
 
 LT_INIT([disable-static])
 
@@ -23,11 +27,11 @@ AC_DEFUN([AC_INSTALLATION_INSTRUCTIONS],
 		echo "Program/library $(tput bold)$(tput setaf 1)${name} is missing$(tput sgr0), you need to install it using your package manager."
 		echo "Alternatively, you can install ${name} from source using the following instructions:"
 		echo $(tput setaf 6)
-		cat ${MOLET_HOME}/third_party/install_${name}.txt
+		cat ${VKL_HOME}/third_party/install_${name}.txt
 		echo $(tput sgr0)
 		echo "If you use the 'prefix' option while running ./configure above, then you need to pass:"
 		echo "   $(tput setaf 2)--with-${name}=prefix$(tput sgr0)"
-		echo "when running the MOLET ./configure script."
+		echo "when running the VKL ./configure script."
 		AC_MSG_ERROR("Program/library ${name} not found")
 	]
 )
@@ -74,6 +78,18 @@ AC_ARG_WITH([jsoncpp],
     [
 	AC_CHECK_LIB(jsoncpp,main,[],[AC_INSTALLATION_INSTRUCTIONS(jsoncpp)])
 	AC_CHECK_HEADERS(json/json.h,[],[AC_MSG_ERROR("you need to have the jsoncpp header files installed.")])
+    ])
+
+AC_ARG_WITH([jq],
+    [AS_HELP_STRING([--with-jq=prefix],[give the path to the jq program binary file.])],
+    [
+	AC_SUBST(AM_JQ,${withval}/bin/jq)
+    ],
+    [
+	AC_PATH_PROG(AM_JQ,jq,[no],[path=$PATH])
+	if test "$AM_JQ" = no ; then
+	   AC_INSTALLATION_INSTRUCTIONS(jq)
+	fi
     ])
 
 AC_ARG_WITH([boost],
@@ -129,12 +145,31 @@ AC_ARG_WITH([multinest],
     [
 	ac_new_CPPFLAGS+=" -I${withval}/include"
 	ac_new_LDFLAGS+=" -L${withval}/lib -Wl,-rpath -Wl,${withval}/lib"
-	ac_new_LIBS+=" -lmultinest"
+	ac_new_LIBS+=" -lmultinest_mpi"
     ],
     [
 	AC_CHECK_LIB(multinest,main,[],[AC_MSG_ERROR("you need to have the multinest library installed.")])
 	AC_CHECK_HEADERS(multinest.h,[],[AC_MSG_ERROR("you need to have the multinest header files installed.")])
     ])
+
+
+
+
+AC_ARG_WITH([cuda],
+   [  --with-cuda=PATH    prefix where cuda is installed [default=/usr/local/cuda]])
+
+if test -n "$with_cuda"
+then
+   CUDA_CFLAGS="-I$with_cuda/include"
+   CUDA_LIBS="-lcudart -lcusparse -lcusolver"
+   CUDA_LDFLAGS="-L$with_cuda/lib64"
+   NVCC="$with_cuda/bin/nvcc"
+else
+   CUDA_CFLAGS="-I/usr/local/cuda/include"
+   CUDA_LIBS="-lcudart -lcusparse -lcusolver"
+   CUDA_LDFLAGS="-L/usr/local/cuda/lib64"
+   NVCC="nvcc"
+fi
 
 dnl echo $ac_new_CPPFLAGS
 dnl echo $ac_new_LDFLAGS
@@ -153,6 +188,20 @@ AC_SUBST([LDFLAGS])
 AC_SUBST([LIBS])
 
 
+#CUDA_CFLAGS="-std=c++17 --tag=CXX --compiler-options '-fPIC' -Wno-deprecated-gpu-targets"
+#CUDA_LIBS="-lcudart -lcusparse -lcusolver"
+#NVCC="nvcc"
+
+AC_SUBST(CUDA_CFLAGS)
+AC_SUBST(CUDA_LIBS)
+AC_SUBST(CUDA_LDFLAGS)
+AC_SUBST(NVCC)
+
+
+
+
 AC_CONFIG_FILES([Makefile])
+AC_CONFIG_FILES([scripts/vkl_driver],[chmod +x scripts/vkl_driver])
+AC_CONFIG_FILES([scripts/vkl_analyzer],[chmod +x scripts/vkl_analyzer])
 
 AC_OUTPUT

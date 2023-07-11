@@ -81,8 +81,7 @@ int main(int argc,char* argv[]){
     printf("%7s\n","...done");
     std::cout << std::string(200,'=') << std::endl;
     fflush(stdout);
-    vkl_likeModel->finalizeLikelihoodModel(init->output);
-    vkl_minimizer->finalizeMinimizer(init->output);
+    vkl_minimizer->finalizeMinimizer(init->output,vkl_likeModel); // Updates the likelihood model
   }
   //================= END:MINIMIZATION =========================
 

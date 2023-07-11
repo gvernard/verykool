@@ -40,19 +40,19 @@ GaussKernel::GaussKernel(const GaussKernel& other){
   this->sdev = other.sdev;
 }
 double GaussKernel::getCovariance(double r){
-  //  double cov = this->fac*exp(-r*r/(2*this->sdev*this->sdev));
+  //double cov = this->fac*exp(-r*r/(2*this->sdev*this->sdev));
   double cov = exp(-r*r/(2*this->sdev*this->sdev));
   return cov;
 }
 double GaussKernel::getCovarianceSelf(){
-  //  double cov = this->fac;
+  //double cov = this->fac;
   double cov = 1.1;
   return cov;
 }
 void GaussKernel::setParameters(std::vector<Nlpar*> pars){
   this->cmax = Nlpar::getValueByName("cmax",pars);
   this->sdev = Nlpar::getValueByName("sdev",pars);
-  //  this->fac  = 1.0/(this->sdev*sqrt(2*M_PI));
+  //this->fac  = 1.0/(this->sdev*sqrt(2*M_PI));
 }
 void GaussKernel::printParameters(){
   printf("      %10s\n",this->type.c_str());
@@ -88,5 +88,39 @@ void ExpGaussKernel::printParameters(){
   printf("      %10s\n",this->type.c_str());
   printf("sdev: %10.5f\n",this->sdev);
   printf("expo: %10.5f\n",this->expo);
+  printf("cmax: %10.5f\n",this->cmax);
+}
+
+
+
+MatternKernel::MatternKernel(std::vector<Nlpar*> pars){
+  this->type  = "mattern";
+  this->setParameters(pars);
+}
+MatternKernel::MatternKernel(const MatternKernel& other){
+  this->sdev = other.sdev;
+  this->eta  = other.eta;
+}
+double MatternKernel::getCovariance(double r){
+  double fac  = sqrt(2.0*this->eta)*r/this->sdev;
+  double fac1 = pow(2.0,1.0-this->eta)/tgamma(this->eta);
+  double fac2 = pow(fac,this->eta);
+  double fac3 = std::cyl_bessel_k(this->eta,fac);
+  double cov  = fac1*fac2*fac3;
+  return cov;
+}
+double MatternKernel::getCovarianceSelf(){
+  double cov = 1.0;
+  return cov;
+}
+void MatternKernel::setParameters(std::vector<Nlpar*> pars){
+  this->cmax = Nlpar::getValueByName("cmax",pars);
+  this->eta  = Nlpar::getValueByName("eta",pars);
+  this->sdev = Nlpar::getValueByName("sdev",pars);
+}
+void MatternKernel::printParameters(){
+  printf("      %10s\n",this->type.c_str());
+  printf("sdev: %10.5f\n",this->sdev);
+  printf(" eta: %10.5f\n",this->eta);
   printf("cmax: %10.5f\n",this->cmax);
 }

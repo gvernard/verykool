@@ -118,6 +118,30 @@ void Spemd::defl(double xin,double yin,double& xout,double& yout){
   yout =  ax_t*sinpa + ay_t*cospa;
 }
 
+
+//Derived class from Spemd: Pemd (Power-law Elliptical Mass Density)
+//===============================================================================================================
+Pemd::Pemd(std::vector<Nlpar*> nlpars): Spemd::Spemd(nlpars){
+  this->n = 6;
+  this->type = "pemd";
+
+  int i;
+  for(i=0;i<nlpars.size();i++){
+    if( nlpars[i]->nam == "s" ){
+      nlpars[i]->val = 0.0001;
+      break;
+    }
+  }
+  if( i == nlpars.size() ){
+    Nlpar dum("s",1,0,0.0001,0,0.0001,0.0001);
+    nlpars.push_back(&dum);
+  }
+
+  setMassPars(nlpars);
+}
+
+
+
 //Derived class from BaseMassModel: Pert (perturbations on a grid)
 //===============================================================================================================
 Pert::Pert(int a,int b,double c,double d,std::string reg,std::string interp){

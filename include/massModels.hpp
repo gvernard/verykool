@@ -53,6 +53,11 @@ public:
   double psi(double xin,double yin){return 0.0;};
 };
 
+class Pemd: public Spemd{
+public:
+  Pemd(std::vector<Nlpar*> nlpars);
+};
+
 class Pert: public BaseMassModel{
 public:
   FixedSource* dpsi;
@@ -120,6 +125,8 @@ public:
       return new Sie(nlpars);
     } else if ( modelname == "spemd" ){
       return new Spemd(nlpars);
+    } else if ( modelname == "pemd" ){
+      return new Pemd(nlpars);
     } else {
       return NULL;
     }

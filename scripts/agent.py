@@ -29,7 +29,7 @@ def main():
     
     
     
-    # Check length of path + run. MultiNest supports up to 100 characters for the full path.
+!    # Check length of path + run. MultiNest supports up to 100 characters for the full path.
     ##############################################################################################
     full_path = path+run+"output/"
     if len(full_path) > 80:
@@ -51,7 +51,8 @@ def main():
             answer = input("output directory exists, cleanup? (y/n): ")
             
         if answer == 'y':
-            for item in os.listdir(path+run+"output"):
+            items = os.listdir(path+run+"output") + os.listdir(path+run+"analysis")
+            for item in items:
                 item_path = os.path.join(path+run+"output",item)
                 try:
                     if os.path.isfile(item_path):
@@ -72,22 +73,22 @@ def main():
     input_str = re.sub(re.compile("/\*.*?\*/",re.DOTALL),"",input_str)
     input_str = re.sub(re.compile("//.*?\n" ),"",input_str)
     options   = json.loads(input_str)
+
+    minimizer = options["minimizer"]["type"]
     
     if options["minimizer"]["type"] in original:
         mode = "original"
     elif options["minimizer"]["type"] in cosmosis:
         mode = "cosmosis"
         
-    mpi_flag = False
-    if options["nproc"] > 1:
-        mpi_flag = True
-            
-        
-        
+    parameter_model = options["parameter_model"]
+
+
+    
     # Directory and file check based on the input options
     ##############################################################################################
     if mode == "cosmosis":
-        create_pipeline(path,run,options,vkl_dir)
+        cosmosis_create_pipeline(path,run,options,vkl_dir)
         subprocess.call([vkl_dir+"bin/createCosmosisValuesPriorsIni",path,run])
 
 
@@ -97,27 +98,21 @@ def main():
     ##############################################################################################
     if mode == "original":
         msg = "Executing original code, good luck:"
-        if mpi_flag:
-            host = socket.gethostname()
-            if host == "gamatos2020":
-                cmd = "mpirun --use-hwthread-cpus -np " + str(options["nproc"]) + " " + vkl_dir + "bin/verykool " + path + " " + run
-            else:
-                cmd = "mpirun -np " + str(options["nproc"]) + " " + vkl_dir + "bin/verykool " + path + " " + run
-        else:
-            cmd = vkl_dir + "bin/verykool_test " + path + " " + run
-            #cmd = "valgrind --track-origins=yes " + vkl_dir + "bin/verykool_test " + path + " " + run
-            #cmd = vkl_dir + "bin/verykool " + path + " " + run
+        cmd = "/home/giorgos/myLibraries/openmpi/bin/mpirun --use-hwthread-cpus -np " + str(options["nproc"]) + " " + vkl_dir + "bin/verykool " + path + " " + run
+        #cmd = "valgrind --track-origins=yes " + vkl_dir + "bin/verykool_test " + path + " " + run
+        #cmd = vkl_dir + "bin/verykool " + path + " " + run
     else:
         msg = "Executing cosmosis code, good luck:"
         if mpi_flag:
             exe_command = "mpirun -n " + str(options["nproc"]) + " cosmosis --mpi"
         else:
             exe_command = "cosmosis"
-        create_bash_script(path,run,options,cosmo_lib_dir,conda_env,vkl_dir,exe_command)
+        cosmosis_create_bash_script(path,run,options,cosmo_lib_dir,conda_env,vkl_dir,exe_command)
         cmd = "bash " + path + run + "auto_run_cosmosis.sh"
 
         
-        
+
+    
         
     print(msg)
     print(cmd)
@@ -125,13 +120,42 @@ def main():
     print("Execution succesful (results may still be wrong though...)")
 
 
+    # Perform analysis
+    ##############################################################################################
+    if parameter_model == "standard":
+        print("Plotting best solution...",end="")
+        subprocess.call(["python",vkl_dir+"analysis_tools/analyze_plot_smooth.py",path,run])
+        print("done")
+
+        if minimizer == "multinest":
+            print("Plotting corner...",end="")
+            subprocess.call(["python",vkl_dir+"analysis_tools/analyze_corner.py",path,run])
+            print("done")
+            print("Getting confidence limits...",end="")
+            subprocess.call(["python",vkl_dir+"analysis_tools/analyze_limits.py",path,run])
+            print("done")
+
+
+    # # Convert to the COOLEST standard
+    # ##############################################################################################
+    # if os.path.isfile(path+run+"coolest_fixed_input.json"):
+    #     print("Converting output to COOLEST...",end="")
+    #     subprocess.call([vkl_dir+"analysis_tools/convert_to_coolest",path,run,path+run+"coolest_fixed_input.json"])
+    #     print("done")
 
 
 
 
 
 
-def create_bash_script(path,run,options,cosmo_lib_dir,conda_env,vkl_dir,exe_command):
+
+
+
+    
+
+
+
+def cosmosis_create_bash_script(path,run,options,cosmo_lib_dir,conda_env,vkl_dir,exe_command):
     f = open(path+run+"auto_run_cosmosis.sh","w")
     f.write("#!/bin/bash\n")
     f.write("# This is an automatically generated file!\n")
@@ -142,7 +166,7 @@ def create_bash_script(path,run,options,cosmo_lib_dir,conda_env,vkl_dir,exe_comm
     f.close()
 
 
-def create_pipeline(path,run,options,vkl_dir):
+def cosmosis_create_pipeline(path,run,options,vkl_dir):
     f = open(path+run+"cosmosis_pipeline.ini","w")
     f.write("[runtime]\n")
     f.write("sampler = " + options["minimizer"]["type"][9:] + "\n")
