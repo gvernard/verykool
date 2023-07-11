@@ -305,17 +305,18 @@ void ImagePlane::readC(const std::string flag,const std::string filepath){
   double value;
   this->noise_flag = flag;
 
-  if( flag == "uniform" ){
+  if( flag == "sigma_uniform" ){
 
     //There is only one element in the file, repeated along the diagonal
     std::ifstream infile(filepath);
     infile >> value;
+    double val2 = value*value;
     for(int i=0;i<this->Nm;i++){
-      this->C.tri.push_back({i,i,value});
+      this->C.tri.push_back({i,i,val2});
     }
     infile.close();
 
-  } else if( flag == "map" ){
+  } else if( flag == "sigma_map" ){
 
     //There are exactly Ni x Nj (diagonal) elements in the file and in table C
     std::string extension = filepath.substr(filepath.find(".")+1,std::string::npos);
@@ -324,10 +325,12 @@ void ImagePlane::readC(const std::string flag,const std::string filepath){
 
       std::ifstream infile(filepath);
       int i;
+      double val2;
       while( true ){
 	infile >> i >> i >> value;
+	val2 = value*value;
 	if( infile.eof() ) break;
-	this->C.tri.push_back({i,i,value});
+	this->C.tri.push_back({i,i,val2});
       }
       infile.close();
 
@@ -338,18 +341,17 @@ void ImagePlane::readC(const std::string flag,const std::string filepath){
       image.readAllKeys();
       std::valarray<float> contents(image.axis(0)*image.axis(1));
       this->readFits(filepath,contents);
-      
+      double val2;
       for(int i=0;i<this->Ni*this->Nj;i++){
-	this->C.tri.push_back({i,i,contents[i]});
-	//	  std::cout << 1./pow(contents[i*this->Nj+j],2) << std::endl;
+	val2 = contents[i]*contents[i];
+	this->C.tri.push_back({i,i,val2});
       }
 
     }
 
-
   } else if( flag == "correlated" ){
-
-    //There are at least Ni x Nj (diagonal plus off-diagonal) elements in the file and in table C
+    // This reads the covariance matrix, where the diagonal elements, for example, as sigma^2    
+    // There are at least Ni x Nj (diagonal plus off-diagonal) elements in the file and in table C
     std::ifstream infile(filepath);
     int i,j;
     while( true ){
