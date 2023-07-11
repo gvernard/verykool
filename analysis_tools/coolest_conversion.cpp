@@ -445,6 +445,9 @@ int main(int argc,char* argv[]){
   if( input_json["noise_flag"].asString() == "map" ){
     fname = "my_noise_map.fits";
 
+    int Nx = input_json["iplane"]["pix_x"].asInt();
+    int Ny = input_json["iplane"]["pix_y"].asInt();
+    
     Json::Value pixels_noise;
     pixels_noise["field_of_view_x"] = Json::Value(Json::arrayValue);
     pixels_noise["field_of_view_x"].append(0);
@@ -452,22 +455,43 @@ int main(int argc,char* argv[]){
     pixels_noise["field_of_view_y"] = Json::Value(Json::arrayValue);
     pixels_noise["field_of_view_y"].append(0);
     pixels_noise["field_of_view_y"].append( input_json["iplane"]["siz_y"].asDouble() );
-    pixels_noise["num_pix_x"] = input_json["iplane"]["pix_x"].asInt();
-    pixels_noise["num_pix_y"] = input_json["iplane"]["pix_y"].asInt();
+    pixels_noise["num_pix_x"] = Nx;
+    pixels_noise["num_pix_y"] = Ny;
     pixels_noise["fits_file"] = Json::Value();
     pixels_noise["fits_file"]["path"] = fname;
     noise["type"] = "NoiseMap";
     noise["noise_map"] = pixels_noise;
     
-    dum = system( ("cp "+case_path+"/"+input_json["noisepath"].asString()+" "+outdir_name+"/"+fname).c_str() );
+    std::valarray<float> contents(Nx*Ny);
+    long naxis    = 2;
+    long naxes[2] = {(long) Ny,(long) Nx};
+    long Ntot = (long) Nx*Ny;
+    std::unique_ptr<CCfits::FITS> pInfile( new CCfits::FITS(case_path+"/"+input_json["noisepath"].asString(),CCfits::Read,true) );
+    std::unique_ptr<CCfits::FITS> pOutfile( new CCfits::FITS("!"+outdir_name+"/"+fname,FLOAT_IMG,naxis,naxes) );
+    std::vector<long> extAx(2,(long) Ny);
+    CCfits::ExtHDU* imageExt = pOutfile->addImage("NEW-EXTENSION",FLOAT_IMG,extAx);
+    
+    CCfits::PHDU& image = pInfile->pHDU();
+    std::valarray<float> tmp;
+    image.readAllKeys();
+    image.read(tmp);
+    for(int i=0;i<Ny;i++){
+      for(int j=0;j<Nx;j++){
+	contents[i*Nx+j] = sqrt(tmp[i*Nx+j]);
+      }
+    }
+    
+    long fpixel(1);
+    imageExt->write(fpixel,Ntot,contents);
+    pOutfile->pHDU().write(fpixel,Ntot,contents);
   } else if( input_json["noise_flag"].asString() == "uniform" ){
-    double std;
+    double var;
     fin.open( (case_path+"/"+input_json["noisepath"].asString()).c_str() ,std::ifstream::in);
-    fin >> std;
+    fin >> var;
     fin.close();
 
     noise["type"] = "UniformGaussianNoise";
-    noise["std_dev"] = std;
+    noise["std_dev"] = sqrt(var);
   } else {
     std::cout << "Unknown noise type! Must be: 'map', 'uniform'" << std::endl;
     return 0;

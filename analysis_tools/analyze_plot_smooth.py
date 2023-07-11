@@ -165,7 +165,8 @@ im_res = im_res[::-1,:]
 if inpars["maskpath"] != "0":
     im_res = im_res*np.flipud(np.array(mask))
 
-noise_map = np.flipud(fits.getdata(data_path+'noise_map.fits',ext=0))
+noise_map = np.flipud(fits.getdata(data_path+'noise_map.fits',ext=0)) # This is the sigma map squared
+noise_map = np.sqrt(noise_map)
 im_res = np.divide(im_res,noise_map)
     
 #tmp = np.flipud(im_res)

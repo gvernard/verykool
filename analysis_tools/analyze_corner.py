@@ -105,6 +105,7 @@ pars[:,0] = np.log10(tmp)
 
 
 #dyo = MCSamples(samples=pars,weights=wei,loglikes=loglike,names=names,labels=labels)
+chains.print_load_details = False # Just to silence messages
 ena = MCSamples(samples=pars,names=names,labels=labels,settings={"ignore_rows": 0.0,"smooth_scale_2D":0.3,"mult_bias_correction_order":1})
 #ena = MCSamples(samples=pars,names=names,labels=labels,settings={"ignore_rows": 0.0})
 ena.reweightAddingLogLikes(mypost)

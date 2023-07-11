@@ -3,7 +3,7 @@ import sys
 import json
 import os
 import re
-from getdist import MCSamples
+from getdist import chains,MCSamples
 
 
 # Input args
@@ -73,7 +73,7 @@ for line in tmp:
 labels = [w.replace('_', '-') for w in labels]
 
 
-
+chains.print_load_details = False # Just to silence messages
 ena = MCSamples(samples=pars,names=names,labels=labels,settings={"ignore_rows": 0.0,"smooth_scale_1D":0.5,"mult_bias_correction_order":1})
 #min_non_zero = np.min(mypost[np.nonzero(mypost)])
 #mypost = np.where(mypost<min_non_zero,min_non_zero,mypost)

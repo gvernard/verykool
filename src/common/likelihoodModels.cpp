@@ -307,9 +307,9 @@ void SmoothLikelihood::updateLikelihoodModel(){
   // Solve for the source, calculate the chi2, reg, and detA terms
   this->algebra->solveSource(this->source,lambda_s->val);
 
-  this->terms["Nslogl_s"] = 0.0;
-  this->terms["detCs"] = 0.0;
-  this->terms["detA"] = 0.0;
+  //this->terms["Nslogl_s"] = 0.0;
+  //this->terms["detCs"] = 0.0;
+  //this->terms["detA"] = 0.0;
   //this->terms["reg"] = 0.0;
 }
 
