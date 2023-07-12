@@ -1,4 +1,5 @@
 ./configure \
+--with-mpi=/home/giorgos/myLibraries/openmpi \
 --with-cfitsio=/home/giorgos/myLibraries/cfitsio \
 --with-CCfits=/home/giorgos/myLibraries/CCfits \
 --with-jsoncpp=/home/giorgos/myLibraries/jsoncpp \

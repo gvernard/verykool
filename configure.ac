@@ -5,11 +5,6 @@ AM_INIT_AUTOMAKE([foreign subdir-objects])
 AC_CONFIG_MACRO_DIRS([m4])
 AC_PREFIX_DEFAULT($PWD)
 
-MPIRUN=mpirun
-
-AC_SUBST(VKL_HOME,$PWD)
-AC_SUBST(MPIRUN,$MPIRUN)
-
 AC_PROG_CXX([mpic++])
 AC_PROG_F77
 AC_PROG_MKDIR_P # MKDIR_P
@@ -42,6 +37,15 @@ AC_DEFUN([AC_INSTALLATION_INSTRUCTIONS],
 ac_new_CPPFLAGS=""
 ac_new_LDFLAGS=""
 ac_new_LIBS=""
+
+AC_ARG_WITH([mpi],
+    [AS_HELP_STRING([--with-mpi=prefix],[give the path to the OpenMPI library and header files.])],
+    [
+	MPIRUN=${withval}/bin/mpirun
+    ],
+    [	
+    	MPIRUN=mpirun
+    ])
 
 AC_ARG_WITH([cfitsio],
     [AS_HELP_STRING([--with-cfitsio=prefix],[give the path to the cfitsio library and header files.])],
@@ -189,21 +193,19 @@ dnl echo $CPPFLAGS
 dnl echo $LDFLAGS
 dnl echo $LIBS
 
-AC_SUBST([CPPFLAGS])
-AC_SUBST([LDFLAGS])
-AC_SUBST([LIBS])
-
-
 #CUDA_CFLAGS="-std=c++17 --tag=CXX --compiler-options '-fPIC' -Wno-deprecated-gpu-targets"
 #CUDA_LIBS="-lcudart -lcusparse -lcusolver"
 #NVCC="nvcc"
 
+AC_SUBST([CPPFLAGS])
+AC_SUBST([LDFLAGS])
+AC_SUBST([LIBS])
 AC_SUBST(CUDA_CFLAGS)
 AC_SUBST(CUDA_LIBS)
 AC_SUBST(CUDA_LDFLAGS)
 AC_SUBST(NVCC)
-
-
+AC_SUBST(VKL_HOME,$PWD)
+AC_SUBST(MPIRUN,$MPIRUN)
 
 
 AC_CONFIG_FILES([Makefile])
