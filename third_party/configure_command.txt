@@ -1,4 +1,5 @@
 ./configure \
+--enable-cluster=no \
 --with-mpi=/home/giorgos/myLibraries/openmpi \
 --with-cfitsio=/home/giorgos/myLibraries/cfitsio \
 --with-CCfits=/home/giorgos/myLibraries/CCfits \

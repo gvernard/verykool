@@ -38,6 +38,22 @@ ac_new_CPPFLAGS=""
 ac_new_LDFLAGS=""
 ac_new_LIBS=""
 
+
+AC_ARG_ENABLE([cluster],
+	[AS_HELP_STRING([--enable-cluster],[Add arguments to the 'mpirun' command that are appropriate for running on a cluster])],
+	[
+	if test "$enable_cluster" = "no"; then
+	   CLUSTER_SET=0
+	else
+	   CLUSTER_SET=1
+	fi
+	],
+	[CLUSTER_SET=0])
+AC_SUBST(CLUSTER_SET,$CLUSTER_SET)
+
+
+# Third party libraries
+##########################################################################
 AC_ARG_WITH([mpi],
     [AS_HELP_STRING([--with-mpi=prefix],[give the path to the OpenMPI library and header files.])],
     [

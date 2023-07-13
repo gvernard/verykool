@@ -31,7 +31,6 @@ fi
 injson=`cat ${full_path}vkl_input.json`
 minimizer=`echo ${injson} | @AM_JQ@ '.minimizer.type' | @SED@ -e 's/^"//' -e 's/"$//'`
 parameter_model=`echo ${injson} | @AM_JQ@ '.parameter_model' | @SED@ -e 's/^"//' -e 's/"$//'`
-nproc=`echo ${injson} | @AM_JQ@ '.nproc'`
 
 
 
@@ -56,7 +55,15 @@ fi
 # Execute main code
 ##############################################################################################
 msg="Executing original code, good luck:"
-cmd="@MPIRUN@ --use-hwthread-cpus -np "${nproc}" "${vkl_home}"bin/verykool "${path}" "${run}
+CLUSTER_SET=@CLUSTER_SET@
+if [ $CLUSTER_SET == 1 ]
+then
+    # The PBS_NODEFILE variable must have been previously set. This is usually done by a SLURM script.
+    cmd="@MPIRUN@ --mca oob_tcp_if_exclude idrac,lo --mca btl_tcp_if_exclude idrac,lo -machinefile "${PBS_NODEFILE}" -np "${NPROCS}" "${vkl_home}"bin/verykool "${path}" "${run}
+else
+    nproc=`echo ${injson} | @AM_JQ@ '.nproc'`
+    cmd="@MPIRUN@ --use-hwthread-cpus -np "${nproc}" "${vkl_home}"bin/verykool "${path}" "${run}
+fi
 
 echo $msg
 echo $cmd
