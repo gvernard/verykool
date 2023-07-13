@@ -58,7 +58,9 @@ msg="Executing original code, good luck:"
 CLUSTER_SET=@CLUSTER_SET@
 if [ $CLUSTER_SET == 1 ]
 then
-    # The PBS_NODEFILE variable must have been previously set. This is usually done by a SLURM script.
+    # The PBS_NODEFILE and NPROCS variables should be passed as command line arguments. 
+    PBS_NODEFILE=$3
+    NPROCS=$4
     cmd="@MPIRUN@ --mca oob_tcp_if_exclude idrac,lo --mca btl_tcp_if_exclude idrac,lo -machinefile "${PBS_NODEFILE}" -np "${NPROCS}" "${vkl_home}"bin/verykool "${path}" "${run}
 else
     nproc=`echo ${injson} | @AM_JQ@ '.nproc'`
