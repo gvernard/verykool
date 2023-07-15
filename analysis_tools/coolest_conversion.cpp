@@ -60,24 +60,6 @@ public:
   std::map<std::string,std::string> get_names_lookup(){
     return names_lookup;
   }
-  
-  std::map<std::string,Param> convert_to_map(std::vector<Param> vkl_params){
-    std::map<std::string,Param> mymap;
-    for(int i=0;i<vkl_params.size();i++){
-      mymap.insert( {vkl_params[i].name,vkl_params[i]} );
-    }
-    return mymap;
-  };
-
-  std::vector<Param> convert_to_vector(std::map<std::string,Param> mymap){
-    std::vector<Param> coolest_params(mymap.size());
-    int i = 0;
-    for(std::map<std::string,Param>::iterator it = mymap.begin(); it != mymap.end(); ++it) {
-      coolest_params[i] = it->second;
-      i++;
-    }
-    return coolest_params;
-  };
 
   virtual std::vector<Param> convert_values(std::vector<Param> vkl_params) = 0;
 };
@@ -91,17 +73,33 @@ public:
   };
 
   std::vector<Param> convert_values(std::vector<Param> vkl_params){
-    std::map<std::string,Param> mymap = this->convert_to_map(vkl_params);
-    
-    mymap["phi"].name  = this->names_lookup["phi"];
-    mymap["phi"].value = mymap["phi"].value - 90.0;
-    if( mymap["phi"].has_stats ){
-      mymap["phi"].mean  = mymap["phi"].mean - 90.0;
-      mymap["phi"].p16   = mymap["phi"].p16 - 90.0;
-      mymap["phi"].p84   = mymap["phi"].p84 - 90.0;
+    std::vector<Param> coolest_params(vkl_params.size());
+
+    for(int i=0;i<vkl_params.size();i++){
+      std::string name = vkl_params[i].name;
+      Param dum_param;
+      dum_param.name  = this->names_lookup[name];
+      if( name == "phi" ){
+	// Convert position angle
+	dum_param.value = vkl_params[i].value - 90.0;
+	if( vkl_params[i].has_stats ){
+	  dum_param.mean  = vkl_params[i].mean - 90.0;
+	  dum_param.p16   = vkl_params[i].p16 - 90.0;
+	  dum_param.p84   = vkl_params[i].p84 - 90.0;
+	}
+      } else {
+	// No conversion (only the name)
+	dum_param.value = vkl_params[i].value; 
+	if( vkl_params[i].has_stats ){
+	  dum_param.mean  = vkl_params[i].mean;
+	  dum_param.p16   = vkl_params[i].p16;
+	  dum_param.p84   = vkl_params[i].p84;
+	}
+      }
+      coolest_params[i] = dum_param;
     }
     
-    return convert_to_vector(mymap);
+    return coolest_params;
   }; 
 };
 
@@ -114,28 +112,48 @@ public:
   };
 
   std::vector<Param> convert_values(std::vector<Param> vkl_params){
-    std::map<std::string,Param> mymap = this->convert_to_map(vkl_params);
+    std::vector<Param> coolest_params(vkl_params.size());
 
-    mymap["pa"].name  = this->names_lookup["pa"];
-    mymap["pa"].value = mymap["pa"].value - 90.0;
-    if( mymap["pa"].has_stats ){
-      mymap["pa"].mean  = mymap["pa"].mean - 90.0;
-      mymap["pa"].p16   = mymap["pa"].p16 - 90.0;
-      mymap["pa"].p84   = mymap["pa"].p84 - 90.0;
+    for(int i=0;i<vkl_params.size();i++){
+      std::string name = vkl_params[i].name;
+      Param dum_param;
+      dum_param.name  = this->names_lookup[name];
+      if( name == "pa" ){
+	// Convert position angle
+	dum_param.value = vkl_params[i].value - 90.0;
+	if( vkl_params[i].has_stats ){
+	  dum_param.mean  = vkl_params[i].mean - 90.0;
+	  dum_param.p16   = vkl_params[i].p16 - 90.0;
+	  dum_param.p84   = vkl_params[i].p84 - 90.0;
+	}
+      } else if( name == "b" ){
+	// Convert 'b' to 'theta_E', for which we need the value of "q" first
+	double fac;
+	for(int k=0;k<vkl_params.size();k++){
+	  if( vkl_params[k].name == "q" ){
+	    fac = sqrt(vkl_params[k].value);
+	    break;
+	  }
+	}
+	dum_param.value = vkl_params[i].value/fac;
+	if( vkl_params[i].has_stats ){
+	  dum_param.mean  = vkl_params[i].mean/fac;
+	  dum_param.p16   = vkl_params[i].p16/fac;
+	  dum_param.p84   = vkl_params[i].p84/fac;
+	}
+      } else {
+	// No conversion (only the name)
+	dum_param.value = vkl_params[i].value; 
+	if( vkl_params[i].has_stats ){
+	  dum_param.mean  = vkl_params[i].mean;
+	  dum_param.p16   = vkl_params[i].p16;
+	  dum_param.p84   = vkl_params[i].p84;
+	}
+      }
+      coolest_params[i] = dum_param;
     }
     
-    double vkl_b = mymap["b"].value; // It is still 'b'!
-    double fac = sqrt(mymap["q"].value);
-
-    mymap["b"].name  = this->names_lookup["b"];
-    mymap["b"].value = mymap["b"].value/fac;
-    if( mymap["phi"].has_stats ){
-      mymap["b"].mean  = mymap["b"].mean/fac;
-      mymap["b"].p16   = mymap["b"].p16/fac;
-      mymap["b"].p84   = mymap["b"].p84/fac;
-    }
-    
-    return convert_to_vector(mymap);
+    return coolest_params;
   };
 };
 
@@ -162,13 +180,27 @@ class Source: public BaseConvModel {
 public:
   Source(std::string model_vkl_name) : BaseConvModel(model_vkl_name) {
     this->coolest_name = "IrregularGrid";
-    this->names_lookup = {{"lambda_s","lambda"},{"sdev","l_corr"},{"eta_s","eta"}};
+    this->names_lookup = {{"lambda","lambda"},{"sdev","l_corr"},{"eta","eta"}};
   };
 
   std::vector<Param> convert_values(std::vector<Param> vkl_params){
-    std::map<std::string,Param> mymap = this->convert_to_map(vkl_params);
-    // No conversion
-    return convert_to_vector(mymap);
+    std::vector<Param> coolest_params(vkl_params.size());
+
+    for(int i=0;i<vkl_params.size();i++){
+      // No conversion (only the name)
+      std::string name = vkl_params[i].name;
+      Param dum_param;
+      dum_param.name  = this->names_lookup[name];
+      dum_param.value = vkl_params[i].value; 
+      if( vkl_params[i].has_stats ){
+	dum_param.mean  = vkl_params[i].mean;
+	dum_param.p16   = vkl_params[i].p16;
+	dum_param.p84   = vkl_params[i].p84;
+      }
+      coolest_params[i] = dum_param;
+    }
+    
+    return coolest_params;
   };
 };
 
@@ -382,7 +414,7 @@ int main(int argc,char* argv[]){
   std::vector<Param> vkl_params(nlpars_physical.size());
   for(int i=0;i<nlpars_physical.size();i++){
     if( nlpars_physical[i]->fix == 0 ){
-      val = output_json["parameters"][nlpars_physical[i]->nam]["maxlike"].asDouble();
+      val = output_json["parameters"]["shear_"+nlpars_physical[i]->nam]["maxlike"].asDouble();
     } else {
       val = nlpars_physical[i]->val;
     }
@@ -397,7 +429,10 @@ int main(int argc,char* argv[]){
   // Apply conversions
   conv_model = FactoryConvModel::getInstance()->createConvModel_from_VKL_name("shear");
   std::vector<Param> coolest_params = conv_model->convert_values(vkl_params);
-
+  // for(int k=0;k<vkl_params.size();k++){
+  //   std::cout << vkl_params[k].name << " " << vkl_params[k].value << "       " << coolest_params[k].name << " " << coolest_params[k].value << std::endl;
+  // }  
+  
   // Create Lensing Entity json object
   a_mass_model["type"] = "ExternalShear";
   a_mass_model["parameters"] = Json::Value();
@@ -441,7 +476,7 @@ int main(int argc,char* argv[]){
     std::vector<Param> vkl_params(nlpars_lens.size());
     for(int i=0;i<nlpars_lens.size();i++){
       if( nlpars_lens[i]->fix == 0 ){
-	val = output_json["parameters"][nlpars_lens[i]->nam]["maxlike"].asDouble();
+	val = output_json["parameters"][jmembers[m]+"_"+nlpars_lens[i]->nam]["maxlike"].asDouble();
       } else {
 	val = nlpars_physical[i]->val;
       }
@@ -457,7 +492,10 @@ int main(int argc,char* argv[]){
     std::string model_vkl_name = input_json["lenses"][jmembers[m]]["subtype"].asString();
     conv_model = FactoryConvModel::getInstance()->createConvModel_from_VKL_name(model_vkl_name);
     std::vector<Param> coolest_params = conv_model->convert_values(vkl_params);
-
+    // for(int k=0;k<vkl_params.size();k++){
+    //   std::cout << vkl_params[k].name << " " << vkl_params[k].value << "       " << coolest_params[k].name << " " << coolest_params[k].value << std::endl;
+    // }
+    
     // Create Lensing Entity json object
     a_mass_model["type"] = conv_model->coolest_name;
     a_mass_model["parameters"] = Json::Value();
@@ -532,8 +570,12 @@ int main(int argc,char* argv[]){
   source["redshift"] = source_redshift;
   source["mass_model"] = Json::Value(Json::arrayValue);
   source["light_model"] = Json::Value(Json::arrayValue);
+
+  jmembers = input_json["sources"].getMemberNames();
+  source["name"] = jmembers[0];
+
   
-  Json::Value light_model_1;
+  Json::Value a_light_model;
   Json::Value pixels_irr;
   pixels_irr["field_of_view_x"] = Json::Value(Json::arrayValue);
   pixels_irr["field_of_view_x"].append(0);
@@ -544,10 +586,10 @@ int main(int argc,char* argv[]){
   pixels_irr["num_pix"] = N_source;
   pixels_irr["fits_file"] = Json::Value();
   pixels_irr["fits_file"]["path"] = fname;  
-  light_model_1["parameters"] = Json::Value();
-  light_model_1["parameters"]["pixels"] = pixels_irr;
-  light_model_1["type"] = "IrregularGrid";
-  source["light_model"].append( light_model_1 );
+  a_light_model["parameters"] = Json::Value();
+  a_light_model["parameters"]["pixels"] = pixels_irr;
+  a_light_model["type"] = "IrregularGrid";
+  source["light_model"].append( a_light_model );
 
   lensing_entities.append( source );
   int ind_source = lensing_entities.size()-1;
@@ -573,7 +615,7 @@ int main(int argc,char* argv[]){
       if( model_coolest_name == "ExternalShear" ){
 	// External shear
 	for(std::map<std::string,std::string>::iterator it = names_lookup.begin();it != names_lookup.end();it++){
-	  mydict.insert( {it->first,std::to_string(i)+"-massfield-mass-"+std::to_string(j)+"-ExternalShear-"+it->second} );
+	  mydict.insert( {"shear_"+it->first,std::to_string(i)+"-massfield-mass-"+std::to_string(j)+"-ExternalShear-"+it->second} );
 	}
       } else {
 	// Any other mass model	
@@ -597,10 +639,16 @@ int main(int argc,char* argv[]){
   std::map<std::string,std::string> names_lookup = conv_model->get_names_lookup();
   for(int j=0;j<lensing_entities[i]["light_model"].size();j++){
     for(std::map<std::string,std::string>::iterator it = names_lookup.begin();it != names_lookup.end();it++){
-      mydict.insert( {it->first,std::to_string(i)+"-galaxy-light-"+std::to_string(j)+"-"+lensing_entities[i]["light_model"][j]["type"].asString()+"-"+it->second} );
+      mydict.insert(
+		    {
+		      lensing_entities[i]["name"].asString()+"_"+it->first,
+		      std::to_string(i)+"-galaxy-light-"+std::to_string(j)+"-"+lensing_entities[i]["light_model"][j]["type"].asString()+"-"+it->second
+		    }
+		    );
     }
   }
     
+
 
 
 
@@ -724,25 +772,66 @@ int main(int argc,char* argv[]){
 
     
     // Read in sampled parameter names
-    std::vector<std::string> free_pars;
+    std::vector<std::string> vkl_names;
     char vkl_name[30];
     char tag[30];
     FILE* fp = fopen((runname+"output/"+lname+"_postdist.paramnames").c_str(),"r");
     while( fscanf(fp,"%s %s",vkl_name,tag) != EOF ){
-      free_pars.push_back(vkl_name);
+      vkl_names.push_back(vkl_name);
     }
     fclose(fp);    
-    int npar = free_pars.size();
+    int npar = vkl_names.size();
 
-    // Write parameter names
-    std::vector<std::string> final_names(npar+1);
+
+    // Match VKL to COOLEST parameter names
+    std::vector<std::string> coolest_names(npar);
     for(int i=0;i<npar;i++){
-      final_names[i] = mydict[free_pars[i]];
-      std::cout << free_pars[i] << "    --     " << final_names[i] << std::endl;
+      coolest_names[i] = mydict[vkl_names[i]];
     }
-    final_names[npar] = "probability_weights";
-    out_line = myjoin(final_names,",");
-    fout << out_line << std::endl;
+      
+
+    // Find unique COOLEST model names
+    std::vector<std::string> trunc(npar);
+    for(int i=0;i<npar;i++){
+      int last = coolest_names[i].find_last_of("-");
+      trunc[i] = coolest_names[i].substr(0,last);
+    }
+    std::vector<std::string> uniq = trunc; 
+    sort(uniq.begin(),uniq.end());
+    std::vector<std::string>::iterator it = std::unique(uniq.begin(),uniq.end());
+    uniq.resize( std::distance(uniq.begin(),it) );
+    int Nuniq = uniq.size();
+    
+    // Create vector of Conversion Models (ConvModels) that matches the unique COOLEST model names
+    std::vector<BaseConvModel*> conv_models(Nuniq);
+    for(int i=0;i<Nuniq;i++){
+      int last = uniq[i].find_last_of("-");
+      std::string model_coolest_name = uniq[i].substr(last+1);
+      conv_models[i] = FactoryConvModel::getInstance()->createConvModel_from_COOLEST_name(model_coolest_name);
+    }
+
+    // Match the unique models to the final parameters, i.e. create a vector of index vectors.
+    std::string substr;
+    std::vector< std::vector<int> > indices(Nuniq);
+    for(int i=0;i<Nuniq;i++){
+      for(int j=0;j<npar;j++){
+	int last = coolest_names[j].find_last_of("-");
+	substr = coolest_names[j].substr(0,last);
+	if( substr == uniq[i] ){
+	  indices[i].push_back(j);
+	}
+      }
+    }
+
+
+    // Now we are ready to process the postdist file
+    
+    // Write parameter names
+    out_line = myjoin(coolest_names,",");
+    fout << out_line << ",probability_weights" << std::endl;
+    //out_line = myjoin(vkl_names,"\t");
+    //fout << out_line << "," << "probabil" <<  std::endl;
+
     
     // Read VKL multinest postdist file
     std::string line;
@@ -750,32 +839,61 @@ int main(int argc,char* argv[]){
     if( post.is_open() ){
       while( std::getline(post,line) ){
 
-	// Read all the fields into a vector
+	// Read all the parameters into the par_vals vector
 	std::stringstream ss(line);
 	std::string buf;
-	std::vector<double> vals(npar+2);
-	for(int i=0;i<npar+2;i++){
+	double prob,prob1,prob2;
+	std::vector<double> par_vals(npar);
+	ss >> buf;
+	prob1 = std::stold(buf);
+	ss >> buf;
+	prob2 = std::stold(buf);
+	for(int i=0;i<npar;i++){
 	  ss >> buf;
-	  vals[i] = std::stof(buf);
+	  par_vals[i] = std::stold(buf);
 	}
-
-	// Combine likelihood and posterior (the first two columns)
-	double prob = vals[0] + vals[1];
-
-	// Re-arrange the values: parameter values first, then the probability 
-	for(int i=0;i<npar+2;i++){
-	  vals[i] = vals[i+2];
-	}
-	vals[npar] = prob;
-	vals.resize(npar+1);
 	
-	out_line = myjoin(vals,",");
-	fout << out_line << std::endl;
-	    
-	break;
+	// Combine likelihood and posterior (the first two columns)
+	prob = prob1 + prob2;
+
+	//out_line = myjoin(par_vals,"\t");
+	//fout << out_line << "," << prob <<  std::endl;
+	
+	// Convert each par_vals entry (valus from the postdist file) through its ConvModel
+	for(int i=0;i<Nuniq;i++){
+	  int N_model_pars = indices[i].size();
+
+	  // Create vector<Param> holding the VKL parameter values
+	  std::vector<Param> vkl_dum(N_model_pars);
+	  for(int j=0;j<N_model_pars;j++){
+	    int index = indices[i][j];
+	    // keep only the VKL parameter name, without the prefix ('shear', <lens_name>, <source_name>, etc)
+	    int last = vkl_names[index].find("_");
+	    std::string par_name = vkl_names[index].substr(last+1);
+	    vkl_dum[j] = Param(par_name,par_vals[index]);
+	  }
+
+	  // Apply conversion
+	  std::vector<Param> conv_pars = conv_models[i]->convert_values(vkl_dum);
+
+	  // Update par_vals
+	  for(int j=0;j<N_model_pars;j++){
+	    int index = indices[i][j];
+	    par_vals[index] = conv_pars[j].value;
+	  }
+
+	}
+
+	// Finally, output the line from postdist into the new file
+	out_line = myjoin(par_vals,",");
+	fout << out_line << "," << prob <<  std::endl;
+
+	
       }      
     }
     post.close();
+
+    
     fout.close();
   }
   

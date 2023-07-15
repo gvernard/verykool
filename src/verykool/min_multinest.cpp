@@ -277,18 +277,8 @@ void MultiNest::finalizeMinimizer(std::string output,BaseLikelihoodModel* lmodel
     double value = out_json["parameters"][jmembers[i]]["maxlike"].asDouble();
 
     std::stringstream ss(str);
-    if( str.length() > 2 ){
-      std::string last_two = str.substr( str.length()-2,str.length() );
-
-      if( last_two.compare("_s") == 0 ){
-	key = str;
-      } else {
-	std::getline(ss,key,'_');
-	std::getline(ss,key,'_');
-      }
-    } else {
-      key = str;
-    }
+    std::getline(ss,key,'_');
+    std::getline(ss,key,'_');
 
     std::pair<std::string,double> mypair (key,value);
     maps.insert( mypair );
