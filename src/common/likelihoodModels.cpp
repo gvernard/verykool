@@ -83,11 +83,12 @@ BaseLikelihoodModel::~BaseLikelihoodModel(){
 
 //Derived class from BaseLikelihoodModel: SmoothLikelihood
 //===============================================================================================================
-SmoothLikelihood::SmoothLikelihood(std::vector<Nlpar*> a,std::vector<Nlpar*> b,std::vector< std::vector<Nlpar*> > d,std::vector<std::string> e,ImagePlane* f,BaseSourcePlane* g,CollectionMassModels* h){
+SmoothLikelihood::SmoothLikelihood(std::vector<Nlpar*> a,std::vector<Nlpar*> b,std::vector< std::vector<Nlpar*> > d,std::vector<std::string> e,std::vector<std::string> k,ImagePlane* f,BaseSourcePlane* g,CollectionMassModels* h){
   // Main non-linear parameters
   physical   = a;
   lenses     = d;
   lens_names = e;
+  src_names  = k;
   reg_s      = b;
 
   name       = "smooth";
@@ -101,7 +102,7 @@ SmoothLikelihood::SmoothLikelihood(std::vector<Nlpar*> a,std::vector<Nlpar*> b,s
   for(int i=0;i<this->physical.size();i++){
     if( this->physical[i]->getActive() ){
       this->active.push_back( this->physical[i] );
-      this->active_names.push_back( this->physical[i]->nam );
+      this->active_names.push_back( "shear_" + this->physical[i]->nam );
     }
   }
 
@@ -114,10 +115,12 @@ SmoothLikelihood::SmoothLikelihood(std::vector<Nlpar*> a,std::vector<Nlpar*> b,s
     }
   }
 
-  for(int i=0;i<this->reg_s.size();i++){
-    if( this->reg_s[i]->getActive() ){
-      this->active.push_back( this->reg_s[i] );
-      this->active_names.push_back( this->reg_s[i]->nam );
+  for(int j=0;j<this->src_names.size();j++){
+    for(int i=0;i<this->reg_s.size();i++){
+      if( this->reg_s[i]->getActive() ){
+	this->active.push_back( this->reg_s[i] );
+	this->active_names.push_back( this->src_names[j] + "_" + this->reg_s[i]->nam );
+      }
     }
   }
 
@@ -248,7 +251,7 @@ std::vector<Nlpar*> SmoothLikelihood::getMassModelPars(int i){
 
 //virtual
 void SmoothLikelihood::initializeAlgebra(){
-  Nlpar* lambda_s = Nlpar::getParByName("lambda_s",this->reg_s);
+  Nlpar* lambda_s = Nlpar::getParByName("lambda",this->reg_s);
   this->algebra->setAlgebraInit(this->image,this->source,lambda_s->val);
 }
 
@@ -296,7 +299,7 @@ void SmoothLikelihood::updateLikelihoodModel(){
   }
 
   // If lambda is allowed to vary then update the lambda term
-  Nlpar* lambda_s = Nlpar::getParByName("lambda_s",this->reg_s);
+  Nlpar* lambda_s = Nlpar::getParByName("lambda",this->reg_s);
   if( lambda_s->fix == 0 ){
     this->terms["Nslogl_s"] = source->Sm*log(lambda_s->val)/2.0;
   }
@@ -610,7 +613,7 @@ void PertLikelihood::updateLikelihoodModel(){
 
 
   // If lambda is allowed to vary then update the lambda term for the source
-  Nlpar* lambda_s = Nlpar::getParByName("lambda_s",this->reg_s);
+  Nlpar* lambda_s = Nlpar::getParByName("lambda",this->reg_s);
   if( lambda_s->fix == 0 ){
     this->terms["Nslogl_s"] = this->source->Sm*log(lambda_s->val)/2.0;
   }  
@@ -806,7 +809,7 @@ BothLikelihood::~BothLikelihood(){
 
 //virtual
 void BothLikelihood::initializeAlgebra(){
-  Nlpar* lambda_s = Nlpar::getParByName("lambda_s",this->reg_s);
+  Nlpar* lambda_s = Nlpar::getParByName("lambda",this->reg_s);
   this->smooth_algebra->setAlgebraInit(this->image,this->source,lambda_s->val);
   this->both_algebra->setAlgebraInit(this->source,this->pert_mass_model);
 }
@@ -849,7 +852,7 @@ void BothLikelihood::updateLikelihoodModel(){
   }
 
   // If lambda is allowed to vary then update the lambda term for the source
-  Nlpar* lambda_s = Nlpar::getParByName("lambda_s",this->reg_s);
+  Nlpar* lambda_s = Nlpar::getParByName("lambda",this->reg_s);
   if( lambda_s->fix == 0 ){
     this->terms["Nslogl_s"] = this->source->Sm*log(lambda_s->val)/2.0;
   }  

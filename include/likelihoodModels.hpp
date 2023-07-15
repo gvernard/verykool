@@ -54,11 +54,12 @@ class SmoothLikelihood : public BaseLikelihoodModel {
 public:
   std::vector<Nlpar*> physical;
   std::vector<std::string> lens_names;
+  std::vector<std::string> src_names;
   std::vector< std::vector<Nlpar*> > lenses;
   std::vector<Nlpar*> reg_s;
   SmoothAlgebra* algebra;
 
-  SmoothLikelihood(std::vector<Nlpar*> a,std::vector<Nlpar*> b,std::vector< std::vector<Nlpar*> > d,std::vector<std::string> e,ImagePlane* f,BaseSourcePlane* g,CollectionMassModels* h);
+  SmoothLikelihood(std::vector<Nlpar*> a,std::vector<Nlpar*> b,std::vector< std::vector<Nlpar*> > d,std::vector<std::string> e,std::vector<std::string> k,ImagePlane* f,BaseSourcePlane* g,CollectionMassModels* h);
   ~SmoothLikelihood();
 
   //non-virtual

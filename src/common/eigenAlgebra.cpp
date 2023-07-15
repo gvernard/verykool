@@ -453,7 +453,7 @@ void PertAlgebra::setAlgebraInit(ImagePlane* image,BaseSourcePlane* source,BaseS
     this->likeModel->terms["Noutlog2pi_s"] = -(source->Sm-source->Smask)*log(2*M_PI)/2.0;
     this->likeModel->terms["detLout_s"] = -source->lambda_out_sum/2.0;
   }
-  this->likeModel->terms["Nslogl_s"] = source->Sm*log(Nlpar::getValueByName("lambda_s",this->likeModel->reg_s))/2.0;
+  this->likeModel->terms["Nslogl_s"] = source->Sm*log(Nlpar::getValueByName("lambda",this->likeModel->reg_s))/2.0;
 
   if( pert_mass_model->dpsi->reg == "curvature_in_identity_out" || pert_mass_model->dpsi->reg == "covariance_kernel_in_identity_out" ){
     Eigen::SparseMatrix<double> block_dum(source->Sm+pert_mass_model->dpsi->Sm,source->Sm+pert_mass_model->dpsi->Sm);
@@ -607,7 +607,7 @@ void PertAlgebra::setAlgebraRuntime(BaseSourcePlane* source,BaseSourcePlane* sou
 
   // Calculate RtR
   Eigen::SparseMatrix<double> RtR_dum(source->Sm+pert_mass_model->dpsi->Sm,source->Sm+pert_mass_model->dpsi->Sm);
-  double lambda_s = Nlpar::getValueByName("lambda_s",this->likeModel->reg_s);
+  double lambda_s = Nlpar::getValueByName("lambda",this->likeModel->reg_s);
   for(int k=0;k<this->Cs_inv.outerSize();++k){
     for(Eigen::SparseMatrix<double>::InnerIterator it(this->Cs_inv,k);it;++it){
       RtR_dum.insert(it.row(),it.col()) = lambda_s * it.value();
@@ -656,7 +656,7 @@ void PertAlgebra::solveSourcePert(BaseSourcePlane* source,Pert* pert_mass_model)
   Eigen::SparseMatrix<double> A_inv(source->Sm+pert_mass_model->dpsi->Sm,source->Sm+pert_mass_model->dpsi->Sm);
   double detA = 0.0;
   this->getInverseAndDet(this->A_r,A_inv,detA);
-  double lambda_s    = Nlpar::getValueByName("lambda_s",this->likeModel->reg_s);
+  double lambda_s    = Nlpar::getValueByName("lambda",this->likeModel->reg_s);
   double lambda_dpsi = Nlpar::getValueByName("lambda_dpsi",this->likeModel->reg_dpsi);
   //this->likeModel->terms["detA"] = -(detA - pert_mass_model->dpsi->Sm*log(1.0/lambda_dpsi) )/2.0;
   this->likeModel->terms["detA"] = -detA/2.0;
@@ -823,7 +823,7 @@ void BothAlgebra::setAlgebraRuntime(BaseSourcePlane* source,Pert* pert_mass_mode
 
   // Calculate RtR
   Eigen::SparseMatrix<double> RtR_dum(source->Sm+pert_mass_model->dpsi->Sm,source->Sm+pert_mass_model->dpsi->Sm);
-  double lambda_s = Nlpar::getValueByName("lambda_s",this->likeModel->reg_s);
+  double lambda_s = Nlpar::getValueByName("lambda",this->likeModel->reg_s);
   for(int k=0;k<this->likeModel->smooth_algebra->Cs_inv.outerSize();++k){
     for(Eigen::SparseMatrix<double>::InnerIterator it(this->likeModel->smooth_algebra->Cs_inv,k);it;++it){
       RtR_dum.insert(it.row(),it.col()) = lambda_s * it.value();
@@ -927,7 +927,7 @@ void BothAlgebra::solveSourcePert(BaseSourcePlane* source,Pert* pert_mass_model)
   Eigen::SparseMatrix<double> A_inv(source->Sm+pert_mass_model->dpsi->Sm,source->Sm+pert_mass_model->dpsi->Sm);
   double detA = 0.0;
   this->getInverseAndDet(this->A_r,A_inv,detA);
-  double lambda_s    = Nlpar::getValueByName("lambda_s",this->likeModel->reg_s);
+  double lambda_s    = Nlpar::getValueByName("lambda",this->likeModel->reg_s);
   double lambda_dpsi = Nlpar::getValueByName("lambda_dpsi",this->likeModel->reg_dpsi);
   //this->likeModel->terms["detA"] = -(detA - pert_mass_model->dpsi->Sm*log(1.0/lambda_dpsi) )/2.0;
   this->likeModel->terms["detA"] = -detA/2.0;

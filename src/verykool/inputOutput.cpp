@@ -145,14 +145,27 @@ void Initialization::parseInputJSON(std::string path,std::string run){
   }
 
 
+
+  
   //Parameters of the source
-  this->interp = root["interp"].asString();
-  jmembers = root["splane"].getMemberNames();
+  // this->interp = root["interp"].asString();
+  // jmembers = root["splane"].getMemberNames();
+  // for(int i=0;i<jmembers.size();i++){
+  //   this->source[jmembers[i]] = root["splane"][jmembers[i]].asString();
+  // }
+  jmembers = root["sources"].getMemberNames();
+  std::string src_name = jmembers[0];
+  this->source["name"] = src_name;
+  this->src_names.push_back( src_name );
+  jmembers = root["sources"][src_name].getMemberNames();
   for(int i=0;i<jmembers.size();i++){
-    this->source[jmembers[i]] = root["splane"][jmembers[i]].asString();
+    if( jmembers[i] != "reg" ){
+      this->source[jmembers[i]] = root["sources"][src_name][jmembers[i]].asString();
+    }
   }
+  this->interp = root["sources"][src_name]["interp"].asString();
 
-
+  
   //Calculate the number of adaptive source pixels based on the image data
   if( this->source["type"] == "adaptive" && ( this->source["mode"] == "image" || this->source["mode"] == "grid" ) ){
     int spacing = std::stoi(this->source["spacing"]);
@@ -173,6 +186,26 @@ void Initialization::parseInputJSON(std::string path,std::string run){
     //    std::cout << (int) floor(Ni/spacing)*floor(Nj/spacing) << std::endl;
   }
 
+
+  //NLPARS: Source regularization
+  if( root["parameter_model"] == "standard" ){
+    this->source["reg_s"] = root["sources"][src_name]["reg"]["type"].asString();
+    this->nlpars_reg_s = Nlpar::nlparsFromJsonVector(root["sources"][src_name]["reg"]["nlpars"]);
+    //this->source["reg_s"] = root["reg_s"]["type"].asString();
+    //this->nlpars_reg_s = Nlpar::nlparsFromJsonVector(root["reg_s"]["nlpars"]);
+  } else {
+    this->source["reg_s"] = root["perturbations"]["reg_s"]["type"].asString();
+    if( this->source["reg_s"] == "covariance_kernel" || this->source["reg_s"] == "covariance_kernel_in_identity_out" ){
+      this->source["kernel"] = root["perturbations"]["reg_s"]["subtype"].asString();
+    }
+    this->nlpars_reg_s = Nlpar::nlparsFromJsonVector(root["perturbations"]["reg_s"]["nlpars"]);
+  }
+  // for(int i=0;i<this->nlpars_reg_s.size();i++){
+  //   this->nlpars_reg_s[i]->nam += "_s";
+  // }
+
+
+  
 
   //Parameters for the psf
   this->psfpath = path+root["psfpath"].asString();
@@ -206,24 +239,6 @@ void Initialization::parseInputJSON(std::string path,std::string run){
     this->nlpars_lenses.push_back( Nlpar::nlparsFromJsonVector(root["lenses"][jmembers[i]]["nlpars"]) );
   }
 
-
-  //NLPARS: Source regularization
-  if( root["parameter_model"] == "standard" ){
-    this->source["reg_s"] = root["reg_s"]["type"].asString();
-    if( this->source["reg_s"] == "covariance_kernel" || this->source["reg_s"] == "covariance_kernel_in_identity_out" ){
-      this->source["kernel"] = root["reg_s"]["subtype"].asString();
-    }
-    this->nlpars_reg_s = Nlpar::nlparsFromJsonVector(root["reg_s"]["nlpars"]);
-  } else {
-    this->source["reg_s"] = root["perturbations"]["reg_s"]["type"].asString();
-    if( this->source["reg_s"] == "covariance_kernel" || this->source["reg_s"] == "covariance_kernel_in_identity_out" ){
-      this->source["kernel"] = root["perturbations"]["reg_s"]["subtype"].asString();
-    }
-    this->nlpars_reg_s = Nlpar::nlparsFromJsonVector(root["perturbations"]["reg_s"]["nlpars"]);
-  }
-  for(int i=0;i<this->nlpars_reg_s.size();i++){
-    this->nlpars_reg_s[i]->nam += "_s";
-  }
 
   //Parameters for the perturbations
   if( root["parameter_model"] == "perturbations_standard" || root["parameter_model"] == "both" ){
@@ -286,4 +301,5 @@ void Initialization::parseInputJSON(std::string path,std::string run){
       
     }
   }
+
 }

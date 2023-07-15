@@ -38,6 +38,7 @@ public:
 
   std::vector<std::string> mmodel;                    //mass models of the lenses
   std::vector<std::string> lens_names;                //the name of each lens
+  std::vector<std::string> src_names;                 //the name of each source
   std::vector< std::vector<Nlpar*> > nlpars_lenses;   //non-linear parameters for each lens model
   std::vector<Nlpar*> nlpars_physical;                //non-linear parameters physical
   std::vector<Nlpar*> nlpars_reg_s;                   //non-linear parameters for source regularization
