@@ -190,6 +190,9 @@ void Initialization::parseInputJSON(std::string path,std::string run){
   //NLPARS: Source regularization
   if( root["parameter_model"] == "standard" ){
     this->source["reg_s"] = root["sources"][src_name]["reg"]["type"].asString();
+    if( this->source["reg_s"] == "covariance_kernel" ){
+      this->source["kernel"] = root["sources"][src_name]["reg"]["subtype"].asString();
+    }
     this->nlpars_reg_s = Nlpar::nlparsFromJsonVector(root["sources"][src_name]["reg"]["nlpars"]);
     //this->source["reg_s"] = root["reg_s"]["type"].asString();
     //this->nlpars_reg_s = Nlpar::nlparsFromJsonVector(root["reg_s"]["nlpars"]);
