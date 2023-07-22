@@ -205,6 +205,14 @@ public:
 };
 
 
+class Dpsi: public Source {
+public:
+  Dpsi(std::string model_vkl_name) : Source(model_vkl_name) {
+    this->coolest_name = "PixelatedRegularGridPotential";
+  };
+};
+
+
 class FactoryConvModel {//This is a singleton class.
 public:
   FactoryConvModel(FactoryConvModel const&) = delete;//Stop the compiler generating methods of copy the object.
@@ -230,14 +238,24 @@ public:
     } else if( model_vkl_name == "pemd" ){
       return new Pemd(model_vkl_name);
     } else if( model_vkl_name == "source" ){
-      return new Source(model_vkl_name);   
+      return new Source(model_vkl_name);  
+    } else if( model_vkl_name == "dpsi" ){
+      return new Dpsi(model_vkl_name);  
     } else {
+      std::cout << "DANGER! Not recognized VKL type of lensing entity: " << model_vkl_name <<std::endl;
       return NULL;
     }
   }
   
 private:
-  std::map<std::string,std::string> models_lookup = {{"ExternalShear","shear"},{"SIE","sie"},{"SPEMD","spemd"},{"PEMD","pemd"},{"IrregularGrid","source"}};
+  std::map<std::string,std::string> models_lookup = {
+    {"ExternalShear","shear"},
+    {"SIE","sie"},
+    {"SPEMD","spemd"},
+    {"PEMD","pemd"},
+    {"IrregularGrid","source"},
+    {"PixelatedRegularGridPotential","dpsi"}
+  };
   FactoryConvModel(){};
 };
 
@@ -319,10 +337,13 @@ int main(int argc,char* argv[]){
   fin >> input_json;
   fin.close();
 
+  
   // Getting/setting the initial values of some parameters
   std::string lname;
-  if( input_json["parameter_model"] = "standard" ){
+  if( input_json["parameter_model"] == "standard" ){
     lname = "smooth";
+  } else if( input_json["parameter_model"] == "both" ){
+    lname = "both";    
   } else {
     std::cout << "Unknown parameter model! Must be: 'standard', 'pert', 'both'" << std::endl;
     return 0;
@@ -338,7 +359,6 @@ int main(int argc,char* argv[]){
   double source_redshift = 1.0;
 
 
-  
   // Read VKL output parameter file
   Json::Value output_json;
   //fin.open((runname+"output/"+step+lname+"_output.json").c_str(),std::ifstream::in);
@@ -360,8 +380,6 @@ int main(int argc,char* argv[]){
     fin.close();
   }
 
-
-  
 
 
 
@@ -456,7 +474,7 @@ int main(int argc,char* argv[]){
   }
 
   Json::Value gamma;
-  gamma["type"] = "external_shear";
+  gamma["type"] = "MassField";
   gamma["name"] = "An external shear";
   gamma["redshift"] = lens_redshift;
   gamma["mass_model"] = Json::Value(Json::arrayValue);
@@ -518,7 +536,7 @@ int main(int argc,char* argv[]){
       a_mass_model["parameters"][coolest_params[i].name] = param;
     }    
     Json::Value lens;
-    lens["type"] = "galaxy";
+    lens["type"] = "Galaxy";
     lens["name"] = jmembers[m];
     lens["redshift"] = lens_redshift;
     lens["mass_model"] = Json::Value(Json::arrayValue);
@@ -529,9 +547,53 @@ int main(int argc,char* argv[]){
     lensing_entities.append( lens );
   }
 
-  
-  
 
+
+
+  // Add the Dpsi as a separate lensing entity
+  // #############################################################################################################  
+  if( lname == "both" ){
+
+    int N_dpsi_x = input_json["dpsi"]["pix_x"].asInt();
+    int N_dpsi_y = input_json["dpsi"]["pix_y"].asInt();
+    std::string fname = "vkl_dpsi.fits";
+
+    // Copy perturbations .fits file
+    std::ifstream src((runname+"output/" + step + lname + "_dpsi.fits").c_str(),std::ios::binary);
+    std::ofstream dst((outdir_name + "/" + fname).c_str(), std::ios::binary);
+    dst << src.rdbuf();
+
+    // Create the remaining json fields
+    Json::Value dpsi;
+    dpsi["type"] = "Galaxy";
+    dpsi["name"] = "A field of VKL pixellated potential corrections";
+    dpsi["redshift"] = lens_redshift;
+    dpsi["mass_model"] = Json::Value(Json::arrayValue);
+    dpsi["light_model"] = Json::Value(Json::arrayValue);
+    dpsi["name"] = "dpsi";
+  
+    Json::Value a_mass_model;
+    Json::Value pixels_reg;
+    pixels_reg["field_of_view_x"] = Json::Value(Json::arrayValue);
+    pixels_reg["field_of_view_x"].append(0);
+    pixels_reg["field_of_view_x"].append(0);
+    pixels_reg["field_of_view_y"] = Json::Value(Json::arrayValue);
+    pixels_reg["field_of_view_y"].append(0);
+    pixels_reg["field_of_view_y"].append(0);
+    pixels_reg["num_pix_x"] = N_dpsi_x;
+    pixels_reg["num_pix_y"] = N_dpsi_y;
+    pixels_reg["fits_file"] = Json::Value();
+    pixels_reg["fits_file"]["path"] = fname;  
+    a_mass_model["parameters"] = Json::Value();
+    a_mass_model["parameters"]["pixels"] = pixels_reg;
+    a_mass_model["type"] = "PixelatedRegularGridPotential";
+    dpsi["mass_model"].append( a_mass_model );
+    
+    lensing_entities.append( dpsi );
+  }
+
+  
+  
 
   
   // Add the source as a separate lensing entity
@@ -550,6 +612,7 @@ int main(int argc,char* argv[]){
   fclose(fh);
   int N_source = (int) src_x.size();
 
+
   fname = "my_VKL_source.fits";
   std::unique_ptr<CCfits::FITS> pFits(nullptr);
   pFits.reset( new CCfits::FITS("!"+outdir_name+"/"+fname,CCfits::Write) );
@@ -563,9 +626,10 @@ int main(int argc,char* argv[]){
   newTable->column("y").write(src_y,1);
   newTable->column("z").write(src_z,1);
 
+
   // Then create the remaining json fields
   Json::Value source;
-  source["type"] = "galaxy";
+  source["type"] = "Galaxy";
   source["name"] = "A VKL source";
   source["redshift"] = source_redshift;
   source["mass_model"] = Json::Value(Json::arrayValue);
@@ -597,7 +661,7 @@ int main(int argc,char* argv[]){
   coolest["lensing_entities"] = lensing_entities;
 
 
-
+  
 
 
   
@@ -648,7 +712,9 @@ int main(int argc,char* argv[]){
     }
   }
     
-
+  // for(std::map<std::string,std::string>::iterator it = mydict.begin();it != mydict.end();it++){
+  //   std::cout << it->first << " " << it->second << std::endl;
+  // }
 
 
 
@@ -755,10 +821,6 @@ int main(int argc,char* argv[]){
 
 
   
-  std::ofstream jsonfile(outdir_name+"/coolest_vkl.json");
-  jsonfile << coolest;
-  jsonfile.close();
-
 
 
 
@@ -767,7 +829,8 @@ int main(int argc,char* argv[]){
 
     // Open output file
     //FILE* fout = fopen((outdir_name+"/coolest_chain.csv").c_str(),"w");
-    std::ofstream fout((outdir_name+"/coolest_chain.csv").c_str(),std::ifstream::out);
+    std::string chain_file_name = "coolest_chain.csv";
+    std::ofstream fout((outdir_name+"/"+chain_file_name).c_str(),std::ifstream::out);
     std::string out_line;
 
     
@@ -787,6 +850,7 @@ int main(int argc,char* argv[]){
     std::vector<std::string> coolest_names(npar);
     for(int i=0;i<npar;i++){
       coolest_names[i] = mydict[vkl_names[i]];
+      //std::cout << vkl_names[i] << " " << coolest_names[i] << std::endl;
     }
       
 
@@ -839,22 +903,19 @@ int main(int argc,char* argv[]){
     if( post.is_open() ){
       while( std::getline(post,line) ){
 
+
 	// Read all the parameters into the par_vals vector
 	std::stringstream ss(line);
 	std::string buf;
-	double prob,prob1,prob2;
+	double prob;
 	std::vector<double> par_vals(npar);
 	ss >> buf;
-	prob1 = std::stold(buf);
 	ss >> buf;
-	prob2 = std::stold(buf);
+	prob = std::stold(buf);
 	for(int i=0;i<npar;i++){
 	  ss >> buf;
 	  par_vals[i] = std::stold(buf);
-	}
-	
-	// Combine likelihood and posterior (the first two columns)
-	prob = prob1 + prob2;
+	}	
 
 	//out_line = myjoin(par_vals,"\t");
 	//fout << out_line << "," << prob <<  std::endl;
@@ -886,17 +947,28 @@ int main(int argc,char* argv[]){
 
 	// Finally, output the line from postdist into the new file
 	out_line = myjoin(par_vals,",");
-	fout << out_line << "," << prob <<  std::endl;
-
-	
+	fout << out_line << "," << prob <<  std::endl;	
       }      
     }
     post.close();
 
-    
     fout.close();
+
+
+    // Add chain file path to meta
+    if( coolest["meta"].isNull() ){
+      coolest["meta"] = Json::Value::null;
+    }
+    coolest["meta"]["chain_file_name"] = chain_file_name;
   }
   
+
+
+
+
+  std::ofstream jsonfile(outdir_name+"/coolest_vkl.json");
+  jsonfile << coolest;
+  jsonfile.close();
   
   return 0;
 }
