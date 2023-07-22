@@ -61,6 +61,14 @@ public:
     return names_lookup;
   }
 
+  double transform_angle(double vkl_angle){
+    double coolest_angle = vkl_angle - 90.0;
+    if( coolest_angle < -90.0 ){
+      coolest_angle = vkl_angle + 90.0; // This is in fact +180 first and then -90 to get to the East-of-North reference frame.
+    }
+    return coolest_angle;
+  }
+  
   virtual std::vector<Param> convert_values(std::vector<Param> vkl_params) = 0;
 };
 
@@ -81,11 +89,11 @@ public:
       dum_param.name  = this->names_lookup[name];
       if( name == "phi" ){
 	// Convert position angle
-	dum_param.value = vkl_params[i].value - 90.0;
+	dum_param.value = this->transform_angle(vkl_params[i].value);
 	if( vkl_params[i].has_stats ){
-	  dum_param.mean  = vkl_params[i].mean - 90.0;
-	  dum_param.p16   = vkl_params[i].p16 - 90.0;
-	  dum_param.p84   = vkl_params[i].p84 - 90.0;
+	  dum_param.mean  = this->transform_angle(vkl_params[i].mean);
+	  dum_param.p16   = this->transform_angle(vkl_params[i].p16);
+	  dum_param.p84   = this->transform_angle(vkl_params[i].p84);
 	}
       } else {
 	// No conversion (only the name)
@@ -120,11 +128,11 @@ public:
       dum_param.name  = this->names_lookup[name];
       if( name == "pa" ){
 	// Convert position angle
-	dum_param.value = vkl_params[i].value - 90.0;
+	dum_param.value = this->transform_angle(vkl_params[i].value);
 	if( vkl_params[i].has_stats ){
-	  dum_param.mean  = vkl_params[i].mean - 90.0;
-	  dum_param.p16   = vkl_params[i].p16 - 90.0;
-	  dum_param.p84   = vkl_params[i].p84 - 90.0;
+	  dum_param.mean  = this->transform_angle(vkl_params[i].mean);
+	  dum_param.p16   = this->transform_angle(vkl_params[i].p16);
+	  dum_param.p84   = this->transform_angle(vkl_params[i].p84);
 	}
       } else if( name == "b" ){
 	// Convert 'b' to 'theta_E', for which we need the value of "q" first

@@ -1,2 +1,0 @@
-#!/bin/bash
-g++ -o coolest_conversion coolest_conversion.cpp ../src/common/nonLinearPars.cpp -I../include/ -I/home/giorgos/myLibraries/jsoncpp/include/ -I/home/giorgos/myLibraries/cfitsio/include/ -I/home/giorgos/myLibraries/CCfits/include/ -L/home/giorgos/myLibraries/jsoncpp/lib64/ -L/home/giorgos/myLibraries/cfitsio/lib/ -L/home/giorgos/myLibraries/CCfits/lib/ -lcfitsio -lCCfits -ljsoncpp -Wl,-rpath=/home/giorgos/myLibraries/jsoncpp/lib64/ -Wl,-rpath=/home/giorgos/myLibraries/cfitsio/lib/ -Wl,-rpath=/home/giorgos/myLibraries/CCfits/lib/
