@@ -70,6 +70,7 @@ public:
   }
   
   virtual std::vector<Param> convert_values(std::vector<Param> vkl_params) = 0;
+  virtual std::vector<Param> convert_values(std::vector<Param> vkl_params,double& prob) = 0;
 };
 
 
@@ -109,6 +110,12 @@ public:
     
     return coolest_params;
   }; 
+
+  std::vector<Param> convert_values(std::vector<Param> vkl_params,double& prob){
+    // Do nothing
+    std::vector<Param> coolest_params = this->convert_values(vkl_params);
+    return coolest_params;
+  };
 };
 
 
@@ -163,6 +170,19 @@ public:
     
     return coolest_params;
   };
+
+  
+  std::vector<Param> convert_values(std::vector<Param> vkl_params,double& prob){
+    for(int i=0;i<vkl_params.size();i++){
+      if( vkl_params[i].name == "q" ){
+	prob *= sqrt(vkl_params[i].value); // Convert probability density
+	break;
+      }
+    }    
+    std::vector<Param> coolest_params = this->convert_values(vkl_params);
+    return coolest_params;
+  };
+
 };
 
 
@@ -210,6 +230,14 @@ public:
     
     return coolest_params;
   };
+
+  
+  std::vector<Param> convert_values(std::vector<Param> vkl_params,double& prob){
+    // Do nothing
+    std::vector<Param> coolest_params = this->convert_values(vkl_params);
+    return coolest_params;
+  };
+
 };
 
 
@@ -943,7 +971,7 @@ int main(int argc,char* argv[]){
 	  }
 
 	  // Apply conversion
-	  std::vector<Param> conv_pars = conv_models[i]->convert_values(vkl_dum);
+	  std::vector<Param> conv_pars = conv_models[i]->convert_values(vkl_dum,prob);
 
 	  // Update par_vals
 	  for(int j=0;j<N_model_pars;j++){
