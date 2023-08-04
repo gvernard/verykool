@@ -69,8 +69,8 @@ public:
     return coolest_angle;
   }
   
-  virtual std::vector<Param> convert_values(std::vector<Param> vkl_params) = 0;
-  virtual std::vector<Param> convert_values(std::vector<Param> vkl_params,double& prob) = 0;
+  virtual std::vector<Param> convert_values(std::vector<Param> vkl_params,std::map<std::string,double> extras) = 0;
+  virtual std::vector<Param> convert_values(std::vector<Param> vkl_params,double& prob,std::map<std::string,double> extras) = 0;
 };
 
 
@@ -81,7 +81,7 @@ public:
     this->names_lookup = {{"g","gamma_ext"},{"phi","phi_ext"}};
   };
 
-  std::vector<Param> convert_values(std::vector<Param> vkl_params){
+  std::vector<Param> convert_values(std::vector<Param> vkl_params,std::map<std::string,double> extras){
     std::vector<Param> coolest_params(vkl_params.size());
 
     for(int i=0;i<vkl_params.size();i++){
@@ -111,9 +111,9 @@ public:
     return coolest_params;
   }; 
 
-  std::vector<Param> convert_values(std::vector<Param> vkl_params,double& prob){
+  std::vector<Param> convert_values(std::vector<Param> vkl_params,double& prob,std::map<std::string,double> extras){
     // Do nothing
-    std::vector<Param> coolest_params = this->convert_values(vkl_params);
+    std::vector<Param> coolest_params = this->convert_values(vkl_params,extras);
     return coolest_params;
   };
 };
@@ -126,9 +126,10 @@ public:
     this->names_lookup = {{"x0","center_x"},{"y0","center_y"},{"pa","phi"},{"q","q"},{"b","theta_E"}};
   };
 
-  std::vector<Param> convert_values(std::vector<Param> vkl_params){
+  std::vector<Param> convert_values(std::vector<Param> vkl_params,std::map<std::string,double> extras){
     std::vector<Param> coolest_params(vkl_params.size());
-
+    double hpix = extras["pixel_size"]/2.0;
+    
     for(int i=0;i<vkl_params.size();i++){
       std::string name = vkl_params[i].name;
       Param dum_param;
@@ -156,6 +157,22 @@ public:
 	  dum_param.p16   = vkl_params[i].p16/fac;
 	  dum_param.p84   = vkl_params[i].p84/fac;
 	}
+      } else if( name == "x0" ){
+	// Shift x0 by + half a pixel
+	dum_param.value = vkl_params[i].value + hpix;
+	if( vkl_params[i].has_stats ){
+	  dum_param.mean  = vkl_params[i].mean + hpix;
+	  dum_param.p16   = vkl_params[i].p16 + hpix;
+	  dum_param.p84   = vkl_params[i].p84 + hpix;
+	}
+      } else if( name == "y0" ){
+	// Shift y0 by - half a pixel
+	dum_param.value = vkl_params[i].value - hpix;
+	if( vkl_params[i].has_stats ){
+	  dum_param.mean  = vkl_params[i].mean - hpix;
+	  dum_param.p16   = vkl_params[i].p16 - hpix;
+	  dum_param.p84   = vkl_params[i].p84 - hpix;
+	}
       } else {
 	// No conversion (only the name)
 	dum_param.value = vkl_params[i].value; 
@@ -172,14 +189,14 @@ public:
   };
 
   
-  std::vector<Param> convert_values(std::vector<Param> vkl_params,double& prob){
+  std::vector<Param> convert_values(std::vector<Param> vkl_params,double& prob,std::map<std::string,double> extras){
     for(int i=0;i<vkl_params.size();i++){
       if( vkl_params[i].name == "q" ){
 	prob *= sqrt(vkl_params[i].value); // Convert probability density
 	break;
       }
     }    
-    std::vector<Param> coolest_params = this->convert_values(vkl_params);
+    std::vector<Param> coolest_params = this->convert_values(vkl_params,extras);
     return coolest_params;
   };
 
@@ -211,7 +228,7 @@ public:
     this->names_lookup = {{"lambda","lambda"},{"sdev","l_corr"},{"eta","eta"}};
   };
 
-  std::vector<Param> convert_values(std::vector<Param> vkl_params){
+  std::vector<Param> convert_values(std::vector<Param> vkl_params,std::map<std::string,double> extras){
     std::vector<Param> coolest_params(vkl_params.size());
 
     for(int i=0;i<vkl_params.size();i++){
@@ -232,9 +249,9 @@ public:
   };
 
   
-  std::vector<Param> convert_values(std::vector<Param> vkl_params,double& prob){
+  std::vector<Param> convert_values(std::vector<Param> vkl_params,double& prob,std::map<std::string,double> extras){
     // Do nothing
-    std::vector<Param> coolest_params = this->convert_values(vkl_params);
+    std::vector<Param> coolest_params = this->convert_values(vkl_params,extras);
     return coolest_params;
   };
 
@@ -385,6 +402,10 @@ int main(int argc,char* argv[]){
     return 0;
   }
   std::string minimizer = input_json["minimizer"]["type"].asString();
+  double pixel_size = input_json["iplane"]["siz_x"].asDouble()/input_json["iplane"]["pix_x"].asDouble();
+  std::map<std::string,double> dum_extras;
+  std::map<std::string,double> extras{{"pixel_size",pixel_size}};
+
   
   // Read COOLEST fixed parameter file
   Json::Value coolest;
@@ -482,7 +503,7 @@ int main(int argc,char* argv[]){
     
   // Apply conversions
   conv_model = FactoryConvModel::getInstance()->createConvModel_from_VKL_name("shear");
-  std::vector<Param> coolest_params = conv_model->convert_values(vkl_params);
+  std::vector<Param> coolest_params = conv_model->convert_values(vkl_params,dum_extras);
   // for(int k=0;k<vkl_params.size();k++){
   //   std::cout << vkl_params[k].name << " " << vkl_params[k].value << "       " << coolest_params[k].name << " " << coolest_params[k].value << std::endl;
   // }  
@@ -545,7 +566,7 @@ int main(int argc,char* argv[]){
     // Apply conversions
     std::string model_vkl_name = input_json["lenses"][jmembers[m]]["subtype"].asString();
     conv_model = FactoryConvModel::getInstance()->createConvModel_from_VKL_name(model_vkl_name);
-    std::vector<Param> coolest_params = conv_model->convert_values(vkl_params);
+    std::vector<Param> coolest_params = conv_model->convert_values(vkl_params,extras);
     // for(int k=0;k<vkl_params.size();k++){
     //   std::cout << vkl_params[k].name << " " << vkl_params[k].value << "       " << coolest_params[k].name << " " << coolest_params[k].value << std::endl;
     // }
@@ -756,7 +777,6 @@ int main(int argc,char* argv[]){
 
   // Create instrument
   // #############################################################################################################
-  double pixel_size = input_json["iplane"]["siz_x"].asDouble()/input_json["iplane"]["pix_x"].asDouble();
   coolest["instrument"]["pixel_size"] = pixel_size;
   fname = "my_PSF.fits";
   
@@ -833,7 +853,7 @@ int main(int argc,char* argv[]){
     image.read(tmp);
     for(int i=0;i<Ny;i++){
       for(int j=0;j<Nx;j++){
-	contents[i*Nx+j] = sqrt(tmp[i*Nx+j]);
+	contents[i*Nx+j] = tmp[i*Nx+j];
       }
     }
     
@@ -971,7 +991,7 @@ int main(int argc,char* argv[]){
 	  }
 
 	  // Apply conversion
-	  std::vector<Param> conv_pars = conv_models[i]->convert_values(vkl_dum,prob);
+	  std::vector<Param> conv_pars = conv_models[i]->convert_values(vkl_dum,prob,extras);
 
 	  // Update par_vals
 	  for(int j=0;j<N_model_pars;j++){
