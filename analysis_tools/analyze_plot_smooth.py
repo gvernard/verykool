@@ -52,7 +52,7 @@ if lmodel != "smooth":
     print("This routine can only print 'smooth' model results, this model is: ",lmodel)
     sys.exit()
 data_path = os.path.join(path,'data/')
-
+noise_file = inpars["noisepath"]
 
     
 mycmap_div    = 'Spectral'
@@ -66,7 +66,7 @@ if os.path.isfile(data_path+'source.fits'):
     srcrange  = max(srcwidth,srcheight)/2.0
     hdulist.close()
 else:
-    srcrange = 1.0
+    srcrange = 1.2
 
 #srcrange = 2.5
 
@@ -165,8 +165,8 @@ im_res = im_res[::-1,:]
 if inpars["maskpath"] != "0":
     im_res = im_res*np.flipud(np.array(mask))
 
-noise_map = np.flipud(fits.getdata(data_path+'noise_map.fits',ext=0)) # This is the sigma map squared
-noise_map = np.sqrt(noise_map)
+noise_map = np.flipud(fits.getdata(os.path.join(path,noise_file),ext=0)) # This is the sigma map
+#noise_map = np.sqrt(noise_map)
 im_res = np.divide(im_res,noise_map)
     
 #tmp = np.flipud(im_res)

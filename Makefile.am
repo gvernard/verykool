@@ -114,4 +114,4 @@ CLEANFILES = $(bin_SCRIPTS)
 
 
 install-exec-hook:
-	rm $(bin_PROGRAMS) $(bin_SCRIPTS) $(lib_LTLIBRARIES)
+	rm $(bin_PROGRAMS) $(bin_SCRIPTS)
