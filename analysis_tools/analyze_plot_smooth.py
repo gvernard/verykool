@@ -230,7 +230,7 @@ for c in content:
 
 # Set color scale
 #limit = max([max_true,abs(max(zvalues)),abs(min(zvalues))])
-limit = 0.045
+limit = 0.15
 
 
 
