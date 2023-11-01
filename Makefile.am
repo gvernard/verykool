@@ -93,7 +93,7 @@ verykool_SOURCES = \
 	src/verykool/verykool.cpp
 verykool_CXXFLAGS = -std=c++11 -fopenmp -g -frounding-math
 verykool_CPPFLAGS = -Iinclude
-verykool_LDADD = -lmultinest_mpi -lcommon
+verykool_LDADD = -lmultinest_mpi -lcommon -lgsl
 
 
 coolest_conversion_SOURCES = \

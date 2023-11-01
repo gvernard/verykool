@@ -91,7 +91,7 @@ AC_ARG_WITH([jsoncpp],
     [AS_HELP_STRING([--with-jsoncpp=prefix],[give the path to the jsoncpp library and header files.])],
     [
 	ac_new_CPPFLAGS+=" -I${withval}/include"
-	ac_new_LDFLAGS+=" -L${withval}/lib64 -Wl,-rpath -Wl,${withval}/lib64"
+	ac_new_LDFLAGS+=" -L${withval}/lib -Wl,-rpath -Wl,${withval}/lib"
 	ac_new_LIBS+=" -ljsoncpp"
     ],
     [
@@ -151,7 +151,7 @@ AC_ARG_WITH([CGAL],
     [AS_HELP_STRING([--with-CGAL=prefix],[give the path to the CGAL library and header files.])],
     [
 	ac_new_CPPFLAGS+=" -I${withval}/include"
-	ac_new_LDFLAGS+=" -L${withval}/lib64 -Wl,-rpath -Wl,${withval}/lib64"
+	ac_new_LDFLAGS+=" -L${withval}/lib -Wl,-rpath -Wl,${withval}/lib"
 	ac_new_LIBS+=" -lCGAL"
     ],
     [
