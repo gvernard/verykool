@@ -955,7 +955,7 @@ int main(int argc,char* argv[]){
     
     // Read VKL multinest postdist file
     std::string line;
-    std::ifstream post((runname+"output/"+lname+"_postdist.txt").c_str(),std::ifstream::in);
+    std::ifstream post((runname+"output/"+step+lname+"_postdist.txt").c_str(),std::ifstream::in);
     if( post.is_open() ){
       while( std::getline(post,line) ){
 

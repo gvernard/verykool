@@ -98,7 +98,7 @@ def main():
     ##############################################################################################
     if mode == "original":
         msg = "Executing original code, good luck:"
-        cmd = "/home/giorgos/myLibraries/openmpi/bin/mpirun --use-hwthread-cpus -np " + str(options["nproc"]) + " " + vkl_dir + "bin/verykool " + path + " " + run
+        cmd = "mpirun --use-hwthread-cpus -np " + str(options["nproc"]) + " " + vkl_dir + "bin/verykool " + path + " " + run
         #cmd = "valgrind --track-origins=yes " + vkl_dir + "bin/verykool_test " + path + " " + run
         #cmd = vkl_dir + "bin/verykool " + path + " " + run
     else:
