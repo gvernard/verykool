@@ -661,9 +661,10 @@ int main(int argc,char* argv[]){
   std::vector<float> src_y;
   std::vector<float> src_z;
   float dumx,dumy,dumz;
+  double hpix = pixel_size/2.0;
   while( fscanf(fh,"%20f %20f %20f\n",&dumz,&dumx,&dumy) != EOF ){
-    src_x.push_back(dumx);
-    src_y.push_back(dumy);
+    src_x.push_back(dumx + hpix); 	// Shift x0 by + half a pixel
+    src_y.push_back(dumy - hpix);	// Shift y0 by - half a pixel
     src_z.push_back(dumz);
   }
   fclose(fh);
